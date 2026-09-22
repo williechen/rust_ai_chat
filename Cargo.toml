@@ -8,6 +8,8 @@ members = [
     "crates/persistence",
     "crates/telemetry",
     "crates/shared",
+    "apps/desktop-pet",
+    "crates/pet-domain",
 ]
 
 [workspace.package]

@@ -15,9 +15,9 @@ jobs:
      steps:
        - uses: actions/checkout@4
        - name: Check
-         run: cargo check --workspan
+         run: cargo check --workspace
        - name: Run tests
-         run: cargo test --workspan
+         run: cargo test --workspace
          
   build:
     runs-on: ubuntu-latest

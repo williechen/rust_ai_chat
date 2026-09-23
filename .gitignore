@@ -1,5 +1,7 @@
 /target
 
+/apps/desktop-pet/gen
+
 .env
 
 *.lock

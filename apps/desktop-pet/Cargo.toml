@@ -2,6 +2,11 @@
 name = "desktop-pet"
 version = "0.1.0"
 edition.workspace = true
+build = "build.rs"
 
 [dependencies]
 pet-domain = { path = "../../crates/pet-domain" }
+tauri = { version = "2.11", features = [] }
+
+[build-dependencies]
+tauri-build = { version = "2.6", features = [] }

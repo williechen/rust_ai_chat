@@ -1,6 +1,5 @@
 fn main() {
-    let state = pet_domain::PetState::Idle;
-    let next = state.on_event(&pet_domain::PetEvent::UserClicked);
-
-    println!("pet state: {:?}", next);
+    tauri::Builder::default()
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
 }

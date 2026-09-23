@@ -1,0 +1,110 @@
+{
+    "version": "2.0.0",
+
+    "tasks": [
+        {
+            "label": "Cargo Check",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "check",
+                "--workspace",
+                "--all-targets",
+                "--all-features"
+            ],
+            "group": "build",
+            "problemMatcher": [
+                "$rustc"
+            ]
+        },
+
+        {
+            "label": "Cargo Build",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "build",
+                "--workspace",
+                "--all-targets",
+                "--all-features"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$rustc"
+            ]
+        },
+
+        {
+            "label": "Cargo Test",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "test",
+                "--workspace",
+                "--all-features"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$rustc"
+            ]
+        },
+
+        {
+            "label": "Cargo Format",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "fmt",
+                "--all"
+            ],
+            "problemMatcher": []
+        },
+
+        {
+            "label": "Cargo Format Check",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "fmt",
+                "--all"
+            ],
+            "problemMatcher": []
+        },
+
+        {
+            "label": "Cargo Clippy",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "clippy",
+                "--workspace",
+                "--all-targets",
+                "--all-features",
+                "--",
+                "-D",
+                "warnings"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ]
+        },
+
+        {
+    "label": "Cargo CI",
+    "dependsOrder": "sequence",
+    "dependsOn": [
+        "Cargo Format Check",
+        "Cargo Check",
+        "Cargo Clippy",
+        "Cargo Test"
+    ],
+    "problemMatcher": []
+}
+    ]
+}

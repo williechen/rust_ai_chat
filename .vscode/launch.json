@@ -1,0 +1,143 @@
+{
+    "version": "0.2.0",
+
+    "configurations": [
+        {
+            "name": "Server: Debug",
+            "type": "lldb",
+            "request": "launch",
+
+            "cargo": {
+                "args": [
+                    "build",
+                    "--package",
+                    "server"
+                ],
+
+                "filter": {
+                    "name": "server",
+                    "kind": "bin"
+                },
+
+                "cwd": "${workspaceFolder}",
+                "problemMatcher": "$rustc"
+            },
+
+            "cwd": "${workspaceFolder}",
+            "terminal": "integrated",
+
+            "sourceLanguages": [
+                "rust"
+            ],
+
+            "env": {
+                "RUST_BACKTRACE": "1",
+                "RUST_LOG": "debug"
+            }
+        },
+
+        {
+            "name": "Desktop Pet: Debug",
+            "type": "lldb",
+            "request": "launch",
+
+            "cargo": {
+                "args": [
+                    "build",
+                    "--package",
+                    "desktop-pet"
+                ],
+
+                "filter": {
+                    "name": "desktop-pet",
+                    "kind": "bin"
+                },
+
+                "cwd": "${workspaceFolder}",
+                "problemMatcher": "$rustc"
+            },
+
+            "cwd": "${workspaceFolder}",
+            "terminal": "integrated",
+
+            "sourceLanguages": [
+                "rust"
+            ],
+
+            "env": {
+                "RUST_BACKTRACE": "1",
+                "RUST_LOG": "debug"
+            }
+        },
+
+        {
+            "name": "Server: Debug Tests",
+            "type": "lldb",
+            "request": "launch",
+
+            "cargo": {
+                "args": [
+                    "test",
+                    "--package",
+                    "server",
+                    "--no-run"
+                ],
+
+                "filter": {
+                    "name": "server",
+                    "kind": "lib"
+                },
+
+                "cwd": "${workspaceFolder}",
+                "problemMatcher": "$rustc"
+            },
+
+            "cwd": "${workspaceFolder}",
+            "terminal": "integrated",
+
+            "sourceLanguages": [
+                "rust"
+            ],
+
+            "env": {
+                "RUST_BACKTRACE": "1",
+                "RUST_LOG": "debug"
+            }
+        },
+
+        {
+            "name": "Desktop Pet: Debug Tests",
+            "type": "lldb",
+            "request": "launch",
+
+            "cargo": {
+                "args": [
+                    "test",
+                    "--package",
+                    "desktop-pet",
+                    "--no-run"
+                ],
+
+                "filter": {
+                    "name": "desktop-pet",
+                    "kind": "lib"
+                },
+
+                "cwd": "${workspaceFolder}",
+                "problemMatcher": "$rustc"
+            },
+
+            "cwd": "${workspaceFolder}",
+            "terminal": "integrated",
+
+            "sourceLanguages": [
+                "rust"
+            ],
+
+            "env": {
+                "RUST_BACKTRACE": "1",
+                "RUST_LOG": "debug"
+            }
+        }
+    ]
+}

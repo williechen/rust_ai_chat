@@ -1,15 +1,15 @@
 [workspace]
 resolver = "3"
 members = [
+    "apps/desktop_pet",
     "apps/server",
-    "crates/ui",
-    "crates/chat_domain",
     "crates/ai_core",
-    "crates/persistence",
-    "crates/telemetry",
+    "crates/chat_domain",
     "crates/shared",
-    "apps/desktop-pet",
-    "crates/pet-domain",
+    "crates/persistence",
+    "crates/pet_domain",
+    "crates/telemetry",
+    "crates/ui",
 ]
 
 [workspace.package]

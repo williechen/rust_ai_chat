@@ -10,11 +10,15 @@
     "withGlobalTauri": true,
     "windows": [
       { 
-        "label": "main", 
-        "title": "Rust AI Desktop Pet", 
-        "width": 320, 
-        "height": 360, 
-        "resizable": true
+        "label": "main",
+        "title": "Rust AI Desktop Pet",
+        "width": 320,
+        "height": 360,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "shadow": false
       }
     ]
   },

@@ -7,10 +7,37 @@
     content="width=device-width, initial-scale=1.0"
   />
   <title>Rust AI Desktop Pet</title>
+
+  <style>
+  html,
+  body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    overflow: hidden;
+  }
+
+  body {
+    display: grid;
+    place-items: center;
+    font-family: system-ui, sans-serif;
+  }
+
+  .pet-shell {
+    width: 220px;
+    padding: 20px;
+    border-radius: 28px;
+    background: rgba(30, 30, 36, 0.82);
+    color: white;
+    text-align: center;
+  }
+</style>
+
 </head>
 
 <body>
-  <main>
+  <main class="pet-shell">
     <h1>🐾 Rust AI Desktop Pet</h1>
 
     <p>

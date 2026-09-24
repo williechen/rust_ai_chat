@@ -7,12 +7,12 @@
     "devUrl": "http://localhost:1420",
     "frontendDist": "frontend/dist",
     "beforeDevCommand": {
-      "script": "trunk serve",
-      "cwd": "../frontend"
+      "script": "trunk serve --port 1420",
+      "cwd": "./frontend"
     },
     "beforeBuildCommand": {
       "script": "trunk build --release",
-      "cwd": "../frontend"
+      "cwd": "./frontend"
     }
   },
   "app": {

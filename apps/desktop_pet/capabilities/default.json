@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default permissions for Rust AI Desktop Pet",
+  "windows": ["main"],
+  "permissions": [
+    "core:default"
+  ]
+}

@@ -4,7 +4,16 @@
   "version": "0.1.0",
   "identifier": "dev.rustai.desktop-pet",
   "build": { 
-    "frontendDist": "public"
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "frontend/dist",
+    "beforeDevCommand": {
+      "script": "trunk serve",
+      "cwd": "../frontend"
+    },
+    "beforeBuildCommand": {
+      "script": "trunk build --release",
+      "cwd": "../frontend"
+    }
   },
   "app": {
     "withGlobalTauri": true,

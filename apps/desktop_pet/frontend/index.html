@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>Rust AI Desktop Pet</title>
+
+  <link data-trunk rel="css" href="style.css" />
+</head>
+
+<body>
+  <script>
+    const { invoke } = window.__TAURI__.core;
+    const { listen } = window.__TAURI__.event;
+
+    window.getPetState = () => {
+      return invoke("get_pet_state");
+    };
+
+    window.sendPetCommand = (command) => {
+      return invoke("send_pet_command", { command });
+    };
+
+    window.listenPetState = (callback) => {
+      return listen(
+        "pet://state-changed",
+        (event) => callback(event.payload),
+      );
+    };
+  </script>
+
+  <link data-trunk rel="rust" />
+</body>
+</html>

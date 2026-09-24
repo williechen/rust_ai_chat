@@ -28,7 +28,7 @@ pub enum PetEvent {
     StateChanged { from: PetState, to: PetState },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PetSnapshot {
     pub state: PetState,
     pub revision: u64,

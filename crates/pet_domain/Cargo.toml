@@ -5,3 +5,5 @@ edition.workspace = true
 
 [dependencies]
 serde.workspace = true
+
+thiserror = "2.0"

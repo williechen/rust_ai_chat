@@ -6,7 +6,11 @@ build = "build.rs"
 
 [dependencies]
 pet-domain = { path = "../../crates/pet_domain" }
+
+serde.workspace = true
+
 tauri = { version = "2.11", features = [] }
+
 
 [build-dependencies]
 tauri-build = { version = "2.6", features = [] }

@@ -1,23 +1,49 @@
-const status = document.querySelector('#status');
-const invoke = window.__TAURI__?.core?.invoke;
-const listen = window.__TAURI__?.event?.listen;
+const { invoke } = window.__TAURI__.core;
+const { listen } = window.__TAURI__.event;
+
+const stateEl = document.querySelector("#state");
+const revisionEl = document.querySelector("#revision");
+const errorEl = document.querySelector("#error");
 
 function render(snapshot) {
-  status.textContent = `狀態：${snapshot.state}（版本 ${snapshot.revision}）`;
+  stateEl.textContent = snapshot.state;
+  revisionEl.textContent = snapshot.revision;
 }
 
-if (!invoke || !listen) {
-  status.textContent = '請從 Tauri 視窗啟動';
-} else {
-  listen('pet://state-changed', () => invoke('get_pet_state').then(render));
-  invoke('get_pet_state').then(render).catch(error => { status.textContent = String(error); });
-  document.querySelectorAll('[data-command]').forEach(button => {
-    button.addEventListener('click', async () => {
-      try {
-        render(await invoke('send_pet_command', { command: button.dataset.command }));
-      } catch (error) {
-        status.textContent = `命令失敗：${error}`;
-      }
-    });
+async function loadState() {
+  const snapshot = await invoke("get_pet_state");
+  render(snapshot);
+}
+
+async function send(type) {
+  errorEl.textContent = "";
+
+  try {
+    const snapshot = await invoke(
+      "send_pet_command",
+      {
+        command: type
+      },
+    );
+
+    render(snapshot);
+  } catch (error) {
+    errorEl.textContent = String(error);
+  }
+}
+
+for (const button of document.querySelectorAll(
+  "[data-command]",
+)) {
+  button.addEventListener("click", () => {
+    send(button.dataset.command);
   });
 }
+
+listen("pet://state-changed", (event) => {
+  render(event.payload);
+});
+
+loadState().catch((error) => {
+  errorEl.textContent = String(error);
+});

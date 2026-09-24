@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "dev.rustai.desktop-pet",
   "build": { 
-    "frontendDist": "public" 
+    "frontendDist": "public"
   },
   "app": {
     "withGlobalTauri": true,
@@ -12,9 +12,9 @@
       { 
         "label": "main", 
         "title": "Rust AI Desktop Pet", 
-        "width": 420, 
-        "height": 320, 
-        "resizable": true 
+        "width": 320, 
+        "height": 360, 
+        "resizable": true
       }
     ]
   },

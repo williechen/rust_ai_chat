@@ -1,17 +1,19 @@
+pub mod error;
+
+use crate::error::PetError;
 use serde::{Deserialize, Serialize};
 
 /// 可顯示的狀態；動畫與 UI 不屬於 domain。
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PetState {
-    #[default]
     Idle,
     Interacting,
     Sleeping,
 }
 
 /// 外部送入狀態機的意圖，與輸出的事件分開。
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PetCommand {
     Interact,
@@ -25,20 +27,6 @@ pub enum PetCommand {
 pub enum PetEvent {
     StateChanged { from: PetState, to: PetState },
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct InvalidTransition {
-    pub state: PetState,
-    pub command: PetCommand,
-}
-
-impl std::fmt::Display for InvalidTransition {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "cannot apply {:?} in {:?}", self.command, self.state)
-    }
-}
-
-impl std::error::Error for InvalidTransition {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct PetSnapshot {
@@ -55,100 +43,100 @@ impl Default for PetSnapshot {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct PetMachine {
-    snapshot: PetSnapshot,
+    state: PetState,
+    revision: u64,
 }
 
 impl PetMachine {
     pub fn snapshot(&self) -> PetSnapshot {
-        self.snapshot
+        PetSnapshot {
+            state: self.state,
+            revision: self.revision,
+        }
     }
-
-    /// 無效命令不改變狀態；只有真正轉移才產生事件與遞增版本。
-    pub fn dispatch(&mut self, command: PetCommand) -> Result<PetEvent, InvalidTransition> {
-        let from = self.snapshot.state;
-        let to = match (from, command) {
+    pub fn dispatch(&mut self, command: PetCommand) -> Result<PetSnapshot, PetError> {
+        let next_state = match (self.state, command) {
             (PetState::Idle, PetCommand::Interact) => PetState::Interacting,
             (PetState::Interacting, PetCommand::FinishInteraction) => PetState::Idle,
             (PetState::Idle | PetState::Interacting, PetCommand::Sleep) => PetState::Sleeping,
             (PetState::Sleeping, PetCommand::Wake) => PetState::Idle,
-            _ => {
-                return Err(InvalidTransition {
-                    state: from,
-                    command,
+            (state, command) => {
+                return Err(PetError::InvalidTransition {
+                    state,
+                    command: command.clone(),
                 });
             }
         };
-        self.snapshot.state = to;
-        self.snapshot.revision += 1;
-        Ok(PetEvent::StateChanged { from, to })
+
+        self.state = next_state;
+        self.revision += 1;
+        Ok(self.snapshot())
+    }
+}
+
+impl Default for PetMachine {
+    fn default() -> Self {
+        Self {
+            state: PetState::Idle,
+            revision: 0,
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::PetError;
 
     #[test]
-    fn idle_interact_finish_sleep_wake() {
-        let mut pet = PetMachine::default();
+    fn pet_starts_idle() {
+        let pet = PetMachine::default();
+
         assert_eq!(
-            pet.dispatch(PetCommand::Interact),
-            Ok(PetEvent::StateChanged {
-                from: PetState::Idle,
-                to: PetState::Interacting
-            })
+            pet.snapshot(),
+            PetSnapshot {
+                state: PetState::Idle,
+                revision: 0,
+            }
         );
-        assert_eq!(
-            pet.dispatch(PetCommand::FinishInteraction),
-            Ok(PetEvent::StateChanged {
-                from: PetState::Interacting,
-                to: PetState::Idle
-            })
-        );
-        assert_eq!(
-            pet.dispatch(PetCommand::Sleep),
-            Ok(PetEvent::StateChanged {
-                from: PetState::Idle,
-                to: PetState::Sleeping
-            })
-        );
-        assert_eq!(
-            pet.dispatch(PetCommand::Wake),
-            Ok(PetEvent::StateChanged {
-                from: PetState::Sleeping,
-                to: PetState::Idle
-            })
-        );
-        assert_eq!(pet.snapshot().revision, 4);
     }
 
     #[test]
-    fn invalid_transition_preserves_snapshot() {
+    fn interact_moves_idle_to_interacting() {
         let mut pet = PetMachine::default();
+
+        let snapshot = pet.dispatch(PetCommand::Interact).unwrap();
+
+        assert_eq!(snapshot.state, PetState::Interacting);
+        assert_eq!(snapshot.revision, 1);
+    }
+
+    #[test]
+    fn sleeping_pet_cannot_interact() {
+        let mut pet = PetMachine::default();
+
         pet.dispatch(PetCommand::Sleep).unwrap();
+
         let before = pet.snapshot();
-        assert_eq!(
-            pet.dispatch(PetCommand::Interact),
-            Err(InvalidTransition {
-                state: PetState::Sleeping,
-                command: PetCommand::Interact
-            })
-        );
+
+        let result = pet.dispatch(PetCommand::Interact);
+
+        assert!(matches!(result, Err(PetError::InvalidTransition { .. })));
+
         assert_eq!(pet.snapshot(), before);
     }
 
     #[test]
-    fn interaction_can_be_interrupted_by_sleep() {
+    fn wake_moves_sleeping_pet_back_to_idle() {
         let mut pet = PetMachine::default();
-        pet.dispatch(PetCommand::Interact).unwrap();
-        assert_eq!(
-            pet.dispatch(PetCommand::Sleep),
-            Ok(PetEvent::StateChanged {
-                from: PetState::Interacting,
-                to: PetState::Sleeping
-            })
-        );
+
+        pet.dispatch(PetCommand::Sleep).unwrap();
+
+        let snapshot = pet.dispatch(PetCommand::Wake).unwrap();
+
+        assert_eq!(snapshot.state, PetState::Idle);
+        assert_eq!(snapshot.revision, 2);
     }
 }

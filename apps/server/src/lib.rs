@@ -1,7 +1,11 @@
 pub mod http;
 pub mod state;
+pub mod ws;
 
-use axum::{Router, routing::get};
+use axum::{
+    Router,
+    routing::{any, get},
+};
 use std::io::Result;
 
 pub async fn application() -> Result<()> {
@@ -9,6 +13,7 @@ pub async fn application() -> Result<()> {
 
     let app = Router::new()
         .route("/health", get(http::health))
+        .route("/ws", any(ws::ws_handler))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;

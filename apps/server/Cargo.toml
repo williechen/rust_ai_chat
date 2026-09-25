@@ -6,8 +6,9 @@ edition.workspace = true
 [dependencies]
 axum.workspace = true
 
-chat-domain = { path = "../../crates/chat_domain" }
-
 serde.workspace = true
+serde_json.workspace = true
+
+shared = { path = "../../crates/shared" }
 
 tokio.workspace = true

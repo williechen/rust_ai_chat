@@ -85,6 +85,7 @@ fn App() -> impl IntoView {
 
     view! {
         <main class="pet-shell">
+            <DragHandle />
             <PetStatus snapshot />
 
             <PetControls
@@ -192,6 +193,25 @@ fn PetControls(
                 "醒來"
             </button>
         </section>
+    }
+}
+
+#[component]
+fn DragHandle() -> impl IntoView {
+    view! {
+        <header
+            class="drag-handle"
+            data-tauri-drag-region
+            aria-label="拖曳桌面小寵物"
+        >
+            <span
+                class="drag-handle-icon"
+                data-tauri-drag-region
+                aria-hidden="true"
+            >
+                "..."
+            </span>
+        </header>
     }
 }
 

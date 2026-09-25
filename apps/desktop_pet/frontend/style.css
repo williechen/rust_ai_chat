@@ -45,3 +45,21 @@ button {
   margin-top: 12px;
   font-size: 12px;
 }
+
+.drag-handle {
+  height: 28px;
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  user-select: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.drag-grip {
+  line-height: 1;
+  letter-spacing: 4px;
+  opacity: 0.65;
+}

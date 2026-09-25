@@ -5,6 +5,7 @@ members = [
     "apps/desktop_pet/frontend",
     "apps/server",
     "crates/ai_core",
+    "crates/chat_application",
     "crates/chat_domain",
     "crates/shared",
     "crates/persistence",

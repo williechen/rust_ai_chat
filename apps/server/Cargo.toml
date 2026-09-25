@@ -6,6 +6,8 @@ edition.workspace = true
 [dependencies]
 axum.workspace = true
 
+chat-application = { path = "../../crates/chat_application" }
+
 serde.workspace = true
 serde_json.workspace = true
 

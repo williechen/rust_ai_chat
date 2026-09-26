@@ -1,8 +1,17 @@
 pub mod bridge;
 
+use gloo_timers::callback::{Interval, Timeout};
 use leptos::mount::mount_to_body;
 use leptos::{prelude::*, task::spawn_local};
 use pet_domain::{PetCommand, PetSnapshot, PetState};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PetPose {
+    Idle,
+    Blink,
+    Interact,
+    Sleep,
+}
 
 fn main() {
     mount_to_body(|| {
@@ -48,11 +57,28 @@ fn dispatch_command(
     });
 }
 
+fn project_pose(state: PetState, blinking: bool) -> PetPose {
+    match state {
+        PetState::Idle => {
+            if blinking {
+                PetPose::Blink
+            } else {
+                PetPose::Idle
+            }
+        }
+        PetState::Interacting => PetPose::Interact,
+        PetState::Sleeping => PetPose::Sleep,
+        PetState::Blinking => PetPose::Blink,
+    }
+}
+
 #[component]
 fn App() -> impl IntoView {
     let (snapshot, set_snapshot) = signal::<Option<PetSnapshot>>(None);
 
     let (error, set_error) = signal::<Option<String>>(None);
+
+    let (blinking, set_blinking) = signal(false);
 
     {
         let snapshot_reader = snapshot;
@@ -86,7 +112,13 @@ fn App() -> impl IntoView {
     view! {
         <main class="pet-shell">
             <DragHandle />
-            <PetStatus snapshot />
+
+            <BlinkController
+                snapshot
+                set_blinking
+            />
+
+            <PetStatus snapshot blinking/>
 
             <PetControls
                 snapshot
@@ -100,16 +132,49 @@ fn App() -> impl IntoView {
 }
 
 #[component]
-fn PetStatus(snapshot: ReadSignal<Option<PetSnapshot>>) -> impl IntoView {
-    let label = move || {
+fn DragHandle() -> impl IntoView {
+    view! {
+        <header
+            class="drag-handle"
+            data-tauri-drag-region
+            aria-label="拖曳桌面小寵物"
+        >
+            <span
+                class="drag-handle-icon"
+                data-tauri-drag-region
+                aria-hidden="true"
+            >
+                "..."
+            </span>
+        </header>
+    }
+}
+
+#[component]
+fn PetStatus(
+    snapshot: ReadSignal<Option<PetSnapshot>>,
+    blinking: ReadSignal<bool>,
+) -> impl IntoView {
+    let pose = move || {
         snapshot
             .get()
-            .map(|snapshot| match snapshot.state {
-                PetState::Idle => "待機",
-                PetState::Interacting => "互動中",
-                PetState::Sleeping => "睡覺中",
-            })
-            .unwrap_or("載入中")
+            .map(|snapshot| project_pose(snapshot.state, blinking.get()))
+    };
+
+    let face = move || match pose() {
+        Some(PetPose::Idle) => "😺",
+        Some(PetPose::Blink) => "😻",
+        Some(PetPose::Interact) => "😸",
+        Some(PetPose::Sleep) => "😴",
+        None => "🐾",
+    };
+
+    let label = move || match pose() {
+        Some(PetPose::Idle) => "待機",
+        Some(PetPose::Blink) => "眨眼",
+        Some(PetPose::Interact) => "互動",
+        Some(PetPose::Sleep) => "睡覺",
+        None => "載入中",
     };
 
     let revision = move || {
@@ -121,7 +186,7 @@ fn PetStatus(snapshot: ReadSignal<Option<PetSnapshot>>) -> impl IntoView {
 
     view! {
         <section class="pet-status">
-            <div class="pet-face">"🐾"</div>
+            <div class="pet-face">{face()}</div>
 
             <strong>{label}</strong>
 
@@ -131,6 +196,38 @@ fn PetStatus(snapshot: ReadSignal<Option<PetSnapshot>>) -> impl IntoView {
             </small>
         </section>
     }
+}
+
+#[component]
+fn BlinkController(
+    snapshot: ReadSignal<Option<PetSnapshot>>,
+    set_blinking: WriteSignal<bool>,
+) -> impl IntoView {
+    let interval = Interval::new(4_000, move || {
+        let is_idle = snapshot
+            .get_untracked()
+            .map(|snapshot| snapshot.state == PetState::Idle)
+            .unwrap_or(false);
+
+        if !is_idle {
+            set_blinking.set(false);
+            return;
+        }
+
+        set_blinking.set(true);
+
+        Timeout::new(180, move || {
+            set_blinking.set(false);
+        })
+        .forget();
+    });
+
+    // gloo_timers::Interval 是 !Send / !Sync。
+    // StoredValue::new_local() 會把它保存在目前 Leptos owner 的 local arena，
+    // owner dispose 時一起 drop，Interval 也會因此取消。
+    let _interval = StoredValue::new_local(interval);
+
+    ().into_any()
 }
 
 #[component]
@@ -197,25 +294,6 @@ fn PetControls(
 }
 
 #[component]
-fn DragHandle() -> impl IntoView {
-    view! {
-        <header
-            class="drag-handle"
-            data-tauri-drag-region
-            aria-label="拖曳桌面小寵物"
-        >
-            <span
-                class="drag-handle-icon"
-                data-tauri-drag-region
-                aria-hidden="true"
-            >
-                "..."
-            </span>
-        </header>
-    }
-}
-
-#[component]
 fn ErrorMessage(error: ReadSignal<Option<String>>) -> impl IntoView {
     view! {
         <Show
@@ -230,5 +308,25 @@ fn ErrorMessage(error: ReadSignal<Option<String>>) -> impl IntoView {
                 }}
             </p>
         </Show>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn idle_can_project_to_blink() {
+        assert_eq!(project_pose(PetState::Idle, true), PetPose::Blink,);
+    }
+
+    #[test]
+    fn sleeping_wins_over_blink() {
+        assert_eq!(project_pose(PetState::Sleeping, true), PetPose::Sleep,);
+    }
+
+    #[test]
+    fn interacting_wins_over_blink() {
+        assert_eq!(project_pose(PetState::Interacting, true), PetPose::Interact,);
     }
 }

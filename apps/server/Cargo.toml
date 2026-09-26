@@ -14,3 +14,5 @@ serde_json.workspace = true
 shared = { path = "../../crates/shared" }
 
 tokio.workspace = true
+
+uuid.workspace = true

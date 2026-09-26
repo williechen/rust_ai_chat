@@ -1,4 +1,5 @@
 pub mod http;
+pub mod hub;
 pub mod state;
 pub mod ws;
 
@@ -13,7 +14,7 @@ pub async fn application() -> Result<()> {
 
     let app = Router::new()
         .route("/health", get(http::health))
-        .route("/ws", any(ws::ws_handler))
+        .route("/ws/{room_id}", any(ws::ws_handler))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;

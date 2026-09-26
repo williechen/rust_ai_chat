@@ -29,9 +29,7 @@ fn js_error(value: JsValue) -> String {
 }
 
 pub async fn get_pet_state() -> Result<PetSnapshot, String> {
-    let value = JsFuture::from( get_pet_state_js() )
-        .await
-        .map_err(js_error)?;
+    let value = JsFuture::from(get_pet_state_js()).await.map_err(js_error)?;
 
     serde_wasm_bindgen::from_value(value).map_err(|error| error.to_string())
 }
@@ -39,7 +37,7 @@ pub async fn get_pet_state() -> Result<PetSnapshot, String> {
 pub async fn send_pet_command(command: PetCommand) -> Result<PetSnapshot, String> {
     let command = serde_wasm_bindgen::to_value(&command).map_err(|error| error.to_string())?;
 
-    let value = JsFuture::from( send_pet_command_js(command) )
+    let value = JsFuture::from(send_pet_command_js(command))
         .await
         .map_err(js_error)?;
 
@@ -55,7 +53,7 @@ pub async fn listen_pet_state(
         }
     });
 
-    JsFuture::from( listen_pet_state_js(callback.as_ref().unchecked_ref()) )
+    JsFuture::from(listen_pet_state_js(callback.as_ref().unchecked_ref()))
         .await
         .map_err(js_error)?;
 

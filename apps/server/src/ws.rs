@@ -7,35 +7,58 @@ use axum::{
     response::Response,
 };
 use shared::{ClientEvent, ServerEvent};
+use tokio::sync::broadcast;
 
 pub async fn ws_handler(State(state): State<AppState>, ws: WebSocketUpgrade) -> Response {
     ws.on_upgrade(move |socket| handle_socket(socket, state))
 }
 
 async fn handle_socket(mut socket: WebSocket, state: AppState) {
-    while let Some(result) = socket.recv().await {
-        let message = match result {
-            Ok(message) => message,
-            Err(error) => {
-                eprintln!("websocket receive error: {error}");
-                break;
-            }
-        };
+    let mut events = state.events.subscribe();
 
-        match message {
-            Message::Text(text) => {
-                if let Err(error) = handle_text_message(&mut socket, &state, text.as_str()).await {
-                    eprintln!("websocket message error: {error}");
+    loop {
+        tokio::select! {
+            incoming = socket.recv() => {
+                let Some(result) = incoming else {
                     break;
+                };
+                let message = match result {
+                    Ok(message) => message,
+                    Err(error) => {
+                        eprintln!("websocket receive error: {error}");
+                        break;
+                    }
+                };
+
+                if let Message::Text(text) = message {
+                    if let Err(error) = handle_client_event(&mut socket, &state, text.as_str()).await {
+                        eprintln!("client message error: {error}");
+                        break;
+                    }
                 }
             }
-            Message::Close(_) => break,
-            _ => {}
+            event = events.recv() => {
+                match event {
+                    Ok(event) => {
+                        if let Err(error) = send_event(&mut socket, event).await {
+                            eprintln!("websocket send error: {error}");
+                            break;
+                        }
+                    }
+                    Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                        eprintln!("websocket receiver lagged skipped: {skipped} events");
+                    }
+                    Err(broadcast::error::RecvError::Closed) => {
+                        eprintln!("websocket receiver closed");
+                        break;
+                    }
+                }
+            }
         }
     }
 }
 
-async fn handle_text_message(
+async fn handle_client_event(
     socket: &mut WebSocket,
     state: &AppState,
     text: &str,
@@ -48,7 +71,7 @@ async fn handle_text_message(
         }
         ClientEvent::SendMessage { room_id, content } => {
             let message = state.chat_service.send_message(room_id, content);
-            send_event(socket, ServerEvent::MessageCreated(message)).await?;
+            let _ = state.events.send(ServerEvent::MessageCreated(message));
         }
         ClientEvent::Typing { .. } => {
             // 後面再做 presence / typing。

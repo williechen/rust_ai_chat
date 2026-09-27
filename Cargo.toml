@@ -30,4 +30,4 @@ serde_json = "1.0"
 tokio = { version = "1.53", features = ["full"] }
 tracing = "0.1"
 
-uuid = { version = "1.26", features = ["serde", "v4"] }
+uuid = { version = "1.26", features = ["serde", "v4", "js"] }

@@ -189,7 +189,7 @@ fn PetStatus(
             .map(|snapshot| project_pose(snapshot.state, blinking.get(), animation_phase.get()))
     };
 
-    let face = move || match pose() {
+    let face = Signal::derive(move || match pose() {
         Some(PetPose::Idle) => "😺",
         Some(PetPose::Blink) => "😻",
         Some(PetPose::InteractA) => "😸",
@@ -197,7 +197,7 @@ fn PetStatus(
         Some(PetPose::SleepA) => "😴",
         Some(PetPose::SleepB) => "😪",
         None => "🐾",
-    };
+    });
 
     let label = move || match pose() {
         Some(PetPose::Idle) => "待機",
@@ -217,7 +217,28 @@ fn PetStatus(
 
     view! {
         <section class="pet-status">
-            <div class="pet-face">{face}</div>
+            <div
+                class="pet-face"
+
+                on:contextmenu=move |event| {
+                    event.prevent_default();
+
+                    let x = event.client_x();
+                    let y = event.client_y();
+
+                    spawn_local(async move {
+                        if let Err(error) =
+                            bridge::show_pet_context_menu(x, y).await
+                        {
+                            web_sys::console::warn_1(
+                                &error.into()
+                            );
+                        }
+                    });
+                }
+            >
+                {face}
+            </div>
 
             <strong>{label}</strong>
 

@@ -16,13 +16,14 @@
   <script>
     const { invoke } = window.__TAURI__.core;
     const { listen } = window.__TAURI__.event;
+    
 
     window.getPetState = () => {
       return invoke("get_pet_state");
     };
 
     window.sendPetCommand = (command) => {
-      return invoke("send_pet_command", { command });
+      return invoke("send_pet_command", { ...command });
     };
 
     window.listenPetState = (callback) => {
@@ -31,6 +32,70 @@
         (event) => callback(event.payload),
       );
     };
+
+    let petContextMenu = null;
+
+    async function getPetContextMenu() {
+      if (petContextMenu) {
+        return petContextMenu;
+      }
+
+      const { Menu } = window.__TAURI__.menu;
+
+      petContextMenu = await Menu.new({
+        items: [
+          {
+            id: "interact",
+            text: "互動",
+            action: () => {
+              void window
+                .sendPetCommand({ command: "interact" })
+                .catch(console.warn);
+            },
+          },
+          {
+            id: "sleep",
+            text: "睡覺",
+            action: () => {
+              void window
+                .sendPetCommand({ command: "sleep" })
+                .catch(console.warn);
+            },
+          },
+          {
+            id: "wake",
+            text: "醒來",
+            action: () => {
+              void window
+                .sendPetCommand({ command: "wake" })
+                .catch(console.warn);
+            },
+          },
+        ],
+      });
+
+      return petContextMenu;
+    }
+
+    window.showPetContextMenu = async (x, y) => {
+      const menu = await getPetContextMenu();
+
+      const {
+        getCurrentWindow,
+      } = window.__TAURI__.window;
+
+      const {
+        LogicalPosition,
+      } = window.__TAURI__.dpi;
+
+      const appWindow = getCurrentWindow();
+
+      await menu.popup(
+        new LogicalPosition(x, y),
+        appWindow,
+      );
+    };
+
   </script>
 
   <link data-trunk rel="rust" />

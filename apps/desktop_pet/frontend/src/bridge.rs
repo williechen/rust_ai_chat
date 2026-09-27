@@ -22,6 +22,12 @@ extern "C" {
         js_name = listenPetState
     )]
     fn listen_pet_state_js(callback: &Function) -> Promise;
+
+    #[wasm_bindgen(
+        js_namespace = window,
+        js_name = showPetContextMenu
+    )]
+    fn show_pet_context_menu_js(x: i32, y: i32) -> Promise;
 }
 
 fn js_error(value: JsValue) -> String {
@@ -59,6 +65,14 @@ pub async fn listen_pet_state(
 
     // listener 跟著整個 pet app 存活。
     callback.forget();
+
+    Ok(())
+}
+
+pub async fn show_pet_context_menu(x: i32, y: i32) -> Result<(), String> {
+    JsFuture::from(show_pet_context_menu_js(x, y))
+        .await
+        .map_err(js_error)?;
 
     Ok(())
 }

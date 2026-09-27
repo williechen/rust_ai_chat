@@ -9,8 +9,10 @@ use pet_domain::{PetCommand, PetSnapshot, PetState};
 pub enum PetPose {
     Idle,
     Blink,
-    Interact,
-    Sleep,
+    InteractA,
+    InteractB,
+    SleepA,
+    SleepB,
 }
 
 fn main() {
@@ -57,7 +59,7 @@ fn dispatch_command(
     });
 }
 
-fn project_pose(state: PetState, blinking: bool) -> PetPose {
+fn project_pose(state: PetState, blinking: bool, animation_phase: bool) -> PetPose {
     match state {
         PetState::Idle => {
             if blinking {
@@ -66,8 +68,20 @@ fn project_pose(state: PetState, blinking: bool) -> PetPose {
                 PetPose::Idle
             }
         }
-        PetState::Interacting => PetPose::Interact,
-        PetState::Sleeping => PetPose::Sleep,
+        PetState::Interacting => {
+            if animation_phase {
+                PetPose::InteractB
+            } else {
+                PetPose::InteractA
+            }
+        }
+        PetState::Sleeping => {
+            if animation_phase {
+                PetPose::SleepB
+            } else {
+                PetPose::SleepA
+            }
+        }
         PetState::Blinking => PetPose::Blink,
     }
 }
@@ -79,6 +93,8 @@ fn App() -> impl IntoView {
     let (error, set_error) = signal::<Option<String>>(None);
 
     let (blinking, set_blinking) = signal(false);
+
+    let (animation_phase, set_animation_phase) = signal(false);
 
     {
         let snapshot_reader = snapshot;
@@ -117,8 +133,9 @@ fn App() -> impl IntoView {
                 snapshot
                 set_blinking
             />
+            <AnimationClock set_animation_phase />
 
-            <PetStatus snapshot blinking/>
+            <PetStatus snapshot blinking animation_phase />
 
             <PetControls
                 snapshot
@@ -151,29 +168,43 @@ fn DragHandle() -> impl IntoView {
 }
 
 #[component]
+fn AnimationClock(set_animation_phase: WriteSignal<bool>) -> impl IntoView {
+    let interval = Interval::new(650, move || {
+        set_animation_phase.update(|phase| *phase = !*phase);
+    });
+    let _interval = StoredValue::new_local(interval);
+
+    ().into_any()
+}
+
+#[component]
 fn PetStatus(
     snapshot: ReadSignal<Option<PetSnapshot>>,
     blinking: ReadSignal<bool>,
+    animation_phase: ReadSignal<bool>,
 ) -> impl IntoView {
     let pose = move || {
         snapshot
             .get()
-            .map(|snapshot| project_pose(snapshot.state, blinking.get()))
+            .map(|snapshot| project_pose(snapshot.state, blinking.get(), animation_phase.get()))
     };
 
     let face = move || match pose() {
         Some(PetPose::Idle) => "😺",
         Some(PetPose::Blink) => "😻",
-        Some(PetPose::Interact) => "😸",
-        Some(PetPose::Sleep) => "😴",
+        Some(PetPose::InteractA) => "😸",
+        Some(PetPose::InteractB) => "😹",
+        Some(PetPose::SleepA) => "😴",
+        Some(PetPose::SleepB) => "😪",
         None => "🐾",
     };
 
     let label = move || match pose() {
         Some(PetPose::Idle) => "待機",
         Some(PetPose::Blink) => "眨眼",
-        Some(PetPose::Interact) => "互動",
-        Some(PetPose::Sleep) => "睡覺",
+        Some(PetPose::InteractA | PetPose::InteractB) => "互動",
+        Some(PetPose::SleepA | PetPose::SleepB) => "睡覺",
+
         None => "載入中",
     };
 
@@ -186,7 +217,7 @@ fn PetStatus(
 
     view! {
         <section class="pet-status">
-            <div class="pet-face">{face()}</div>
+            <div class="pet-face">{face}</div>
 
             <strong>{label}</strong>
 
@@ -316,17 +347,33 @@ mod tests {
     use super::*;
 
     #[test]
-    fn idle_can_project_to_blink() {
-        assert_eq!(project_pose(PetState::Idle, true), PetPose::Blink,);
+    fn idle_blink_has_priority() {
+        assert_eq!(project_pose(PetState::Idle, true, true,), PetPose::Blink,);
     }
 
     #[test]
-    fn sleeping_wins_over_blink() {
-        assert_eq!(project_pose(PetState::Sleeping, true), PetPose::Sleep,);
+    fn interacting_uses_animation_phase() {
+        assert_eq!(
+            project_pose(PetState::Interacting, false, false,),
+            PetPose::InteractA,
+        );
+
+        assert_eq!(
+            project_pose(PetState::Interacting, false, true,),
+            PetPose::InteractB,
+        );
     }
 
     #[test]
-    fn interacting_wins_over_blink() {
-        assert_eq!(project_pose(PetState::Interacting, true), PetPose::Interact,);
+    fn sleeping_uses_animation_phase() {
+        assert_eq!(
+            project_pose(PetState::Sleeping, false, false,),
+            PetPose::SleepA,
+        );
+
+        assert_eq!(
+            project_pose(PetState::Sleeping, false, true,),
+            PetPose::SleepB,
+        );
     }
 }

@@ -18,6 +18,8 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
 
       - name: Install Linux dependencies
         run: |
@@ -26,7 +28,12 @@ jobs:
           sudo apt-get install -y \
             build-essential \
             pkg-config \
-            libglib2.0-dev \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libxdo-dev \
+            librsvg2-dev \
             libwebkit2gtk-4.1-dev
 
       - name: Check native dependencies
@@ -46,11 +53,26 @@ jobs:
           echo "WebKitGTK:"
           pkg-config --modversion webkit2gtk-4.1
 
-      - name: Cargo check
-        run: cargo check --workspace --all-targets
+      - name: Install cargo-leptos
+        run: cargo install cargo-leptos --locked
 
-      - name: Cargo test
-        run: cargo test --workspace
+      - name: Check server
+        run: cargo check -p server --features ssr
+
+      - name: Check ui 
+        run: cargo check -p ui --features hydrate --target wasm32-unknown-unknown
+
+      - name: Install trunk
+        run: cargo install trunk --locked
+
+      - name: Check native workspace
+        run: cargo check --workspace --exclude desktop-pet-frontend
+
+      - name: Check desktop frontend
+        run: cargo check -p desktop-pet-frontend --target wasm32-unknown-unknown
+
+      - name: Test pet domain
+        run: cargo test -p pet-domain
 
   build:
     runs-on: ubuntu-latest
@@ -60,6 +82,8 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
 
       - name: Install Linux dependencies
         run: |
@@ -68,8 +92,26 @@ jobs:
           sudo apt-get install -y \
             build-essential \
             pkg-config \
-            libglib2.0-dev \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libxdo-dev \
+            librsvg2-dev \
             libwebkit2gtk-4.1-dev
 
-      - name: Build
-        run: cargo build --workspace --verbose
+      - name: Check native dependencies
+        run: cargo build --workspace --exclude desktop-pet-frontend --verbose
+
+      - name: Install cargo-leptos
+        run: cargo install cargo-leptos --locked
+
+      - name: Build server
+        run: cargo leptos build --release
+
+      - name: Install trunk
+        run: cargo install trunk --locked
+
+      - name: Build desktop
+        working-directory: apps/desktop_pet/frontend
+        run: trunk build --release

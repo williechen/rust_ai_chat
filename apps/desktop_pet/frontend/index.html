@@ -23,7 +23,7 @@
     };
 
     window.sendPetCommand = (command) => {
-      return invoke("send_pet_command", { ...command });
+      return invoke("send_pet_command", { command });
     };
 
     window.listenPetState = (callback) => {
@@ -49,7 +49,7 @@
             text: "互動",
             action: () => {
               void window
-                .sendPetCommand({ command: "interact" })
+                .sendPetCommand("interact")
                 .catch(console.warn);
             },
           },
@@ -58,7 +58,7 @@
             text: "睡覺",
             action: () => {
               void window
-                .sendPetCommand({ command: "sleep" })
+                .sendPetCommand("sleep")
                 .catch(console.warn);
             },
           },
@@ -67,7 +67,7 @@
             text: "醒來",
             action: () => {
               void window
-                .sendPetCommand({ command: "wake" })
+                .sendPetCommand("wake")
                 .catch(console.warn);
             },
           },

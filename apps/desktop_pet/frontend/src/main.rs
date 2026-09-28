@@ -29,7 +29,7 @@ fn apply_snapshot(
     set_snapshot: WriteSignal<Option<PetSnapshot>>,
 ) {
     let should_apply = snapshot
-        .get()
+        .get_untracked()
         .map(|current| incoming.revision >= current.revision)
         .unwrap_or(true);
 
@@ -82,7 +82,6 @@ fn project_pose(state: PetState, blinking: bool, animation_phase: bool) -> PetPo
                 PetPose::SleepA
             }
         }
-        PetState::Blinking => PetPose::Blink,
     }
 }
 
@@ -173,7 +172,7 @@ fn DragHandle() -> impl IntoView {
             aria-label="拖曳桌面小寵物"
         >
             <span
-                class="drag-handle-icon"
+                class="drag-grip"
                 data-tauri-drag-region
                 aria-hidden="true"
             >

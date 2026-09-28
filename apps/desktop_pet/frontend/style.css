@@ -13,6 +13,7 @@ body {
 }
 
 .pet-shell {
+  position: relative;
   width: 220px;
   padding: 20px;
   border-radius: 28px;

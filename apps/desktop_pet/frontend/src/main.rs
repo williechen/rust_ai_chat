@@ -219,7 +219,6 @@ fn PetStatus(
         Some(PetPose::Blink) => "眨眼",
         Some(PetPose::InteractA | PetPose::InteractB) => "互動",
         Some(PetPose::SleepA | PetPose::SleepB) => "睡覺",
-
         None => "載入中",
     };
 
@@ -374,7 +373,7 @@ fn ChatBubble(
         >
             <section class="chat-bubble">
                 <div class="chat-bubble__header">
-                    <strong>"跟小動物說話"</strong>
+                    <strong>"跟小寵物說話"</strong>
 
                     <button
                         type="button"

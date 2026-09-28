@@ -37,6 +37,7 @@ pub fn App() -> impl IntoView {
     view! {
         <main>
             <h1>"Rust AI Chat"</h1>
+            <ChatPage />
         </main>
     }
 }

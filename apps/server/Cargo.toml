@@ -8,6 +8,7 @@ default = []
 ssr = ["ui/ssr"]
 
 [dependencies]
+any_spawner.workspace = true
 axum.workspace = true
 
 chat-application = { path = "../../crates/chat_application" }

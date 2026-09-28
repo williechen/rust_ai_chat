@@ -4,16 +4,18 @@ mod ssr;
 mod state;
 mod ws;
 
+use any_spawner::Executor;
 use axum::{
     Router,
     routing::{any, get},
 };
 use leptos_axum::{site_pkg_dir_service, site_pkg_dir_service_route_path};
 use leptos_config::get_configuration;
-use std::io::Result;
 
-pub async fn application() -> Result<()> {
-    let conf = get_configuration(None).expect("load Leptos Configuration");
+pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
+    let _ = Executor::init_tokio();
+
+    let conf = get_configuration(None)?;
     let leptos_options = conf.leptos_options;
 
     let pkg_path = site_pkg_dir_service_route_path(&leptos_options);

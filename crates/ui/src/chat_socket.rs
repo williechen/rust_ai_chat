@@ -24,15 +24,21 @@ mod browser {
             let socket = WebSocket::new(url)
                 .map_err(|err| format!("Failed to create WebSocket: {:?}", err))?;
 
-            let onmessage = Closure::wrap(Box::new(move |event: MessageEvent| {
-                let Some(text) = event.data().as_string() else {
-                    return;
-                };
-                let Ok(event) = decode_server_event(&text) else {
-                    return;
-                };
-                on_event(event);
-            }) as Box<dyn FnMut(MessageEvent)>);
+            let onmessage =
+                Closure::wrap(
+                    Box::new(move |event: MessageEvent| match event.data().as_string() {
+                        Some(text) => {
+                            web_sys::console::error_1(&format!("Received text: {}", text).into());
+                            match decode_server_event(&text) {
+                                Ok(event) => on_event(event),
+                                Err(err) => web_sys::console::error_1(
+                                    &format!("Failed to decode server event: {:?}", err).into(),
+                                ),
+                            }
+                        }
+                        None => return,
+                    }) as Box<dyn FnMut(MessageEvent)>,
+                );
 
             socket.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
 
@@ -67,7 +73,7 @@ pub struct ChatSocket;
 
 #[cfg(not(target_arch = "wasm32"))]
 impl ChatSocket {
-    pub fn server_stud() -> Self {
+    pub fn server_stub() -> Self {
         Self
     }
 

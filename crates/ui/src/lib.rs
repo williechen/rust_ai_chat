@@ -63,7 +63,7 @@ pub fn ChatPage() -> impl IntoView {
     };
 
     #[cfg(not(target_arch = "wasm32"))]
-    let socket = Rc::new(ChatSocket::server_stud());
+    let socket = Rc::new(ChatSocket::server_stub());
 
     let send = {
         let socket = Rc::clone(&socket);

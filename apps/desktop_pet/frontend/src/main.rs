@@ -96,6 +96,9 @@ fn App() -> impl IntoView {
 
     let (animation_phase, set_animation_phase) = signal(false);
 
+    let (chat_open, set_chat_open) = signal(false);
+    let (chat_input, set_chat_input) = signal(String::new());
+
     {
         let snapshot_reader = snapshot;
         let snapshot_writer = set_snapshot;
@@ -141,6 +144,19 @@ fn App() -> impl IntoView {
                 snapshot
                 set_snapshot
                 set_error
+            />
+
+            <button
+                class="chat-trigger"
+                type="button"
+                on:click=move |_| {set_chat_open.set(true);}
+            >"聊天"</button>
+
+            <ChatBubble
+                 chat_open
+                 set_chat_open
+                 chat_input
+                 set_chat_input
             />
 
             <ErrorMessage error />
@@ -342,6 +358,62 @@ fn PetControls(
                 "醒來"
             </button>
         </section>
+    }
+}
+
+#[component]
+fn ChatBubble(
+    chat_open: ReadSignal<bool>,
+    set_chat_open: WriteSignal<bool>,
+    chat_input: ReadSignal<String>,
+    set_chat_input: WriteSignal<String>,
+) -> impl IntoView {
+    view! {
+        <Show
+            when=move || chat_open.get()
+            fallback=|| ()
+        >
+            <section class="chat-bubble">
+                <div class="chat-bubble__header">
+                    <strong>"跟小動物說話"</strong>
+
+                    <button
+                        type="button"
+                        class="chat-bubble__close"
+                        aria-label="關閉對話"
+                        on:click=move |_| {
+                            set_chat_open.set(false);
+                        }
+                    >
+                        "×"
+                    </button>
+                </div>
+
+                <input
+                    class="chat-bubble__input"
+                    type="text"
+                    placeholder="輸入一句話…"
+
+                    prop:value=move || {
+                        chat_input.get()
+                    }
+
+                    on:input=move |event| {
+                        set_chat_input.set(
+                            event_target_value(&event)
+                        );
+                    }
+                />
+
+                <button
+                    class="chat-bubble__send"
+                    type="button"
+                    prop:disabled=true
+                >
+                    "送出（Day 11）"
+                </button>
+            </section>
+        </Show>
     }
 }
 

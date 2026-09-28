@@ -63,3 +63,46 @@ button {
   letter-spacing: 4px;
   opacity: 0.65;
 }
+
+.chat-bubble {
+  position: absolute;
+  right: 12px;
+  bottom: 72px;
+
+  width: 220px;
+  padding: 12px;
+
+  border-radius: 14px;
+  background: rgba(30, 30, 30, 0.92);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+}
+
+.chat-bubble__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.chat-bubble__close {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.chat-bubble__input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+}
+
+.chat-bubble__send {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 10px;
+}
+
+.chat-trigger {
+  cursor: pointer;
+}

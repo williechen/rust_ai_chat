@@ -4935,6 +4935,7 @@ version = "0.1.0"
 dependencies = [
  "chat-domain",
  "leptos",
+ "leptos_router",
  "serde_json",
  "shared",
  "uuid",

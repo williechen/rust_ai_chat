@@ -4,6 +4,11 @@ use std::rc::Rc;
 
 use chat_domain::ChatMessage;
 use leptos::prelude::*;
+use leptos_router::{
+    components::{Route, Router, Routes},
+    hooks::{use_navigate, use_params_map},
+    path,
+};
 use shared::{ClientEvent, ServerEvent};
 use uuid::Uuid;
 
@@ -35,17 +40,55 @@ pub fn hydrate() {
 #[component]
 pub fn App() -> impl IntoView {
     view! {
-        <main>
-            <h1>"Rust AI Chat"</h1>
-            <ChatPage />
-        </main>
+        <Router>
+            <main>
+                <h1>"Rust AI Chat"</h1>
+                <Routes fallback=|| view!{
+                    <p>"404 - Page Not Found"</p>
+                }>
+                    <Route path=path!("/") view=HomePage />
+                    <Route path=path!("/room/:room_id") view=RoomPage />
+                </Routes>
+            </main>
+        </Router>
     }
 }
 
 #[component]
-pub fn ChatPage() -> impl IntoView {
-    let room_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").expect("Invalid room ID");
+fn HomePage() -> impl IntoView {
+    let navigate = use_navigate();
+    view! {
+        <p>"Welcome to Rust AI Chat!"</p>
+        <button
+            type="button"
+            on:click=move |_| {
+                let room_id = Uuid::new_v4();
+                let path = format!("/room/{}", room_id);
+                navigate(&path, Default::default());
+            }
+        >"Create Room"</button>
+    }
+}
 
+#[component]
+fn RoomPage() -> impl IntoView {
+    let params = use_params_map();
+
+    move || {
+        let room_id = params
+            .read()
+            .get("room_id")
+            .and_then(|value| Uuid::parse_str(&value).ok());
+
+        match room_id {
+            Some(room_id) => view! { <ChatPage room_id /> }.into_any(),
+            None => view! { <p>"Invalid Room Id"</p> }.into_any(),
+        }
+    }
+}
+
+#[component]
+pub fn ChatPage(room_id: Uuid) -> impl IntoView {
     let (draft, set_draft) = signal(String::new());
     let (messages, set_messages) = signal(Vec::<ChatMessage>::new());
 

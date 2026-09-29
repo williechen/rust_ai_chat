@@ -56,8 +56,11 @@ jobs:
       - name: Install cargo-leptos
         run: cargo install cargo-leptos --locked
 
-      - name: Check server
+      - name: Check server ssr
         run: cargo check -p server --features ssr
+
+      - name: Check ui ssr
+        run: cargo check -p ui --features ssr
 
       - name: Check ui 
         run: cargo check -p ui --features hydrate --target wasm32-unknown-unknown

@@ -2,10 +2,18 @@
 
 Rust AI Chat 是一個以 **實作帶動學習** 的 Rust workspace。
 
-這個專案的主要目的，不是單純做出一個聊天室或桌面寵物，而是用兩個可以長期演進的實際產品，**深入淺出地學習 Rust、Leptos 與 AI application architecture**：
+這個 repository 的第一目標，是透過可持續演進的真實專案，**深入淺出地學習 Rust、Leptos 與 AI**；聊天室與桌面 AI Pet 都是學習載體，而不是為了堆功能而堆功能。
 
-1. **AI 多主題多人聊天室**
-2. **會主動學習、主動提問與主動教學的 Desktop AI Pet**
+三條核心主線是：
+
+1. **Rust**：ownership、type system、async、domain design、application architecture、persistence、observability
+2. **Leptos**：reactive system、SSR / hydration、routing、Resource / Suspense、ErrorBoundary、server functions、desktop UI integration
+3. **AI**：model abstraction、streaming、Structured Output、Function Calling、memory、RAG、MCP、Agent Runtime、multi-agent orchestration
+
+這些能力會落在兩個長期產品目標上：
+
+1. **AI 多主題、多人、多角色即時聊天室**
+2. **會透過學習與教學主動詢問、主動提問、主動引導學習的 Desktop AI Pet**
 
 整個 repository 會從最基礎的 Rust domain model、async、WebSocket、Leptos reactive UI 開始，一步一步加入 PostgreSQL、AI model abstraction、streaming、memory、RAG、MCP、Agent Runtime 與 OpenTelemetry。
 
@@ -58,7 +66,7 @@ Rust AI Chat 是一個以 **實作帶動學習** 的 Rust workspace。
 
 ---
 
-# 最終目標一：AI 多主題、多人聊天室
+# 最終目標一：多主題、多人、多 AI 角色聊天室
 
 目前的 Web Chat 不是只要做到「使用者輸入一句、AI 回一句」。
 
@@ -126,7 +134,11 @@ AI Persona 應該是聊天室中的參與者：
 
 希望達到的體驗是：
 
-> AI 自然地融入群組對話，而不是每次都變成「人類向機器問問題 → 機器回答」。
+> AI 自然地融入群組對話，讓人類先感受到「正在和房間裡的參與者聊天」，而不是每一次互動都被 UI 與流程刻意框成「現在要向 AI 發問」。
+
+也就是說，AI 不是獨立的問答入口，而是與真人一起存在於 room conversation 裡：它可以等待、插話、回應特定對象、延續主題，也可以和其他角色互動。
+
+系統仍應保留可查詢的 AI 身份與透明度資訊；目標是降低「AI 助手介面感」，讓角色自然融入，而不是用 AI 冒充某個真實的人。
 
 技術上會特別研究：
 
@@ -144,21 +156,13 @@ AI Persona 應該是聊天室中的參與者：
 - persistence
 - observability
 
-### 關於 AI 身份
-
-我們希望 AI Persona 的互動足夠自然，不讓「AI 操作介面」破壞聊天體驗；但系統設計仍應保留可查詢的 AI 身份與透明度資訊，避免用 AI 冒充真實的人。
-
-也就是把重點放在：
-
-> **自然融入對話，而不是欺騙使用者。**
-
 ---
 
 # 最終目標二：會成長的 Desktop AI Pet
 
-Desktop AI Pet 也不是「把 ChatGPT 放進一個小視窗」。
+Desktop AI Pet 也不是「把 ChatGPT 放進一個小視窗」，更不是只等待主人提出問題再回答。
 
-最終目標是一個會隨著互動逐步形成行為、知識與教學能力的桌面 AI 角色。
+最終目標是一個能透過**學習與教學循環**逐步形成記憶、知識狀態、互動策略與教學能力的桌面 AI 角色；它要能判斷什麼時候應該主動詢問、主動提問、主動複習或換一種方式教學。
 
 初期：
 
@@ -790,16 +794,14 @@ cargo check -p desktop-pet-frontend --target wasm32-unknown-unknown
 
 # 專案真正想完成的事情
 
-最後，這個 repository 的目標可以濃縮成兩句話。
+這個 repository 的核心不是「完成兩個 AI App」，而是：
+
+> **透過真正會持續長大的產品，深入淺出地學會 Rust、Leptos 與 AI，並理解它們如何共同組成可維護、可演進、可觀測的 AI 系統。**
 
 ### Chat
 
-> 用 Rust + Leptos 建立一個真正的多主題、多使用者、多 AI Persona 即時聊天室，讓 AI 自然成為群組互動的一部分，並藉此學會 realtime system、AI orchestration、memory、RAG、agent 與 observability。
+> 用 Rust + Leptos 建立一個真正的多主題、多使用者、多 AI Persona 即時聊天室。AI 不以獨立助手入口存在，而是像其他 room participant 一樣依照角色、上下文、turn-taking、memory 與 policy 自然參與群組互動；介面不需要不斷提醒使用者「現在正在問 AI」，但 AI 身份仍可被查詢與辨識。
 
 ### AI Pet
 
-> 用 Tauri + Leptos + Rust AI Core 建立一個會記憶、會學習、會主動詢問、會主動出題、會教學的桌面 AI 角色，而不是只會等待主人提問的聊天機器人。
-
-這兩條產品線共享同一個學習核心：
-
-> **透過真正會持續長大的產品，深入淺出地學會 Rust、Leptos 與 AI。**
+> 用 Tauri + Leptos + Rust AI Core 建立一個會記憶、會學習，也會教學的桌面 AI 角色。它不只回答主人的問題，而會根據學習紀錄與互動狀態主動詢問、主動提問、主動出題、安排複習、調整難度與改變解釋方式，逐步從被動 assistant 演進成 proactive learning / teaching agent。

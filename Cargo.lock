@@ -932,6 +932,7 @@ dependencies = [
 name = "desktop-pet"
 version = "0.1.0"
 dependencies = [
+ "ai-core",
  "pet-domain",
  "serde",
  "tauri",

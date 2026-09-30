@@ -1,6 +1,6 @@
 use crate::hub::RoomHub;
 use chat_application::ChatService;
-use sqlx::postgres::PgPool;
+use sqlx::PgPool;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]

@@ -31,7 +31,7 @@ mod tests {
         let message = service.send_message(room_id, "hello".to_string());
 
         assert_eq!(message.room_id, room_id);
-        assert_eq!(message.role, MessageAuthor::AnonymousUser);
+        assert_eq!(message.author, MessageAuthor::AnonymousUser);
         assert_eq!(message.content, "hello");
     }
 }

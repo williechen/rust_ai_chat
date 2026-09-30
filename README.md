@@ -1,22 +1,363 @@
 # Rust AI Chat
 
-Rust AI Chat 是一個以 Rust workspace 組成的學習／實作專案，核心包含：
+Rust AI Chat 是一個以 **實作帶動學習** 的 Rust workspace。
 
-- **Axum + Leptos 0.8** 的即時聊天室
-- **WebSocket per-room broadcast** 即時訊息
-- **PostgreSQL + SQLx** 基礎持久化層
-- **Tauri 2 + Leptos** 桌面 AI 小寵物
-- 可擴充到 **AI Persona、多角色聊天室、streaming、presence、typing、observability** 的共用事件模型
+這個專案的主要目的，不是單純做出一個聊天室或桌面寵物，而是用兩個可以長期演進的實際產品，**深入淺出地學習 Rust、Leptos 與 AI application architecture**：
 
-目前專案已完成 Day 1～Day 12 的核心路線；AI 多角色聊天室的資料模型與 WebSocket event contract 已開始預留，但真正的多角色 orchestrator、AI streaming 與訊息持久化仍屬下一階段。
+1. **AI 多主題多人聊天室**
+2. **會主動學習、主動提問與主動教學的 Desktop AI Pet**
 
-> README 內容以目前 `main` 分支實際程式碼為準，不把 roadmap 中尚未落地的功能列為已完成。
+整個 repository 會從最基礎的 Rust domain model、async、WebSocket、Leptos reactive UI 開始，一步一步加入 PostgreSQL、AI model abstraction、streaming、memory、RAG、MCP、Agent Runtime 與 OpenTelemetry。
 
-## 目前狀態
+> README 與後續教學內容以目前 `main` 分支的實際程式碼為準。  
+> Roadmap 是學習方向，不會把尚未落地的功能描述成已完成。
 
-### Web 聊天室
+---
 
-已實作：
+## 專案核心：不是堆功能，而是學會怎麼設計 Rust AI 系統
+
+這個 repository 希望回答的不只是：
+
+> 「怎麼用 Rust 呼叫 AI API？」
+
+而是從實際系統中逐步理解：
+
+- Rust ownership / borrowing / type system 如何影響 application architecture
+- trait 如何把 domain、application 與 infrastructure 解耦
+- async Rust、Tokio、channel、broadcast 如何組成即時系統
+- Leptos signal、effect、resource、SSR、hydration 如何運作
+- Axum、WebSocket 與 Leptos 如何整合
+- PostgreSQL + SQLx 如何建立可維護的 persistence layer
+- AI model abstraction 如何避免 application 綁死單一 provider
+- Structured Output、Function Calling、RAG、MCP、Agent Runtime 如何逐層建立
+- AI memory、persona、context 與 orchestration 如何設計
+- OpenTelemetry 如何追蹤 `agent.run → model.turn → tool.call → rag.retrieve → database`
+- Tauri + Leptos 如何把同一套 Rust domain / AI core 帶到桌面應用
+
+學習方式不是一次把所有 framework 塞進專案，而是：
+
+```text
+先理解問題
+    ↓
+建立最小可運作模型
+    ↓
+看清楚 Rust / Leptos / AI 的原理
+    ↓
+加入下一層能力
+    ↓
+重構成可延伸架構
+    ↓
+回頭 code review 真實 repository
+```
+
+每一階段都應該能回答三件事：
+
+1. **現在解決什麼問題？**
+2. **Rust / Leptos / AI 在這裡各自負責什麼？**
+3. **為什麼下一步需要新的 abstraction？**
+
+---
+
+# 最終目標一：AI 多主題、多人聊天室
+
+目前的 Web Chat 不是只要做到「使用者輸入一句、AI 回一句」。
+
+最終目標是一個真正的：
+
+> **Multi-topic + Multi-user + Multi-AI-Persona realtime chat system**
+
+同一個平台可以存在多個主題房間，例如：
+
+```text
+Rust
+Leptos
+AI
+Database
+Game
+Daily Life
+Project Discussion
+...```
+
+每個房間可以同時包含：
+
+- 多位真人使用者
+- 多個 AI Persona
+- 不同角色設定
+- 不同知識、記憶與行為模式
+- 不同的發言頻率與主動程度
+
+概念上會變成：
+
+```text
+                         ┌── Human A
+                         ├── Human B
+Room / Topic ────────────┼── AI Persona A
+                         ├── AI Persona B
+                         └── AI Persona C
+                                │
+                                ▼
+                         Persona Runtime
+                                │
+                  ┌─────────────┼─────────────┐
+                  ▼             ▼             ▼
+               Memory          RAG          Tools
+                  │             │             │
+                  └─────────────┼─────────────┘
+                                ▼
+                            AI Model
+```
+
+## AI Persona 的目標
+
+AI 不應該只是聊天室旁邊的一個固定「AI 助手按鈕」。
+
+AI Persona 應該是聊天室中的參與者：
+
+- 有自己的名字與角色設定
+- 有不同專長
+- 有不同語氣與互動方式
+- 可以理解目前房間主題
+- 可以理解最近的多人對話
+- 可以判斷現在是否適合加入
+- 可以主動發言
+- 可以回應特定使用者
+- 可以與其他 AI Persona 互動
+- 可以記住與房間、使用者、主題相關的重要資訊
+
+希望達到的體驗是：
+
+> AI 自然地融入群組對話，而不是每次都變成「人類向機器問問題 → 機器回答」。
+
+技術上會特別研究：
+
+- speaker selection
+- turn-taking
+- silence / cooldown
+- persona memory
+- room context
+- topic context
+- reply target
+- proactive message
+- multi-agent coordination
+- duplicate-response suppression
+- streaming
+- persistence
+- observability
+
+### 關於 AI 身份
+
+我們希望 AI Persona 的互動足夠自然，不讓「AI 操作介面」破壞聊天體驗；但系統設計仍應保留可查詢的 AI 身份與透明度資訊，避免用 AI 冒充真實的人。
+
+也就是把重點放在：
+
+> **自然融入對話，而不是欺騙使用者。**
+
+---
+
+# 最終目標二：會成長的 Desktop AI Pet
+
+Desktop AI Pet 也不是「把 ChatGPT 放進一個小視窗」。
+
+最終目標是一個會隨著互動逐步形成行為、知識與教學能力的桌面 AI 角色。
+
+初期：
+
+```text
+主人提問
+   ↓
+AI Pet 回答
+```
+
+但這只是起點。
+
+真正希望做到的是：
+
+```text
+觀察互動 / 活動 / 學習紀錄
+            │
+            ▼
+         Memory
+            │
+            ▼
+       Learning Model
+            │
+    ┌───────┼────────┐
+    ▼       ▼        ▼
+主動詢問  主動提問  主動教學
+    │       │        │
+    └───────┼────────┘
+            ▼
+       與主人互動
+            │
+            ▼
+      更新理解與記憶
+```
+
+## AI Pet 不只是回答問題
+
+未來 AI Pet 應該能夠：
+
+- 主動詢問主人目前在做什麼
+- 根據之前的學習內容追問
+- 發現長時間沒有理解的概念
+- 用不同方式重新解釋
+- 主動出題
+- 根據回答調整題目難度
+- 建立複習節奏
+- 記住正在學習的主題
+- 主動提醒尚未完成的學習內容
+- 從「回答問題」逐步變成「陪伴學習」
+- 從「被動 assistant」逐步變成「proactive learning agent」
+
+例如學 Rust 時，不只是：
+
+```text
+User:
+什麼是 ownership？
+
+Pet:
+ownership 是……
+```
+
+而可以演進成：
+
+```text
+Pet:
+昨天我們講到 ownership 和 borrowing。
+
+如果一個 String 被 move 進 function，
+你覺得原本的變數還能不能使用？
+
+為什麼？
+```
+
+接著依照回答：
+
+```text
+回答正確
+    ↓
+增加難度
+    ↓
+borrow / mutable borrow
+    ↓
+lifetime
+```
+
+或：
+
+```text
+回答不完整
+    ↓
+換一種解釋
+    ↓
+給最小 Rust example
+    ↓
+再問一次
+```
+
+因此 AI Pet 後續會需要研究：
+
+- conversation memory
+- long-term memory
+- learner model
+- knowledge state
+- question generation
+- teaching strategy
+- active recall
+- spaced repetition
+- activity loop
+- proactive trigger
+- tool usage
+- RAG
+- MCP
+- Agent Runtime
+- desktop event integration
+- AI observability
+
+---
+
+# Rust / Leptos / AI 三條學習主線
+
+## Rust
+
+從 repository 本身學習：
+
+- workspace
+- crate boundary
+- domain model
+- enum / struct
+- ownership
+- borrowing
+- `Arc`
+- `Mutex`
+- traits
+- trait object
+- error handling
+- async / await
+- Tokio
+- broadcast channel
+- application service
+- repository pattern
+- dependency inversion
+- state machine
+- testing
+
+## Leptos
+
+逐步理解：
+
+- CSR
+- SSR
+- hydration
+- routing
+- dynamic routes
+- signals
+- derived state
+- effects
+- event handling
+- component composition
+- browser WebSocket bridge
+- Tauri bridge
+- Resource / Suspense
+- ErrorBoundary
+- server functions
+- islands / partial hydration
+
+## AI
+
+不是從「prompt engineering 技巧」開始，而是從 application architecture 建立：
+
+```text
+ChatModel abstraction
+        ↓
+Real Provider
+        ↓
+Streaming
+        ↓
+Structured Output
+        ↓
+Function Calling
+        ↓
+RAG
+        ↓
+Memory
+        ↓
+MCP
+        ↓
+Agent Runtime
+        ↓
+Multi Persona / Proactive Agent
+        ↓
+OpenTelemetry AI Observability
+```
+
+---
+
+# 目前 Repository 狀態
+
+## Web 聊天室
+
+目前已實作：
 
 - Leptos 0.8 SSR + hydration
 - Leptos Router：`/`、`/room/:room_id`
@@ -29,9 +370,14 @@ Rust AI Chat 是一個以 Rust workspace 組成的學習／實作專案，核心
 - `rooms` table migration
 - health check：`/health`
 
-目前聊天室訊息仍只存在記憶體 broadcast 流程中，**尚未寫入 PostgreSQL**，重新整理頁面也不會載入歷史訊息。
+目前聊天室訊息仍只存在記憶體 broadcast flow：
 
-### AI 能力
+- 尚未寫入 PostgreSQL
+- reload 後不會載入 history
+- 尚未建立 users / messages / personas persistence
+- Web chat 尚未真正接入 AI model
+
+## AI Core
 
 `crates/ai_core` 已建立：
 
@@ -41,661 +387,123 @@ Rust AI Chat 是一個以 Rust workspace 組成的學習／實作專案，核心
 - `AiError`
 - `MockChatModel`
 
-目前 Web 聊天室尚未把 `ChatModel` 接到 WebSocket message flow，因此使用者訊息不會自動產生 AI 回覆。
+這代表 application layer 可以依賴抽象介面，而不是直接依賴某一家 AI provider。
 
-共用 protocol 已預留：
+## AI Persona 基礎
 
-- `ServerEvent::AiDelta`
-- `ServerEvent::AiCompleted`
-- `ServerEvent::PresenceChanged`
-- `ClientEvent::Typing`
-
-這些 event 目前只是協定層準備，尚未完整實作 server-side 行為。
-
-### AI 多角色聊天室
-
-Domain 已把訊息作者從單純的 user/assistant role 擴充成：
+Chat domain 的作者模型已支援：
 
 - `AnonymousUser`
 - `User { user_id }`
 - `Ai { persona_id }`
 - `System`
 
-因此一則 AI 訊息可以帶有不同的 `persona_id`，這是未來同一房間存在多個 AI 角色的基礎。
+因此 AI 訊息已經可以用 `persona_id` 區分不同角色。
 
-預計的資料流會是：
-
-```text
-User Message
-    │
-    ▼
-Room
-    │
-    ├── Persona A ──► AI Model
-    ├── Persona B ──► AI Model
-    └── Persona C ──► AI Model
-             │
-             ▼
-      MessageAuthor::Ai
-        { persona_id }
-             │
-             ▼
-        Room WebSocket
-```
-
-目前尚未實作：
+目前尚未完整實作：
 
 - `AiPersona` 設定模型
-- room 與 AI persona membership
-- 多 persona 排程／orchestrator
+- room / persona membership
 - persona-specific system prompt
-- AI streaming 真正串入 WebSocket
-- AI 訊息資料庫持久化
-
-因此目前 README 將它列為**架構方向與已具備的基礎能力**，而不是已完成的聊天室功能。
-
-### Desktop AI Pet
-
-桌面 AI 寵物不是單純的 UI demo，而是目前 repository 中另一條獨立的 application path：
-
-```text
-Leptos WASM UI
-    │
-    ▼
-JavaScript bridge
-    │
-    ▼
-Tauri invoke / event
-    │
-    ├── PetMachine
-    │     └── pet_domain
-    │
-    └── AiState
-          └── ChatModel
-                └── MockChatModel
-```
-
-目前已經具備 **桌面視窗、寵物狀態機、Tauri command/event、Leptos reactive UI，以及 AI model abstraction**；但 Pet state 的 Tauri state registration 與聊天 frontend bridge 還沒有完全接好，所以目前仍屬「架構已成形、整合尚未完成」的狀態。
-
-#### 1. Tauri Desktop Shell
-
-`apps/desktop_pet/tauri.conf.json` 目前定義：
-
-- product name：`Rust AI Desktop Pet`
-- identifier：`dev.rustai.desktop-pet`
-- 視窗大小：`320 × 360`
-- `resizable: false`
-- `decorations: false`
-- `transparent: true`
-- `alwaysOnTop: true`
-- `shadow: false`
-- dev frontend：`http://localhost:1420`
-- frontend build：Trunk
-
-因此這個 app 的設計方向是「漂浮在桌面上的小寵物」，而不是一般有標題列的桌面視窗。
-
-Capability 目前只開放：
-
-```text
-core:default
-core:window:allow-start-dragging
-```
-
-Leptos UI 透過 `data-tauri-drag-region` 實作視窗拖曳。
-
-#### 2. Pet Domain State Machine
-
-`crates/pet_domain` 把寵物行為和 UI 分離。
-
-目前 domain state：
-
-```rust
-PetState::Idle
-PetState::Interacting
-PetState::Sleeping
-```
-
-可接受的 command：
-
-```rust
-PetCommand::Interact
-PetCommand::FinishInteraction
-PetCommand::Sleep
-PetCommand::Wake
-```
-
-目前允許的 transition：
-
-```text
-Idle
- ├── Interact ─────────────► Interacting
- └── Sleep ────────────────► Sleeping
-
-Interacting
- ├── FinishInteraction ────► Idle
- └── Sleep ────────────────► Sleeping
-
-Sleeping
- └── Wake ─────────────────► Idle
-```
-
-其他 transition 會回傳：
-
-```rust
-PetError::InvalidTransition
-```
-
-例如 sleeping 狀態直接執行 `Interact` 目前會被拒絕。
-
-#### 3. PetSnapshot 與 revision
-
-UI 不直接持有 `PetMachine`，而是接收：
-
-```rust
-PetSnapshot {
-    state,
-    revision,
-}
-```
-
-每次合法 state transition：
-
-```text
-dispatch command
-    │
-    ▼
-change state
-    │
-    ▼
-revision += 1
-    │
-    ▼
-return PetSnapshot
-```
-
-frontend 的 `apply_snapshot` 只接受 revision 不小於目前 snapshot 的資料：
-
-```text
-incoming.revision >= current.revision
-```
-
-這是目前用來避免較舊狀態覆蓋較新狀態的基礎機制。
-
-#### 4. Tauri Pet Commands
-
-Desktop backend 已定義兩個寵物 command：
-
-```rust
-get_pet_state()
-send_pet_command(command)
-```
-
-預期資料流：
-
-```text
-Leptos UI
-    │
-    ▼
-window.sendPetCommand(...)
-    │
-    ▼
-Tauri invoke("send_pet_command")
-    │
-    ▼
-PetMachine::dispatch(...)
-    │
-    ▼
-PetSnapshot
-    │
-    ├── command return value
-    │
-    └── emit("pet://state-changed")
-```
-
-frontend 同時會：
-
-- 啟動時呼叫 `get_pet_state`
-- 訂閱 `pet://state-changed`
-- 收到 snapshot 後經過 revision 檢查再更新 UI
-
-目前有一個重要的 runtime wiring 尚未完成：
-
-`get_pet_state` 與 `send_pet_command` 都要求：
-
-```rust
-State<Mutex<PetMachine>>
-```
-
-但目前 `tauri::Builder` 只註冊：
-
-```rust
-.manage(AiState::new(Arc::new(MockChatModel)))
-```
-
-尚未看到：
-
-```rust
-.manage(Mutex::new(PetMachine::default()))
-```
-
-因此 PetMachine 的 managed state 還需要補上，才能讓這兩個 command 的 state injection 完整成立。
-
-#### 5. Leptos Pet UI
-
-Desktop frontend 使用 Leptos CSR。
-
-目前主要 component：
-
-```text
-App
-├── DragHandle
-├── BlinkController
-├── AnimationClock
-├── PetStatus
-├── PetControls
-├── ChatBubble
-└── ErrorMessage
-```
-
-UI 使用 signals 管理：
-
-- pet snapshot
-- error
-- blink state
-- animation phase
-- chat bubble open/close
-- chat input
-
-#### 6. Pet Pose Projection
-
-Domain 只知道：
-
-```text
-Idle
-Interacting
-Sleeping
-```
-
-動畫 pose 則留在 UI：
-
-```rust
-PetPose::Idle
-PetPose::Blink
-PetPose::InteractA
-PetPose::InteractB
-PetPose::SleepA
-PetPose::SleepB
-```
-
-也就是：
-
-```text
-PetState
-    +
-Blink flag
-    +
-Animation phase
-    │
-    ▼
-PetPose
-    │
-    ▼
-visual representation
-```
-
-這樣可以避免把 animation frame 塞進 domain model。
-
-目前畫面暫時使用 emoji：
-
-- 😺 Idle
-- 😻 Blink
-- 😸 / 😹 Interacting
-- 😴 / 😪 Sleeping
-
-未來可以直接把 `PetPose` mapping 換成 sprite、WebP、SVG、Lottie 或其他 animation asset，而不需要改 `pet_domain`。
-
-#### 7. Blink Controller
-
-`BlinkController` 每 4 秒檢查一次：
-
-```text
-PetState == Idle ?
-    │
-    ├── no  → blinking = false
-    │
-    └── yes → blinking = true
-               │
-               └── 180 ms 後回 false
-```
-
-因此只有 idle pet 會自動眨眼。
-
-#### 8. Animation Clock
-
-`AnimationClock` 每 650 ms 切換一次：
-
-```text
-animation_phase = !animation_phase
-```
-
-Interacting 和 Sleeping 根據這個 phase 在 A / B pose 之間切換。
-
-目前這是最簡單的 frame animation clock；之後可以替換成更完整的 animation timeline。
-
-#### 9. Pet Controls
-
-目前 UI 提供：
-
-- 互動
-- 結束
-- 睡覺
-- 醒來
-
-每個操作都走同一條 command flow：
-
-```text
-button click
-    │
-    ▼
-dispatch_command(...)
-    │
-    ▼
-bridge::send_pet_command(...)
-    │
-    ▼
-Tauri
-    │
-    ▼
-PetMachine
-```
-
-錯誤會寫入 `error` signal，再由 `ErrorMessage` 顯示。
-
-#### 10. Context Menu
-
-對寵物按右鍵會呼叫：
-
-```text
-showPetContextMenu(x, y)
-```
-
-JavaScript 使用 Tauri menu API 建立 context menu，目前包含：
-
-- 互動
-- 睡覺
-- 醒來
-
-menu action 仍然呼叫同一個 `sendPetCommand`，因此 UI button 與 context menu 共用同一個 domain command path。
-
-#### 11. AI Core
-
-AI pet backend 已經接入 `crates/ai_core`。
-
-目前 abstraction：
-
-```rust
-#[async_trait]
-pub trait ChatModel: Send + Sync {
-    async fn chat(
-        &self,
-        request: ChatRequest,
-    ) -> Result<ChatResponse, AiError>;
-}
-```
-
-Tauri application 使用：
-
-```rust
-AiState {
-    model: Arc<dyn ChatModel>
-}
-```
-
-目前實際注入：
-
-```text
-Arc<dyn ChatModel>
-        │
-        ▼
-MockChatModel
-```
-
-所以 application layer 已經不是直接依賴特定 AI provider，而是依賴 `ChatModel` interface。
-
-未來可把 `MockChatModel` 替換成真正 provider，而不必改 Tauri command 的呼叫方式。
-
-#### 12. chat_with_pet
-
-Desktop backend 已定義：
-
-```rust
-#[tauri::command]
-async fn chat_with_pet(
-    message: String,
-    state: State<'_, AiState>,
-) -> Result<String, String>
-```
-
-目前 backend flow：
-
-```text
-message
-   │
-   ▼
-ChatRequest::new(message)
-   │
-   ▼
-AiState.model
-   │
-   ▼
-ChatModel::chat
-   │
-   ▼
-MockChatModel
-   │
-   ▼
-"mock: {message}"
-```
-
-空白訊息會由 `AiError::EmptyMessage` 拒絕。
-
-這表示 **AI pet backend 的 chat abstraction 已經存在**。
-
-#### 13. ChatBubble 現況
-
-Leptos frontend 已經有：
-
-- 「聊天」按鈕
-- ChatBubble
-- input
-- close button
-- `chat_input` signal
-
-但目前：
-
-```rust
-prop:disabled=true
-```
-
-所以送出按鈕還不能使用。
-
-而且 `frontend/src/bridge.rs` 目前只有：
-
-- `get_pet_state`
-- `send_pet_command`
-- `listen_pet_state`
-- `show_pet_context_menu`
-
-還沒有：
-
-```rust
-chat_with_pet(...)
-```
-
-`index.html` 也尚未提供：
-
-```javascript
-window.chatWithPet = (...) =>
-    invoke("chat_with_pet", ...)
-```
-
-因此目前狀態是：
-
-```text
-ChatBubble UI                    ✅
-chat input state                 ✅
-Tauri chat_with_pet command      ✅
-ChatModel abstraction            ✅
-MockChatModel                    ✅
-
-JS invoke bridge                 ❌
-Rust WASM bridge                 ❌
-Send button                      ❌ disabled
-AI response state                ❌
-Conversation history             ❌
-Streaming                        ❌
-Real model provider              ❌
-```
-
-#### 14. AI Pet 完整架構方向
-
-目前 architecture 可以自然演進成：
-
-```mermaid
-flowchart LR
-    UI["Leptos Pet UI"]
-    Bubble["ChatBubble"]
-    Bridge["WASM / JS Bridge"]
-    Tauri["Tauri Commands"]
-    Pet["PetMachine"]
-    AI["AiState"]
-    Model["ChatModel"]
-    Provider["AI Provider"]
-
-    UI --> Pet
-    UI --> Bubble
-    Bubble --> Bridge
-    Bridge --> Tauri
-
-    Tauri --> Pet
-    Tauri --> AI
-    AI --> Model
-    Model --> Provider
-```
-
-未來 AI response 還可以反過來影響 pet behavior：
-
-```text
-AI response
-    │
-    ├── emotion / intent
-    │
-    ▼
-PetCommand
-    │
-    ▼
-PetMachine
-    │
-    ▼
-PetState
-    │
-    ▼
-PetPose / animation
-```
-
-這樣 AI pet 才會從「有聊天框的桌面寵物」進一步變成真正由 AI 對話驅動行為的 desktop agent。
-
-#### 15. Desktop AI Pet 已完成 / 未完成
-
-| 能力 | 狀態 |
-| --- | --- |
-| Tauri 2 desktop shell | ✅ |
-| Transparent / always-on-top window | ✅ |
-| Window drag region | ✅ |
-| Leptos CSR frontend | ✅ |
-| Pet domain state machine | ✅ |
-| Pet commands | ✅ |
-| Pet snapshot revision | ✅ |
-| Blink behavior | ✅ |
-| Simple frame animation | ✅ |
-| Context menu | ✅ |
-| Tauri pet commands | ✅ |
-| Tauri state-change event | ✅ |
-| `ChatModel` abstraction | ✅ |
-| `MockChatModel` | ✅ |
-| `chat_with_pet` backend command | ✅ |
-| Managed `PetMachine` registration | ⚠️ 尚需補上 |
-| ChatBubble UI | ✅ |
-| Frontend chat invoke bridge | ❌ |
-| Chat send action | ❌ |
-| AI response rendering | ❌ |
-| Conversation history | ❌ |
-| Streaming response | ❌ |
-| Real AI provider | ❌ |
-| AI-driven pet emotion/state | ❌ |
-| Persistence | ❌ |
-| Desktop AI observability | ❌ |
-
-#### 16. AI Pet 下一步
-
-以目前 repository 實作來看，AI pet 最合理的下一段不是重寫架構，而是把已經存在的 pieces 串起來：
-
-1. 在 Tauri Builder 註冊 `Mutex<PetMachine>`
-2. 在 `index.html` 加入 `window.chatWithPet`
-3. 在 `frontend/src/bridge.rs` 加入 `chat_with_pet`
-4. 啟用 ChatBubble send button
-5. 增加 loading / error / response signals
-6. 顯示 MockChatModel response
-7. 再替換成 real `ChatModel` provider
-8. 增加 streaming abstraction
-9. 讓 AI intent / emotion 驅動 `PetCommand`
-10. 最後再加入 persistence 與 telemetry
-
-
-## 系統架構
+- persona memory
+- speaker selection
+- turn-taking
+- proactive response policy
+- multi-persona orchestrator
+- AI streaming WebSocket flow
+- AI message persistence
+
+## Desktop AI Pet
+
+目前已有：
+
+- Tauri 2 desktop shell
+- Leptos CSR frontend
+- transparent / always-on-top window
+- Pet domain state machine
+- `PetSnapshot` revision
+- Tauri commands / events
+- blink / simple animation
+- context menu
+- `ChatModel` abstraction
+- `MockChatModel`
+- `chat_with_pet` backend command
+- ChatBubble UI
+
+目前主要整合缺口：
+
+- `PetMachine` managed state registration
+- frontend `chat_with_pet` bridge
+- chat send action
+- AI response rendering
+- conversation history
+- real AI provider
+- streaming
+- AI-driven pet behavior
+- memory
+- proactive activity loop
+- learning / teaching model
+- persistence
+- observability
+
+---
+
+# 系統架構
 
 ```mermaid
 flowchart TB
     Browser["Browser / Leptos UI"]
     Router["Leptos Router"]
     WSClient["ChatSocket"]
-    Axum["Axum Server"]
+    Server["Axum Server"]
     WS["WebSocket Handler"]
     Hub["RoomHub"]
-    ChatService["ChatService"]
-    Domain["chat_domain"]
-    Protocol["shared events"]
-    PG["PostgreSQL"]
+    ChatApp["chat_application"]
+    ChatDomain["chat_domain"]
+    Shared["shared protocol"]
     Persist["persistence / SQLx"]
+    PG["PostgreSQL"]
+
+    Persona["AI Persona Runtime"]
+    AI["ai_core / ChatModel"]
+    Memory["Memory / RAG"]
+    Agent["Agent Runtime / MCP"]
 
     Desktop["Tauri Desktop Pet"]
-    PetUI["Leptos WASM Frontend"]
-    Bridge["JS / Tauri Bridge"]
+    PetUI["Leptos WASM UI"]
     PetDomain["pet_domain"]
-    AiCore["ai_core"]
-    Mock["MockChatModel"]
+    Learning["Learning / Teaching Runtime"]
 
     Browser --> Router
     Router --> WSClient
     WSClient <-->|ClientEvent / ServerEvent| WS
-    WS --> Axum
+    WS --> Server
     WS --> Hub
-    WS --> ChatService
-    ChatService --> Domain
-    WS --> Protocol
+    WS --> ChatApp
+    ChatApp --> ChatDomain
+    WS --> Shared
 
-    Axum --> Persist
+    Server --> Persist
     Persist --> PG
 
+    ChatApp -. future .-> Persona
+    Persona -. future .-> AI
+    Persona -. future .-> Memory
+    Persona -. future .-> Agent
+
     Desktop --> PetUI
-    PetUI --> Bridge
-    Bridge --> Desktop
     Desktop --> PetDomain
-    Desktop --> AiCore
-    AiCore --> Mock
+    Desktop --> AI
+    Desktop -. future .-> Learning
+    Learning -. future .-> Memory
+    Learning -. future .-> Agent
 ```
 
-### Workspace 結構
+虛線代表 roadmap 中尚未完整落地的能力。
+
+---
+
+# Workspace 結構
 
 | 路徑 | 職責 |
 | --- | --- |
@@ -703,64 +511,131 @@ flowchart TB
 | `apps/desktop_pet` | Tauri desktop backend、Pet state、AI command |
 | `apps/desktop_pet/frontend` | Leptos WASM desktop UI |
 | `crates/ui` | Web Leptos UI、Router、WebSocket client |
-| `crates/chat_domain` | Chat message 與 `MessageAuthor` domain |
-| `crates/chat_application` | `ChatService` application layer |
-| `crates/shared` | Client/Server WebSocket event contract |
+| `crates/chat_domain` | Chat message、message author domain |
+| `crates/chat_application` | Chat application service |
+| `crates/shared` | Client / Server WebSocket event contract |
 | `crates/ai_core` | AI abstraction、`ChatModel`、mock model |
-| `crates/persistence` | PostgreSQL connection / SQLx migrations |
-| `crates/pet_domain` | Desktop pet state machine |
-| `crates/telemetry` | Observability 預留 crate，目前尚未實作 |
-| `migrations` | SQLx database migrations |
+| `crates/persistence` | PostgreSQL / SQLx |
+| `crates/pet_domain` | Desktop Pet state machine |
+| `crates/telemetry` | Observability 預留 crate |
+| `migrations` | SQLx migrations |
 | `deploy` | nginx / systemd / OTel collector 預留設定 |
 
-## Day 1～Day 12
+---
 
-目前 Day 1～Day 12 對應的主線如下。
+# 已完成的 Day 1～Day 12 主線
 
 | Day | 主題 | Repository 現況 |
 | --- | --- | --- |
 | Day 1 | Rust workspace | ✅ 多 crate workspace |
-| Day 2 | Chat domain / shared protocol | ✅ `ChatMessage`、`MessageAuthor`、Client/Server events |
-| Day 3 | Axum HTTP server | ✅ Axum server、`/health` |
-| Day 4 | WebSocket 基礎 | ✅ `/ws/{room_id}` |
-| Day 5 | ChatService | ✅ application service 建立訊息 |
-| Day 6 | Broadcast | ✅ Tokio broadcast |
-| Day 7 | Per-room RoomHub | ✅ UUID room 隔離 |
-| Day 8 | Leptos reactive UI | ✅ room UI、signals、message list |
-| Day 9 | Browser WebSocket adapter | ✅ `ChatSocket` |
-| Day 10 | SSR + hydration | ✅ Leptos SSR / WASM hydration |
-| Day 11 | Router | ✅ home + room route |
-| Day 12 | PostgreSQL + SQLx | ✅ PgPool、migration runner、`rooms` table |
+| Day 2 | Chat domain / shared protocol | ✅ |
+| Day 3 | Axum HTTP server | ✅ |
+| Day 4 | WebSocket 基礎 | ✅ |
+| Day 5 | ChatService | ✅ |
+| Day 6 | Tokio broadcast | ✅ |
+| Day 7 | Per-room RoomHub | ✅ |
+| Day 8 | Leptos reactive UI | ✅ |
+| Day 9 | Browser WebSocket adapter | ✅ |
+| Day 10 | SSR + hydration | ✅ |
+| Day 11 | Router | ✅ |
+| Day 12 | PostgreSQL + SQLx bootstrap | ✅ |
 
-### Day 12 目前做到哪裡？
-
-Server 啟動時會：
+Day 12 已經讓 PostgreSQL 進入 runtime：
 
 ```text
 DATABASE_URL
-    │
-    ▼
+    ↓
 PgPool::connect
-    │
-    ▼
-persistence::migrate
-    │
-    ▼
+    ↓
+SQLx migrations
+    ↓
 Axum AppState
 ```
 
-目前 migration 已建立 `rooms` table，但尚未加入：
+但目前還不是完整 persistence architecture。
+
+尚未完成：
 
 - messages table
 - users table
 - AI personas table
 - room AI membership table
-- message repository
-- room repository application flow
+- repositories
+- message history loading
 
-所以 PostgreSQL 已進入 runtime bootstrap，但還不是完整 persistence architecture。
+---
 
-## WebSocket Protocol
+# 接下來的學習與實作方向
+
+後續章節不應只照舊 roadmap 往下寫。
+
+流程固定為：
+
+```text
+實際 GitHub repository
+        ↓
+Code Review
+        ↓
+確認目前真正缺口
+        ↓
+決定下一個最小學習目標
+        ↓
+深入淺出解釋原理
+        ↓
+實作
+        ↓
+測試
+        ↓
+再進下一章
+```
+
+## Chat 主線
+
+接下來會逐步建立：
+
+1. Room / Message repository
+2. message persistence
+3. history loading
+4. user identity / session
+5. typing / presence
+6. `AiPersona`
+7. room persona membership
+8. Web chat → `ChatModel`
+9. streaming
+10. persona memory
+11. speaker selection / turn-taking
+12. multi-persona orchestrator
+13. multi-topic room context
+14. RAG
+15. MCP / tools
+16. Agent Runtime
+17. OpenTelemetry
+
+## Desktop AI Pet 主線
+
+接下來會逐步建立：
+
+1. 完成 frontend ↔ Tauri ↔ `ChatModel` chat bridge
+2. real model provider
+3. streaming
+4. conversation persistence
+5. pet memory
+6. AI intent → pet behavior
+7. activity loop
+8. proactive trigger
+9. 主動詢問
+10. 主動提問
+11. learner knowledge state
+12. teaching strategy
+13. active recall / spaced repetition
+14. RAG
+15. MCP / tools
+16. Agent Runtime
+17. OpenTelemetry
+
+---
+
+# WebSocket Protocol
 
 Client events：
 
@@ -781,16 +656,18 @@ ServerEvent::Error { code, message }
 ServerEvent::Pong
 ```
 
-目前真正處理完成的是：
+目前真正完成的主要 flow：
 
 - SendMessage
 - MessageCreated
 - Ping / Pong
 - room mismatch error
 
-Typing、Presence 與 AI streaming 仍待後續實作。
+Typing、Presence、AI streaming 仍待後續實作。
 
-## 開發需求
+---
+
+# 開發需求
 
 - Rust stable
 - Rust edition 2024
@@ -799,9 +676,6 @@ Typing、Presence 與 AI streaming 仍待後續實作。
 - `cargo-leptos`
 - `trunk`
 - Tauri CLI 2
-- Linux 桌面開發需 WebKitGTK 等系統套件
-
-Rust toolchain 已由 `rust-toolchain.toml` 設定 stable、rustfmt、clippy 與 WASM target。
 
 安裝主要工具：
 
@@ -812,7 +686,7 @@ cargo install trunk --locked
 cargo install tauri-cli --version "^2"
 ```
 
-Ubuntu / Debian 的 Tauri build dependencies 可參考 CI：
+Ubuntu / Debian Tauri dependencies：
 
 ```bash
 sudo apt-get install -y \
@@ -827,46 +701,46 @@ sudo apt-get install -y \
   libwebkit2gtk-4.1-dev
 ```
 
-## PostgreSQL 設定
+---
 
-建立 database，例如：
+# PostgreSQL
+
+建立 database：
 
 ```sql
 CREATE DATABASE rust_ai_chat;
 ```
 
-Server 實際讀取的環境變數名稱是 **`DATABASE_URL`**。
-
-在 repository root 建立 `.env`：
+repository root 建立 `.env`：
 
 ```dotenv
 RUST_LOG=debug
 DATABASE_URL=postgres://username:password@localhost:5432/rust_ai_chat
 ```
 
-啟動 server 時會自動呼叫 SQLx migration runner。
+server 啟動時會執行 SQLx migrations。
 
-## 執行 Web 聊天室
+---
 
-在 repository root：
+# 執行 Web Chat
 
 ```bash
 cargo leptos watch
 ```
 
-開啟：
+預設：
 
 ```text
 http://127.0.0.1:3000
 ```
 
-首頁點擊 **Create Room** 後會產生 UUID，並導向：
+首頁建立 room 後會導向：
 
 ```text
 /room/{UUID}
 ```
 
-同一 room URL 的多個瀏覽器連線會共享該 room 的即時 broadcast。
+同一 room URL 的多個 browser connection 會共享該 room 的 realtime broadcast。
 
 Health check：
 
@@ -880,30 +754,24 @@ Release build：
 cargo leptos build --release
 ```
 
-## 執行 Desktop AI Pet
+---
+
+# 執行 Desktop AI Pet
 
 ```bash
 cd apps/desktop_pet
 cargo tauri dev
 ```
 
-Tauri 的 `beforeDevCommand` 會在 `apps/desktop_pet/frontend` 啟動：
+frontend 使用 Trunk，dev server 預設為：
 
-```bash
-trunk serve --port 1420
+```text
+http://localhost:1420
 ```
 
-桌面視窗預設：
+---
 
-- 320 × 360
-- transparent
-- decorations disabled
-- always on top
-- non-resizable
-
-## 測試與檢查
-
-常用指令：
+# 測試與檢查
 
 ```bash
 cargo check -p server --features ssr
@@ -914,55 +782,24 @@ cargo check --workspace --exclude desktop-pet-frontend
 cargo test -p pet-domain
 cargo test -p ai-core
 cargo test -p shared
-```
 
-Desktop frontend：
-
-```bash
 cargo check -p desktop-pet-frontend --target wasm32-unknown-unknown
 ```
 
-GitHub Actions 目前會檢查：
-
-- server SSR
-- UI SSR
-- UI WASM hydration
-- native workspace
-- desktop WASM frontend
-- pet domain tests
-- release builds
-
-## 已知限制
-
-目前專案仍處於逐步建立架構的階段：
-
-- Web chat 尚未接 AI model
-- Web chat message 尚未 persistence
-- history 尚未實作
-- authentication / session 尚未實作
-- typing event 尚未實作 server behavior
-- presence 尚未實作
-- AI streaming 尚未實作
-- multi-persona orchestrator 尚未實作
-- telemetry crate 尚未實作
-- desktop pet frontend 尚未接 `chat_with_pet`
-- desktop pet 尚未接 real AI provider
-
-## 下一階段方向
-
-接下來合理的演進順序是：
-
-1. 建立 Room / Message repository
-2. 完成 message persistence 與 history loading
-3. 建立 `AiPersona` 與 room membership
-4. 把 `ChatModel` 注入 Web chat application flow
-5. 完成 `AiDelta` / `AiCompleted` streaming
-6. 建立多 AI Persona orchestrator
-7. 完成 typing / presence
-8. 串接 desktop pet frontend → `chat_with_pet`
-9. 接入 real provider
-10. 加入 OpenTelemetry tracing
-
 ---
 
-此專案的重點不只是完成聊天室，而是逐步建立一套可延伸到 **Web 即時聊天室、AI Persona、多 Agent 對話、桌面 AI 寵物與 observability** 的 Rust application architecture。
+# 專案真正想完成的事情
+
+最後，這個 repository 的目標可以濃縮成兩句話。
+
+### Chat
+
+> 用 Rust + Leptos 建立一個真正的多主題、多使用者、多 AI Persona 即時聊天室，讓 AI 自然成為群組互動的一部分，並藉此學會 realtime system、AI orchestration、memory、RAG、agent 與 observability。
+
+### AI Pet
+
+> 用 Tauri + Leptos + Rust AI Core 建立一個會記憶、會學習、會主動詢問、會主動出題、會教學的桌面 AI 角色，而不是只會等待主人提問的聊天機器人。
+
+這兩條產品線共享同一個學習核心：
+
+> **透過真正會持續長大的產品，深入淺出地學會 Rust、Leptos 與 AI。**

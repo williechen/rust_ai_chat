@@ -671,13 +671,26 @@ Typing、Presence、AI streaming 仍待後續實作。
 
 ---
 
+# 版本策略
+
+這個 repository 的教學與實作一律以 **目前最新穩定版（latest stable）** 為基準，而不是沿用舊章節的版本號。
+
+固定規則：
+
+- 每次新增章節或進行 code review 前，先核對 Rust、Leptos、Axum、Tauri、SQLx、OpenTelemetry、PostgreSQL 與主要工具的最新穩定版。
+- 若目前 `Cargo.lock` 已解析到較新的穩定版本，教學內容與 `Cargo.toml` 必須同步，不得繼續示範舊 API。
+- 升級不能只改版本號；遇到 API / feature / runtime 行為改變時，要同步修改實作、測試與章節說明。
+- alpha / beta / RC 不進入主線實作，除非該章明確是「下一版 migration / preview」實驗。
+- PostgreSQL、nginx 等基礎設施優先採最新 stable / production channel，而不是 development / beta / mainline channel。
+- 每次版本調整後，以實際 repository 的 build / test 結果決定是否完成升級。
+
 # 開發需求
 
-- Rust stable
+- Rust stable（目前 1.98.1）
 - Rust edition 2024
 - `wasm32-unknown-unknown`
-- PostgreSQL
-- `cargo-leptos`
+- PostgreSQL 18.6（PostgreSQL 19 目前仍為 beta，不進主線）
+- `cargo-leptos` 0.3.10
 - `trunk`
 - Tauri CLI 2
 

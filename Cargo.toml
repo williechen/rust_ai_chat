@@ -18,28 +18,28 @@ members = [
 edition = "2024"
 
 [workspace.dependencies]
-any_spawner = { version = "0.3.0", features = ["tokio"] }
-async-trait = "0.1.92"
-axum = { version = "0.8.9", features = ["ws"] }
+any_spawner = { version = "0.3", features = ["tokio"] }
+async-trait = "0.1"
+axum = { version = "0.8", features = ["ws"] }
 
 dotenv = "0.15"
 
-leptos = "0.8.21"
-leptos_axum = "0.8.10"
-leptos_config = "0.8.10"
-leptos_router = "0.8.16"
+leptos = "0.8"
+leptos_axum = "0.8"
+leptos_config = "0.8"
+leptos_router = "0.8"
 
-opentelemetry = "0.33.0"
+opentelemetry = "0.33"
 
-serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
-sqlx = { version = "0.9.0", features = ["runtime-tokio", "macros", "postgres"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sqlx = { version = "0.9", features = ["runtime-tokio", "macros", "postgres"] }
 
-thiserror = "2.0.21"
-tokio = { version = "1.53.1", features = ["full"] }
+thiserror = "2.0"
+tokio = { version = "1.53", features = ["full"] }
 tracing = "0.1"
 
-uuid = { version = "1.26.1", features = ["serde", "v4", "js"] }
+uuid = { version = "1.26", features = ["serde", "v4", "js"] }
 
 [[workspace.metadata.leptos]]
 name = "rust_ai_chat"

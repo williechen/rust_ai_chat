@@ -1,4 +1,4 @@
-use chat_domain::{ChatMessage, MessageRole};
+use chat_domain::{ChatMessage, MessageAuthor};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Default)]
@@ -13,7 +13,7 @@ impl ChatService {
         ChatMessage {
             id: Uuid::new_v4(),
             room_id,
-            role: MessageRole::User,
+            author: MessageAuthor::AnonymousUser,
             content,
         }
     }

@@ -2,7 +2,7 @@ mod chat_socket;
 
 use std::rc::Rc;
 
-use chat_domain::ChatMessage;
+use chat_domain::{ChatMessage, MessageAuthor};
 use leptos::prelude::*;
 use leptos_router::{
     components::{Route, Router, Routes},
@@ -13,6 +13,15 @@ use shared::{ClientEvent, ServerEvent};
 use uuid::Uuid;
 
 use chat_socket::ChatSocket;
+
+fn author_label(author: &MessageAuthor) -> String {
+    match author {
+        MessageAuthor::AnonymousUser => "You".to_string(),
+        MessageAuthor::User { user_id } => format!("User {}", user_id),
+        MessageAuthor::Ai { persona_id } => format!("AI {}", persona_id),
+        MessageAuthor::System => "System".to_string(),
+    }
+}
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -134,7 +143,7 @@ pub fn ChatPage(room_id: Uuid) -> impl IntoView {
                     view! {
                         <li>
                           <strong>
-                            {format!("{:?}: ", message.role)}
+                            {author_label(&message.author)}": "
                           </strong>
                           {message.content}
                         </li>

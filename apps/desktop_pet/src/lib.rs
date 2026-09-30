@@ -1,4 +1,4 @@
-use ai_code::{ChatModel, ChatRequest, MockChatModel};
+use ai_core::{ChatModel, ChatRequest, MockChatModel};
 use pet_domain::{PetCommand, PetMachine, PetSnapshot};
 use std::sync::{Arc, Mutex};
 use tauri::{Emitter, State};
@@ -46,7 +46,7 @@ async fn chat_with_pet(
         .chat(ChatRequest::new(message))
         .await
         .map_err(|error| error.to_string())?;
-    Ok(response)
+    Ok(response.text)
 }
 
 pub fn application() {

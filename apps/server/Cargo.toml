@@ -13,14 +13,20 @@ axum.workspace = true
 
 chat-application = { path = "../../crates/chat_application" }
 
+dotenv.workspace = true
+
 leptos.workspace = true
 leptos_axum.workspace = true
 leptos_config.workspace = true
+
+persistence = { path = "../../crates/persistence" }
 
 serde.workspace = true
 serde_json.workspace = true
 
 shared = { path = "../../crates/shared" }
+
+sqlx.workspace = true
 
 tokio.workspace = true
 

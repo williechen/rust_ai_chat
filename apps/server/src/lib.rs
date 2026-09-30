@@ -11,6 +11,7 @@ use axum::{
 };
 use leptos_axum::{site_pkg_dir_service, site_pkg_dir_service_route_path};
 use leptos_config::get_configuration;
+use sqlx::database;
 
 pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
     let _ = Executor::init_tokio();
@@ -21,7 +22,12 @@ pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
     let pkg_path = site_pkg_dir_service_route_path(&leptos_options);
     let pkg_service = site_pkg_dir_service(&leptos_options);
 
-    let state = state::AppState::new(leptos_options);
+    let database_url = std::env::var("DATABASE_URL")?;
+    let db = sqlx::PgPool::connect(&database_url).await?;
+
+    persistence::migrate(&db).await?;
+
+    let state = state::AppState::new(leptos_options, db);
 
     let app = Router::new()
         .route_service(&pkg_path, pkg_service)

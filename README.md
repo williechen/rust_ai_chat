@@ -678,10 +678,11 @@ Typing、Presence、AI streaming 仍待後續實作。
 固定規則：
 
 - 每次新增章節或進行 code review 前，先核對 Rust、Leptos、Axum、Tauri、SQLx、OpenTelemetry、PostgreSQL 與主要工具的最新穩定版。
-- 若目前 `Cargo.lock` 已解析到較新的穩定版本，教學內容與 `Cargo.toml` 必須同步，不得繼續示範舊 API。
+- `Cargo.toml` 只宣告 major/minor 相容線（例如 `leptos = "0.8"`、`tokio = "1.53"`），精確 patch 版本由 `Cargo.lock` 固定。若 lockfile 已解析到較新的穩定 patch，教學內容應以 lockfile 的實際版本與 API 為準。
 - 升級不能只改版本號；遇到 API / feature / runtime 行為改變時，要同步修改實作、測試與章節說明。
 - alpha / beta / RC 不進入主線實作，除非該章明確是「下一版 migration / preview」實驗。
 - PostgreSQL、nginx 等基礎設施優先採最新 stable / production channel，而不是 development / beta / mainline channel。
+- 不在 dependency requirement 寫死 patch 版本；只有套件本身的 `[package].version` 仍遵守完整 SemVer，例如 `0.1.0`。
 - 每次版本調整後，以實際 repository 的 build / test 結果決定是否完成升級。
 
 # 開發需求

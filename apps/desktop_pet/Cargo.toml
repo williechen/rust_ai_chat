@@ -10,8 +10,8 @@ pet-domain = { path = "../../crates/pet_domain" }
 
 serde.workspace = true
 
-tauri = { version = "2.12.0", features = [] }
+tauri = { version = "2.12", features = [] }
 
 
 [build-dependencies]
-tauri-build = { version = "2.7.0", features = [] }
+tauri-build = { version = "2.7", features = [] }

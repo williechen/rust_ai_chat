@@ -1,6 +1,17 @@
+use ai_code::{ChatModel, ChatRequest, MockChatModel};
 use pet_domain::{PetCommand, PetMachine, PetSnapshot};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::{Emitter, State};
+
+struct AiState {
+    model: Arc<dyn ChatModel>,
+}
+
+impl AiState {
+    fn new(model: Arc<dyn ChatModel>) -> Self {
+        Self { model }
+    }
+}
 
 #[tauri::command]
 fn get_pet_state(pet: State<'_, Mutex<PetMachine>>) -> Result<PetSnapshot, String> {
@@ -25,10 +36,27 @@ fn send_pet_command(
     Ok(snapshot)
 }
 
+#[tauri::command]
+async fn chat_with_pet(
+    message: String,
+    state: tauri::State<'_, AiState>,
+) -> Result<String, String> {
+    let response = state
+        .model
+        .chat(ChatRequest::new(message))
+        .await
+        .map_err(|error| error.to_string())?;
+    Ok(response)
+}
+
 pub fn application() {
     tauri::Builder::default()
-        .manage(Mutex::new(PetMachine::default()))
-        .invoke_handler(tauri::generate_handler![get_pet_state, send_pet_command])
+        .manage(AiState::new(Arc::new(MockChatModel)))
+        .invoke_handler(tauri::generate_handler![
+            get_pet_state,
+            send_pet_command,
+            chat_with_pet
+        ])
         .run(tauri::generate_context!())
         .expect("failed to run Rust AI Desktop Pet");
 }

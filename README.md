@@ -96,28 +96,561 @@ Room
 
 ### Desktop AI Pet
 
-Tauri 2 桌面應用目前包含：
+桌面 AI 寵物不是單純的 UI demo，而是目前 repository 中另一條獨立的 application path：
 
-- 透明、無邊框、always-on-top 視窗
-- Leptos WebAssembly 前端
-- `PetMachine` domain state machine
-- `Idle` / `Interacting` / `Sleeping`
-- command 驅動的狀態轉換
-- revision-based snapshot
-- Tauri event：`pet://state-changed`
-- 眨眼與簡單動畫
-- context menu
-- `chat_with_pet` Tauri async command
-- `MockChatModel` 注入到 Tauri state
+```text
+Leptos WASM UI
+    │
+    ▼
+JavaScript bridge
+    │
+    ▼
+Tauri invoke / event
+    │
+    ├── PetMachine
+    │     └── pet_domain
+    │
+    └── AiState
+          └── ChatModel
+                └── MockChatModel
+```
 
-目前桌面聊天前端仍尚未完成 bridge：
+目前已經具備 **桌面視窗、寵物狀態機、Tauri command/event、Leptos reactive UI，以及 AI model abstraction**；但 Pet state 的 Tauri state registration 與聊天 frontend bridge 還沒有完全接好，所以目前仍屬「架構已成形、整合尚未完成」的狀態。
 
-- Rust/Tauri backend 已有 `chat_with_pet`
-- frontend `bridge.rs` 尚未 expose chat command
-- ChatBubble 的送出按鈕目前仍 disabled
-- 尚未顯示 AI response
-- 尚未接真實 AI provider
-- 尚未支援 streaming
+#### 1. Tauri Desktop Shell
+
+`apps/desktop_pet/tauri.conf.json` 目前定義：
+
+- product name：`Rust AI Desktop Pet`
+- identifier：`dev.rustai.desktop-pet`
+- 視窗大小：`320 × 360`
+- `resizable: false`
+- `decorations: false`
+- `transparent: true`
+- `alwaysOnTop: true`
+- `shadow: false`
+- dev frontend：`http://localhost:1420`
+- frontend build：Trunk
+
+因此這個 app 的設計方向是「漂浮在桌面上的小寵物」，而不是一般有標題列的桌面視窗。
+
+Capability 目前只開放：
+
+```text
+core:default
+core:window:allow-start-dragging
+```
+
+Leptos UI 透過 `data-tauri-drag-region` 實作視窗拖曳。
+
+#### 2. Pet Domain State Machine
+
+`crates/pet_domain` 把寵物行為和 UI 分離。
+
+目前 domain state：
+
+```rust
+PetState::Idle
+PetState::Interacting
+PetState::Sleeping
+```
+
+可接受的 command：
+
+```rust
+PetCommand::Interact
+PetCommand::FinishInteraction
+PetCommand::Sleep
+PetCommand::Wake
+```
+
+目前允許的 transition：
+
+```text
+Idle
+ ├── Interact ─────────────► Interacting
+ └── Sleep ────────────────► Sleeping
+
+Interacting
+ ├── FinishInteraction ────► Idle
+ └── Sleep ────────────────► Sleeping
+
+Sleeping
+ └── Wake ─────────────────► Idle
+```
+
+其他 transition 會回傳：
+
+```rust
+PetError::InvalidTransition
+```
+
+例如 sleeping 狀態直接執行 `Interact` 目前會被拒絕。
+
+#### 3. PetSnapshot 與 revision
+
+UI 不直接持有 `PetMachine`，而是接收：
+
+```rust
+PetSnapshot {
+    state,
+    revision,
+}
+```
+
+每次合法 state transition：
+
+```text
+dispatch command
+    │
+    ▼
+change state
+    │
+    ▼
+revision += 1
+    │
+    ▼
+return PetSnapshot
+```
+
+frontend 的 `apply_snapshot` 只接受 revision 不小於目前 snapshot 的資料：
+
+```text
+incoming.revision >= current.revision
+```
+
+這是目前用來避免較舊狀態覆蓋較新狀態的基礎機制。
+
+#### 4. Tauri Pet Commands
+
+Desktop backend 已定義兩個寵物 command：
+
+```rust
+get_pet_state()
+send_pet_command(command)
+```
+
+預期資料流：
+
+```text
+Leptos UI
+    │
+    ▼
+window.sendPetCommand(...)
+    │
+    ▼
+Tauri invoke("send_pet_command")
+    │
+    ▼
+PetMachine::dispatch(...)
+    │
+    ▼
+PetSnapshot
+    │
+    ├── command return value
+    │
+    └── emit("pet://state-changed")
+```
+
+frontend 同時會：
+
+- 啟動時呼叫 `get_pet_state`
+- 訂閱 `pet://state-changed`
+- 收到 snapshot 後經過 revision 檢查再更新 UI
+
+目前有一個重要的 runtime wiring 尚未完成：
+
+`get_pet_state` 與 `send_pet_command` 都要求：
+
+```rust
+State<Mutex<PetMachine>>
+```
+
+但目前 `tauri::Builder` 只註冊：
+
+```rust
+.manage(AiState::new(Arc::new(MockChatModel)))
+```
+
+尚未看到：
+
+```rust
+.manage(Mutex::new(PetMachine::default()))
+```
+
+因此 PetMachine 的 managed state 還需要補上，才能讓這兩個 command 的 state injection 完整成立。
+
+#### 5. Leptos Pet UI
+
+Desktop frontend 使用 Leptos CSR。
+
+目前主要 component：
+
+```text
+App
+├── DragHandle
+├── BlinkController
+├── AnimationClock
+├── PetStatus
+├── PetControls
+├── ChatBubble
+└── ErrorMessage
+```
+
+UI 使用 signals 管理：
+
+- pet snapshot
+- error
+- blink state
+- animation phase
+- chat bubble open/close
+- chat input
+
+#### 6. Pet Pose Projection
+
+Domain 只知道：
+
+```text
+Idle
+Interacting
+Sleeping
+```
+
+動畫 pose 則留在 UI：
+
+```rust
+PetPose::Idle
+PetPose::Blink
+PetPose::InteractA
+PetPose::InteractB
+PetPose::SleepA
+PetPose::SleepB
+```
+
+也就是：
+
+```text
+PetState
+    +
+Blink flag
+    +
+Animation phase
+    │
+    ▼
+PetPose
+    │
+    ▼
+visual representation
+```
+
+這樣可以避免把 animation frame 塞進 domain model。
+
+目前畫面暫時使用 emoji：
+
+- 😺 Idle
+- 😻 Blink
+- 😸 / 😹 Interacting
+- 😴 / 😪 Sleeping
+
+未來可以直接把 `PetPose` mapping 換成 sprite、WebP、SVG、Lottie 或其他 animation asset，而不需要改 `pet_domain`。
+
+#### 7. Blink Controller
+
+`BlinkController` 每 4 秒檢查一次：
+
+```text
+PetState == Idle ?
+    │
+    ├── no  → blinking = false
+    │
+    └── yes → blinking = true
+               │
+               └── 180 ms 後回 false
+```
+
+因此只有 idle pet 會自動眨眼。
+
+#### 8. Animation Clock
+
+`AnimationClock` 每 650 ms 切換一次：
+
+```text
+animation_phase = !animation_phase
+```
+
+Interacting 和 Sleeping 根據這個 phase 在 A / B pose 之間切換。
+
+目前這是最簡單的 frame animation clock；之後可以替換成更完整的 animation timeline。
+
+#### 9. Pet Controls
+
+目前 UI 提供：
+
+- 互動
+- 結束
+- 睡覺
+- 醒來
+
+每個操作都走同一條 command flow：
+
+```text
+button click
+    │
+    ▼
+dispatch_command(...)
+    │
+    ▼
+bridge::send_pet_command(...)
+    │
+    ▼
+Tauri
+    │
+    ▼
+PetMachine
+```
+
+錯誤會寫入 `error` signal，再由 `ErrorMessage` 顯示。
+
+#### 10. Context Menu
+
+對寵物按右鍵會呼叫：
+
+```text
+showPetContextMenu(x, y)
+```
+
+JavaScript 使用 Tauri menu API 建立 context menu，目前包含：
+
+- 互動
+- 睡覺
+- 醒來
+
+menu action 仍然呼叫同一個 `sendPetCommand`，因此 UI button 與 context menu 共用同一個 domain command path。
+
+#### 11. AI Core
+
+AI pet backend 已經接入 `crates/ai_core`。
+
+目前 abstraction：
+
+```rust
+#[async_trait]
+pub trait ChatModel: Send + Sync {
+    async fn chat(
+        &self,
+        request: ChatRequest,
+    ) -> Result<ChatResponse, AiError>;
+}
+```
+
+Tauri application 使用：
+
+```rust
+AiState {
+    model: Arc<dyn ChatModel>
+}
+```
+
+目前實際注入：
+
+```text
+Arc<dyn ChatModel>
+        │
+        ▼
+MockChatModel
+```
+
+所以 application layer 已經不是直接依賴特定 AI provider，而是依賴 `ChatModel` interface。
+
+未來可把 `MockChatModel` 替換成真正 provider，而不必改 Tauri command 的呼叫方式。
+
+#### 12. chat_with_pet
+
+Desktop backend 已定義：
+
+```rust
+#[tauri::command]
+async fn chat_with_pet(
+    message: String,
+    state: State<'_, AiState>,
+) -> Result<String, String>
+```
+
+目前 backend flow：
+
+```text
+message
+   │
+   ▼
+ChatRequest::new(message)
+   │
+   ▼
+AiState.model
+   │
+   ▼
+ChatModel::chat
+   │
+   ▼
+MockChatModel
+   │
+   ▼
+"mock: {message}"
+```
+
+空白訊息會由 `AiError::EmptyMessage` 拒絕。
+
+這表示 **AI pet backend 的 chat abstraction 已經存在**。
+
+#### 13. ChatBubble 現況
+
+Leptos frontend 已經有：
+
+- 「聊天」按鈕
+- ChatBubble
+- input
+- close button
+- `chat_input` signal
+
+但目前：
+
+```rust
+prop:disabled=true
+```
+
+所以送出按鈕還不能使用。
+
+而且 `frontend/src/bridge.rs` 目前只有：
+
+- `get_pet_state`
+- `send_pet_command`
+- `listen_pet_state`
+- `show_pet_context_menu`
+
+還沒有：
+
+```rust
+chat_with_pet(...)
+```
+
+`index.html` 也尚未提供：
+
+```javascript
+window.chatWithPet = (...) =>
+    invoke("chat_with_pet", ...)
+```
+
+因此目前狀態是：
+
+```text
+ChatBubble UI                    ✅
+chat input state                 ✅
+Tauri chat_with_pet command      ✅
+ChatModel abstraction            ✅
+MockChatModel                    ✅
+
+JS invoke bridge                 ❌
+Rust WASM bridge                 ❌
+Send button                      ❌ disabled
+AI response state                ❌
+Conversation history             ❌
+Streaming                        ❌
+Real model provider              ❌
+```
+
+#### 14. AI Pet 完整架構方向
+
+目前 architecture 可以自然演進成：
+
+```mermaid
+flowchart LR
+    UI["Leptos Pet UI"]
+    Bubble["ChatBubble"]
+    Bridge["WASM / JS Bridge"]
+    Tauri["Tauri Commands"]
+    Pet["PetMachine"]
+    AI["AiState"]
+    Model["ChatModel"]
+    Provider["AI Provider"]
+
+    UI --> Pet
+    UI --> Bubble
+    Bubble --> Bridge
+    Bridge --> Tauri
+
+    Tauri --> Pet
+    Tauri --> AI
+    AI --> Model
+    Model --> Provider
+```
+
+未來 AI response 還可以反過來影響 pet behavior：
+
+```text
+AI response
+    │
+    ├── emotion / intent
+    │
+    ▼
+PetCommand
+    │
+    ▼
+PetMachine
+    │
+    ▼
+PetState
+    │
+    ▼
+PetPose / animation
+```
+
+這樣 AI pet 才會從「有聊天框的桌面寵物」進一步變成真正由 AI 對話驅動行為的 desktop agent。
+
+#### 15. Desktop AI Pet 已完成 / 未完成
+
+| 能力 | 狀態 |
+| --- | --- |
+| Tauri 2 desktop shell | ✅ |
+| Transparent / always-on-top window | ✅ |
+| Window drag region | ✅ |
+| Leptos CSR frontend | ✅ |
+| Pet domain state machine | ✅ |
+| Pet commands | ✅ |
+| Pet snapshot revision | ✅ |
+| Blink behavior | ✅ |
+| Simple frame animation | ✅ |
+| Context menu | ✅ |
+| Tauri pet commands | ✅ |
+| Tauri state-change event | ✅ |
+| `ChatModel` abstraction | ✅ |
+| `MockChatModel` | ✅ |
+| `chat_with_pet` backend command | ✅ |
+| Managed `PetMachine` registration | ⚠️ 尚需補上 |
+| ChatBubble UI | ✅ |
+| Frontend chat invoke bridge | ❌ |
+| Chat send action | ❌ |
+| AI response rendering | ❌ |
+| Conversation history | ❌ |
+| Streaming response | ❌ |
+| Real AI provider | ❌ |
+| AI-driven pet emotion/state | ❌ |
+| Persistence | ❌ |
+| Desktop AI observability | ❌ |
+
+#### 16. AI Pet 下一步
+
+以目前 repository 實作來看，AI pet 最合理的下一段不是重寫架構，而是把已經存在的 pieces 串起來：
+
+1. 在 Tauri Builder 註冊 `Mutex<PetMachine>`
+2. 在 `index.html` 加入 `window.chatWithPet`
+3. 在 `frontend/src/bridge.rs` 加入 `chat_with_pet`
+4. 啟用 ChatBubble send button
+5. 增加 loading / error / response signals
+6. 顯示 MockChatModel response
+7. 再替換成 real `ChatModel` provider
+8. 增加 streaming abstraction
+9. 讓 AI intent / emotion 驅動 `PetCommand`
+10. 最後再加入 persistence 與 telemetry
+
 
 ## 系統架構
 

@@ -74,8 +74,23 @@ jobs:
       - name: Check desktop frontend
         run: cargo check -p desktop-pet-frontend --target wasm32-unknown-unknown
 
+      - name: Test ai core
+        run: cargo test -p ai-core
+
+      - name: Test chat application
+        run: cargo test -p chat-application
+
+      - name: Test chat domain
+        run: cargo test -p chat-domain
+      
       - name: Test pet domain
         run: cargo test -p pet-domain
+
+      - name: Test shared
+        run: cargo test -p shared
+
+      - name: Test ui
+        run: cargo test -p ui
 
   build:
     runs-on: ubuntu-latest

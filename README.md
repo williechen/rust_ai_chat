@@ -446,6 +446,23 @@ ServerEvent::MessageCreated
 - `Typing` event contract 已存在，但 server 目前仍是 no-op
 - `PresenceChanged` contract 已存在，但 presence runtime 尚未實作
 
+### Room ID 目前的實際型別邊界
+
+目前 repository 正處於 ID portable 化的過渡階段，尚未完全統一：
+
+| Layer | 目前型別 |
+| --- | --- |
+| Leptos route / create room | `Uuid` |
+| WebSocket path | `Uuid` |
+| `RoomHub` key | `Uuid` |
+| `ChatMessage.room_id` | `Uuid` |
+| `ClientEvent::SendMessage.room_id` | `Uuid` |
+| `chat_domain::Room.id` | `String` |
+| `RoomRepository::find_by_id` | `&str` |
+| PostgreSQL `rooms.id` | `varchar(40)` |
+
+這表示 persistence/domain 的 Room 已開始採資料庫無關的字串 ID，但 realtime chat flow 仍綁 `uuid::Uuid`。後續重構時應統一 identifier boundary，避免 domain 一半是 `String`、一半是 `Uuid`。
+
 ## AI Core
 
 `crates/ai_core` 已建立：
@@ -542,6 +559,24 @@ Leptos UI
 - RAG / MCP / Agent Runtime
 - observability
 
+### Desktop window / frontend 實際設定
+
+目前 `tauri.conf.json` 與 Trunk 已明確設定：
+
+- window：`320 × 360`
+- `resizable = false`
+- `decorations = false`
+- `transparent = true`
+- `alwaysOnTop = true`
+- `shadow = false`
+- Tauri global API：`withGlobalTauri = true`
+- frontend dev server：`http://localhost:1420`
+- `beforeDevCommand`：`trunk serve --port 1420`
+- `beforeBuildCommand`：`trunk build --release`
+- bundle 目前：`active = false`
+
+因此目前 Desktop Pet 是「可執行的開發期桌面殼」，但 packaging / installer / updater 尚未進入實作。
+
 ---
 
 # 系統架構
@@ -601,21 +636,25 @@ flowchart TB
 
 # Workspace 結構
 
-| 路徑 | 職責 |
+| 路徑 | 實際職責 / 狀態 |
 | --- | --- |
-| `apps/server` | Axum server、SSR、WebSocket、DB bootstrap |
-| `apps/desktop_pet` | Tauri desktop backend、Pet state、AI command |
-| `apps/desktop_pet/frontend` | Leptos WASM desktop UI |
-| `crates/ui` | Web Leptos UI、Router、WebSocket client |
-| `crates/chat_domain` | Chat message、message author domain |
-| `crates/chat_application` | Chat application service |
+| `apps/server` | Axum server、Leptos SSR、WebSocket、DB bootstrap |
+| `apps/desktop_pet` | Tauri desktop backend、managed Pet state、AI command |
+| `apps/desktop_pet/frontend` | Leptos CSR WASM UI、Tauri JS bridge |
+| `crates/ui` | Web Leptos UI、Router、browser WebSocket client |
+| `crates/chat_domain` | `ChatMessage`、`MessageAuthor`、`Room` |
+| `crates/chat_application` | `ChatService`、`RoomRepository` port |
 | `crates/shared` | Client / Server WebSocket event contract |
-| `crates/ai_core` | AI abstraction、`ChatModel`、mock model |
-| `crates/persistence` | PostgreSQL / SQLx |
-| `crates/pet_domain` | Desktop Pet state machine |
-| `crates/telemetry` | Observability 預留 crate |
-| `migrations` | SQLx migrations |
-| `deploy` | nginx / systemd / OTel collector 預留設定 |
+| `crates/ai_core` | `ChatModel`、request/response/error、`MockChatModel` |
+| `crates/persistence` | PostgreSQL connection/migration、`PostgresRoomRepository` |
+| `crates/pet_domain` | Pet state machine、command/snapshot/error |
+| `crates/telemetry` | 目前幾乎為空，僅保留 crate 邊界 |
+| `migrations` | 目前只有 `rooms` migration |
+| `deploy/nginx` | placeholder config，尚未完成 |
+| `deploy/systemd` | placeholder config，尚未完成 |
+| `deploy/otel_collector` | placeholder config，尚未完成 |
+| `tests` | 目前只有 placeholder，整合測試尚未建立 |
+| `.github/workflows/rust.yml` | native/WASM checks、workspace build、Leptos release build、Trunk release build |
 
 ---
 
@@ -851,6 +890,14 @@ http://127.0.0.1:3000
 
 同一 room URL 的多個 browser connection 會共享該 room 的 realtime broadcast。
 
+目前 browser WebSocket client 直接使用：
+
+```text
+ws://localhost:3000/ws/{room_id}
+```
+
+所以這仍是 local-development wiring。正式部署到 HTTPS / reverse proxy 前，必須改成依目前頁面 origin 自動選擇 `ws://` / `wss://`，或由 runtime config 提供 endpoint。
+
 Health check：
 
 ```text
@@ -882,18 +929,37 @@ http://localhost:1420
 
 # 測試與檢查
 
+目前 GitHub Actions 實際執行的主要檢查：
+
 ```bash
 cargo check -p server --features ssr
 cargo check -p ui --features ssr
 cargo check -p ui --features hydrate --target wasm32-unknown-unknown
 cargo check --workspace --exclude desktop-pet-frontend
+cargo check -p desktop-pet-frontend --target wasm32-unknown-unknown
 
 cargo test -p pet-domain
+```
+
+CI build job 另外執行：
+
+```bash
+cargo build --workspace --exclude desktop-pet-frontend --verbose
+cargo leptos build --release
+
+cd apps/desktop_pet/frontend
+trunk build --release
+```
+
+本地仍建議額外執行目前已有單元測試的 crates：
+
+```bash
 cargo test -p ai-core
 cargo test -p shared
-
-cargo check -p desktop-pet-frontend --target wasm32-unknown-unknown
+cargo test -p chat-application
 ```
+
+> 目前 CI 尚未啟動 PostgreSQL service，因此 `PostgresRoomRepository::find_by_id()` 的 DB integration test 不在 GitHub Actions 主線中。
 
 ---
 

@@ -401,21 +401,50 @@ OpenTelemetry AI Observability
 
 - Leptos 0.8 SSR + hydration
 - Leptos Router：`/`、`/room/:room_id`
-- UUID room
+- Browser 端以 UUID 建立 / 解析 room route
 - Axum WebSocket：`/ws/{room_id}`
 - per-room `RoomHub` broadcast
+- `ChatService::send_message()`
 - shared client/server event protocol
+- `MessageAuthor::{AnonymousUser, User, Ai, System}`
+- AI streaming contract：`AiDelta` / `AiCompleted`
 - PostgreSQL `PgPool`
 - SQLx migration 啟動流程
 - `rooms` table migration
+- `RoomRepository` application port
+- `PostgresRoomRepository::find_by_id()`
+- `RoomRow → Room` persistence mapping
 - health check：`/health`
 
-目前聊天室訊息仍只存在記憶體 broadcast flow：
+目前真正完成的即時訊息 flow：
 
-- 尚未寫入 PostgreSQL
-- reload 後不會載入 history
-- 尚未建立 users / messages / personas persistence
-- Web chat 尚未真正接入 AI model
+```text
+Leptos ChatPage
+    ↓
+ClientEvent::SendMessage
+    ↓
+WebSocket
+    ↓
+ChatService::send_message
+    ↓
+RoomHub::publish
+    ↓
+ServerEvent::MessageCreated
+    ↓
+同 room clients
+```
+
+目前 persistence 已有 **Room repository 基線**，但尚未接進聊天室 runtime：
+
+- `AppState` 目前仍直接持有 `PgPool`
+- `PostgresRoomRepository` 尚未注入 `ChatService` / use case
+- WebSocket 尚未透過 repository 驗證或載入 room
+- chat message 尚未寫入 PostgreSQL
+- reload 後不會載入 message history
+- 尚未建立 users / messages / ai_personas / room_ai_members persistence
+- Web chat 尚未真正接入 `ChatModel`
+- `Typing` event contract 已存在，但 server 目前仍是 no-op
+- `PresenceChanged` contract 已存在，但 presence runtime 尚未實作
 
 ## AI Core
 
@@ -461,29 +490,56 @@ Chat domain 的作者模型已支援：
 - Leptos CSR frontend
 - transparent / always-on-top window
 - Pet domain state machine
-- `PetSnapshot` revision
-- Tauri commands / events
-- blink / simple animation
-- context menu
+- `PetSnapshot` revision 與 stale snapshot 防護
+- `PetMachine` 已透過 `.manage(Mutex<PetMachine>)` 註冊為 Tauri managed state
+- `get_pet_state` / `send_pet_command` command
+- `pet://state-changed` event
+- idle blink 與 Interacting / Sleeping animation phase
+- native context menu bridge
 - `ChatModel` abstraction
 - `MockChatModel`
-- `chat_with_pet` backend command
-- ChatBubble UI
+- `AiState { model: Arc<dyn ChatModel> }`
+- async `chat_with_pet` Tauri command
+- frontend `bridge::chat_with_pet()`
+- ChatBubble input / send action
+- loading / error state
+- mock AI response rendering
 
-目前主要整合缺口：
+目前 Desktop Pet 的 chat 垂直切片已接通：
 
-- `PetMachine` managed state registration
-- frontend `chat_with_pet` bridge
-- chat send action
-- AI response rendering
+```text
+ChatBubble
+    ↓
+bridge::chat_with_pet
+    ↓
+window.chatWithPet
+    ↓
+Tauri invoke("chat_with_pet")
+    ↓
+AiState
+    ↓
+ChatModel
+    ↓
+MockChatModel
+    ↓
+response
+    ↓
+Leptos UI
+```
+
+目前主要缺口：
+
 - conversation history
 - real AI provider
 - streaming
 - AI-driven pet behavior
 - memory
+- autonomous roaming / monitor bounds
 - proactive activity loop
-- learning / teaching model
+- learner model
+- active recall / spaced repetition
 - persistence
+- RAG / MCP / Agent Runtime
 - observability
 
 ---
@@ -563,7 +619,7 @@ flowchart TB
 
 ---
 
-# 已完成的 Day 1～Day 12 主線
+# 目前 Chat 學習主線進度
 
 | Day | 主題 | Repository 現況 |
 | --- | --- | --- |
@@ -579,8 +635,9 @@ flowchart TB
 | Day 10 | SSR + hydration | ✅ |
 | Day 11 | Router | ✅ |
 | Day 12 | PostgreSQL + SQLx bootstrap | ✅ |
+| Day 13 | AI author/event contract + Room repository baseline | ✅ 已有 `MessageAuthor::Ai`、AI streaming events、`RoomRepository`、Postgres `find_by_id` |
 
-Day 12 已經讓 PostgreSQL 進入 runtime：
+目前 PostgreSQL / room repository flow 已到：
 
 ```text
 DATABASE_URL
@@ -589,18 +646,30 @@ PgPool::connect
     ↓
 SQLx migrations
     ↓
-Axum AppState
+Axum AppState::db
+
+RoomRepository trait
+    ↓
+PostgresRoomRepository
+    ↓
+SELECT rooms
+    ↓
+RoomRow
+    ↓
+chat_domain::Room
 ```
 
-但目前還不是完整 persistence architecture。
+但兩條 flow **尚未 composition 起來**：`PostgresRoomRepository` 還沒有注入 application service / AppState use case。
 
-尚未完成：
+目前尚未完成：
 
+- RoomRepository runtime wiring
+- MessageRepository
 - messages table
 - users table
-- AI personas table
-- room AI membership table
-- repositories
+- ai_personas table
+- room_ai_members table
+- message persistence
 - message history loading
 
 ---
@@ -653,16 +722,16 @@ Code Review
 
 ## Desktop AI Pet 主線
 
-接下來會逐步建立：
+目前 **frontend ↔ Tauri ↔ `ChatModel` non-streaming chat bridge 已完成**。下一步不再重做 Day 13，而是從目前 repository 繼續：
 
-1. 完成 frontend ↔ Tauri ↔ `ChatModel` chat bridge
-2. real model provider
-3. streaming
-4. conversation persistence
-5. pet memory
-6. AI intent → pet behavior
-7. activity loop
-8. proactive trigger
+1. autonomous roaming
+2. monitor bounds
+3. real model provider
+4. streaming
+5. conversation persistence
+6. pet memory
+7. AI intent → pet behavior
+8. activity / proactive trigger
 9. 主動詢問
 10. 主動提問
 11. learner knowledge state

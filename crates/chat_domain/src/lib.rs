@@ -17,3 +17,10 @@ pub struct ChatMessage {
     pub author: MessageAuthor,
     pub content: String,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Room {
+    pub id: String,
+    pub category_room_id: String,
+    pub name: String,
+}

@@ -1,4 +1,5 @@
-use chat_domain::{ChatMessage, MessageAuthor};
+use chat_domain::{ChatMessage, MessageAuthor, Room};
+use thiserror::Error;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Default)]
@@ -17,6 +18,17 @@ impl ChatService {
             content,
         }
     }
+}
+
+#[derive(Debug, Error)]
+pub enum RoomRepositoryError {
+    #[error("repository error: {0}")]
+    Repository(String),
+}
+
+#[async_trait]
+pub trait RoomRepository: Send + Sync {
+    async fn find_by_id(&self, room_id: String) -> Result<Option<Room>, RoomRepositoryError>;
 }
 
 #[cfg(test)]

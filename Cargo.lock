@@ -496,6 +496,7 @@ dependencies = [
 name = "chat-application"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "chat-domain",
  "uuid",
 ]
@@ -3199,6 +3200,9 @@ checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 name = "persistence"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "chat-application",
+ "chat-domain",
  "sqlx",
 ]
 

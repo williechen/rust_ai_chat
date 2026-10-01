@@ -98,6 +98,10 @@ fn App() -> impl IntoView {
     let (chat_open, set_chat_open) = signal(false);
     let (chat_input, set_chat_input) = signal(String::new());
 
+    let (chat_loading, set_chat_loading) = signal(false);
+    let (chat_response, set_chat_response) = signal::<Option<String>>(None);
+    let (chat_error, set_chat_error) = signal::<Option<String>>(None);
+
     {
         let snapshot_reader = snapshot;
         let snapshot_writer = set_snapshot;
@@ -156,6 +160,12 @@ fn App() -> impl IntoView {
                  set_chat_open
                  chat_input
                  set_chat_input
+                 chat_loading
+                 set_chat_loading
+                 chat_response
+                 set_chat_response
+                 chat_error
+                 set_chat_error
             />
 
             <ErrorMessage error />
@@ -365,7 +375,39 @@ fn ChatBubble(
     set_chat_open: WriteSignal<bool>,
     chat_input: ReadSignal<String>,
     set_chat_input: WriteSignal<String>,
+    chat_loading: ReadSignal<bool>,
+    set_chat_loading: WriteSignal<bool>,
+    chat_response: ReadSignal<Option<String>>,
+    set_chat_response: WriteSignal<Option<String>>,
+    chat_error: ReadSignal<Option<String>>,
+    set_chat_error: WriteSignal<Option<String>>,
 ) -> impl IntoView {
+    let submit = move || {
+        if chat_loading.get_untracked() {
+            return;
+        }
+
+        let message = chat_input.get_untracked().trim().to_owned();
+
+        if message.is_empty() {
+            return;
+        }
+
+        set_chat_loading.set(true);
+        set_chat_error.set(None);
+
+        spawn_local(async move {
+            match bridge::chat_with_pet(message).await {
+                Ok(response) => {
+                    set_chat_response.set(Some(response));
+                    set_chat_input.set(String::new());
+                }
+                Err(message) => set_chat_error.set(Some(message)),
+            }
+            set_chat_loading.set(false);
+        });
+    };
+
     view! {
         <Show
             when=move || chat_open.get()
@@ -406,10 +448,36 @@ fn ChatBubble(
                 <button
                     class="chat-bubble__send"
                     type="button"
-                    prop:disabled=true
+                    prop:disabled=move || {chat_loading.get() || chat_input.get().trim().is_empty() }
+                    on:click=move |_| submit()
                 >
-                    "送出（Day 11）"
+                    {move || {
+                        if chat_loading.get() {
+                            "送出中…"
+                        } else {
+                            "送出"
+                        }
+                    }}
                 </button>
+
+                <Show
+                    when=move || chat_response.get().is_some()
+                    fallback=|| ()
+                >
+                    <p class="chat-bubble__response">
+                        {move || chat_response.get().unwrap_or_default()}
+                    </p>
+                </Show>
+
+                <Show
+                    when=move || chat_error.get().is_some()
+                    fallback=|| ()
+                >
+                    <p class="chat-bubble__error">
+                        {move || chat_error.get().unwrap_or_default()}
+                    </p>
+                </Show>
+
             </section>
         </Show>
     }

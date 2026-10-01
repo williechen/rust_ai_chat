@@ -28,6 +28,12 @@ extern "C" {
         js_name = showPetContextMenu
     )]
     fn show_pet_context_menu_js(x: i32, y: i32) -> Promise;
+
+    #[wasm_bindgen(
+        js_namespace = window,
+        js_name = chatWithPet
+    )]
+    fn chat_with_pet_js(message: &str) -> Promise;
 }
 
 fn js_error(value: JsValue) -> String {
@@ -75,4 +81,14 @@ pub async fn show_pet_context_menu(x: i32, y: i32) -> Result<(), String> {
         .map_err(js_error)?;
 
     Ok(())
+}
+
+pub async fn chat_with_pet(message: String) -> Result<String, String> {
+    let value = JsFuture::from(chat_with_pet_js(&message))
+        .await
+        .map_err(js_error)?;
+
+    value
+        .as_string()
+        .ok_or_else(|| "Failed to convert chat_with_pet result to string".to_string())
 }

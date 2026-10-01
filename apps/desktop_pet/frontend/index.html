@@ -33,6 +33,10 @@
       );
     };
 
+    window.chatWithPet = (message) => {
+      return invoke("chat_with_pet", { message });
+    };
+
     let petContextMenu = null;
 
     async function getPetContextMenu() {

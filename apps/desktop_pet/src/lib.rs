@@ -51,6 +51,7 @@ async fn chat_with_pet(
 
 pub fn application() {
     tauri::Builder::default()
+        .manage(Mutex::new(PetMachine::default()))
         .manage(AiState::new(Arc::new(MockChatModel)))
         .invoke_handler(tauri::generate_handler![
             get_pet_state,

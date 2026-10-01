@@ -20,6 +20,42 @@ Rust AI Chat 是一個以 **實作帶動學習** 的 Rust workspace。
 > README 與後續教學內容以目前 `main` 分支的實際程式碼為準。  
 > Roadmap 是學習方向，不會把尚未落地的功能描述成已完成。
 
+## 專案共同規則
+
+### 1. Repository-first
+每一章都先讀取目前 GitHub repository，再決定下一個學習與實作目標：
+
+```text
+GitHub repository
+    ↓
+Code Review
+    ↓
+確認真正缺口
+    ↓
+核對 latest stable
+    ↓
+實作
+    ↓
+build / test
+    ↓
+更新 README / Notion
+```
+
+### 2. 版本策略
+- 主線只使用 **latest stable**；alpha / beta / RC 不進主線，除非該章明確是 preview / migration 實驗。
+- `Cargo.toml` 的 dependency requirement **只寫 major/minor**，例如 `leptos = "0.8"`、`sqlx = "0.9"`、`tokio = "1.53"`。
+- 精確 patch 版本只由 `Cargo.lock` 固定，例如 `0.8.21`、`1.53.1`。
+- `[package].version` 是專案自身 SemVer，仍保留三段式，例如 `0.1.0`。
+- 升級不只改版本號；如果 API、feature、runtime behavior 或 migration 改變，實作、測試與教學必須一起更新。
+
+### 3. 每日章節原則
+- 每天只完成一個可驗證的小目標。
+- 延續同一個 workspace，不另開重複教學專案。
+- 明確區分 domain / application / adapter / UI 責任。
+- 不提前把後續章節功能塞進目前章節。
+- native / wasm32 使用各自正確的 build / test command。
+- README、Notion 與實際程式碼發生衝突時，**以目前 repository 為準**。
+
 ---
 
 ## 專案核心：不是堆功能，而是學會怎麼設計 Rust AI 系統
@@ -670,20 +706,6 @@ ServerEvent::Pong
 Typing、Presence、AI streaming 仍待後續實作。
 
 ---
-
-# 版本策略
-
-這個 repository 的教學與實作一律以 **目前最新穩定版（latest stable）** 為基準，而不是沿用舊章節的版本號。
-
-固定規則：
-
-- 每次新增章節或進行 code review 前，先核對 Rust、Leptos、Axum、Tauri、SQLx、OpenTelemetry、PostgreSQL 與主要工具的最新穩定版。
-- `Cargo.toml` 只宣告 major/minor 相容線（例如 `leptos = "0.8"`、`tokio = "1.53"`），精確 patch 版本由 `Cargo.lock` 固定。若 lockfile 已解析到較新的穩定 patch，教學內容應以 lockfile 的實際版本與 API 為準。
-- 升級不能只改版本號；遇到 API / feature / runtime 行為改變時，要同步修改實作、測試與章節說明。
-- alpha / beta / RC 不進入主線實作，除非該章明確是「下一版 migration / preview」實驗。
-- PostgreSQL、nginx 等基礎設施優先採最新 stable / production channel，而不是 development / beta / mainline channel。
-- 不在 dependency requirement 寫死 patch 版本；只有套件本身的 `[package].version` 仍遵守完整 SemVer，例如 `0.1.0`。
-- 每次版本調整後，以實際 repository 的 build / test 結果決定是否完成升級。
 
 # 開發需求
 

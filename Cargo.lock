@@ -498,6 +498,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chat-domain",
+ "thiserror 2.0.21",
  "uuid",
 ]
 
@@ -3203,7 +3204,9 @@ dependencies = [
  "async-trait",
  "chat-application",
  "chat-domain",
+ "dotenv",
  "sqlx",
+ "tokio",
 ]
 
 [[package]]

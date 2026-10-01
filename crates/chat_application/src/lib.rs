@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use chat_domain::{ChatMessage, MessageAuthor, Room};
 use thiserror::Error;
 use uuid::Uuid;
@@ -28,7 +29,7 @@ pub enum RoomRepositoryError {
 
 #[async_trait]
 pub trait RoomRepository: Send + Sync {
-    async fn find_by_id(&self, room_id: String) -> Result<Option<Room>, RoomRepositoryError>;
+    async fn find_by_id(&self, room_id: &str) -> Result<Option<Room>, RoomRepositoryError>;
 }
 
 #[cfg(test)]

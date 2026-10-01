@@ -8,4 +8,6 @@ async-trait.workspace = true
 
 chat-domain = { path = "../chat_domain" }
 
+thiserror.workspace = true
+
 uuid.workspace = true

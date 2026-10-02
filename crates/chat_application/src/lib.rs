@@ -11,9 +11,9 @@ impl ChatService {
         Self
     }
 
-    pub fn send_message(&self, room_id: Uuid, content: String) -> ChatMessage {
+    pub fn send_message(&self, room_id: String, content: String) -> ChatMessage {
         ChatMessage {
-            id: Uuid::new_v4(),
+            id: Uuid::new_v4().to_string(),
             room_id,
             author: MessageAuthor::AnonymousUser,
             content,

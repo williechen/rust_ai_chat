@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct RoomHub {
-    rooms: Arc<Mutex<HashMap<Uuid, broadcast::Sender<ServerEvent>>>>,
+    rooms: Arc<Mutex<HashMap<String, broadcast::Sender<ServerEvent>>>>,
     capacity: usize,
 }
 
@@ -22,7 +22,7 @@ impl RoomHub {
 
     pub fn subscribe(
         &self,
-        room_id: Uuid,
+        room_id: String,
     ) -> (
         broadcast::Sender<ServerEvent>,
         broadcast::Receiver<ServerEvent>,
@@ -42,7 +42,7 @@ impl RoomHub {
         (sender, receiver)
     }
 
-    pub fn publish(&self, room_id: Uuid, event: ServerEvent) {
+    pub fn publish(&self, room_id: String, event: ServerEvent) {
         let sender = {
             let rooms = self.rooms.lock().unwrap();
             rooms.get(&room_id).cloned()
@@ -52,7 +52,7 @@ impl RoomHub {
         }
     }
 
-    pub fn cleanup(&self, room_id: Uuid, sender: &broadcast::Sender<ServerEvent>) {
+    pub fn cleanup(&self, room_id: String, sender: &broadcast::Sender<ServerEvent>) {
         let mut rooms = self.rooms.lock().unwrap();
         let should_remove = rooms.get(&room_id).is_some_and(|current_sender| {
             current_sender.same_channel(sender) && current_sender.receiver_count() == 0

@@ -1,6 +1,5 @@
 use chat_domain::ChatMessage;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 /*{
   "type": "send_message",
@@ -12,8 +11,8 @@ use uuid::Uuid;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum ClientEvent {
-    SendMessage { room_id: Uuid, content: String },
-    Typing { room_id: Uuid, active: bool },
+    SendMessage { room_id: String, content: String },
+    Typing { room_id: String, active: bool },
     Ping,
 }
 
@@ -21,9 +20,9 @@ pub enum ClientEvent {
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum ServerEvent {
     MessageCreated(ChatMessage),
-    AiDelta { message_id: Uuid, delta: String },
-    AiCompleted { message_id: Uuid },
-    PresenceChanged { user_id: Uuid, online: bool },
+    AiDelta { message_id: String, delta: String },
+    AiCompleted { message_id: String },
+    PresenceChanged { user_id: String, online: bool },
     Error { code: String, message: String },
     Pong,
 }
@@ -37,7 +36,7 @@ mod tests {
     #[test]
     fn client_event_json_roundtrip() {
         let event = ClientEvent::SendMessage {
-            room_id: Uuid::new_v4(),
+            room_id: "room-rust".to_string(),
             content: String::from("Hello"),
         };
         let serialized = serde_json::to_string(&event).unwrap();
@@ -48,12 +47,12 @@ mod tests {
 
     #[test]
     fn ai_message_round_trip() {
-        let persona_id = Uuid::new_v4();
-
         let message = ChatMessage {
-            id: Uuid::new_v4(),
-            room_id: Uuid::new_v4(),
-            author: MessageAuthor::Ai { persona_id },
+            id: "message-001".to_string(),
+            room_id: "room-rust".to_string(),
+            author: MessageAuthor::Ai {
+                persona_id: "persona-rust".to_string(),
+            },
             content: "hello".to_string(),
         };
 

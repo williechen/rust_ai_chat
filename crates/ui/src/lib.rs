@@ -97,7 +97,7 @@ fn RoomPage() -> impl IntoView {
 }
 
 #[component]
-pub fn ChatPage(room_id: Uuid) -> impl IntoView {
+pub fn ChatPage(room_id: String) -> impl IntoView {
     let (draft, set_draft) = signal(String::new());
     let (messages, set_messages) = signal(Vec::<ChatMessage>::new());
 

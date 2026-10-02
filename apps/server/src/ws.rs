@@ -11,14 +11,14 @@ use tokio::sync::broadcast;
 use uuid::Uuid;
 
 pub async fn ws_handler(
-    Path(room_id): Path<Uuid>,
+    Path(room_id): Path<String>,
     State(state): State<AppState>,
     ws: WebSocketUpgrade,
 ) -> Response {
     ws.on_upgrade(move |socket| handle_socket(socket, state, room_id))
 }
 
-async fn handle_socket(mut socket: WebSocket, state: AppState, room_id: Uuid) {
+async fn handle_socket(mut socket: WebSocket, state: AppState, room_id: String) {
     let (room_sender, mut room_events) = state.room_hub.subscribe(room_id);
 
     loop {
@@ -71,7 +71,7 @@ async fn handle_client_event(
     socket: &mut WebSocket,
     state: &AppState,
     text: &str,
-    event_room_id: Uuid,
+    event_room_id: String,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let event: ClientEvent = serde_json::from_str(text)?;
 

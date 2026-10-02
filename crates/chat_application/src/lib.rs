@@ -39,11 +39,11 @@ mod tests {
     #[test]
     fn send_message_creates_user_message() {
         let service = ChatService::new();
-        let room_id = Uuid::new_v4();
+        let room_id = "rust_chat".to_string();
 
-        let message = service.send_message(room_id, "hello".to_string());
+        let message = service.send_message(room_id.clone(), "hello".to_string());
 
-        assert_eq!(message.room_id, room_id);
+        assert_eq!(message.room_id, room_id.clone());
         assert_eq!(message.author, MessageAuthor::AnonymousUser);
         assert_eq!(message.content, "hello");
     }

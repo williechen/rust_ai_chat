@@ -4,7 +4,6 @@ use std::sync::Mutex;
 
 use shared::ServerEvent;
 use tokio::sync::broadcast;
-use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct RoomHub {

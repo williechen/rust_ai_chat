@@ -84,10 +84,7 @@ fn RoomPage() -> impl IntoView {
     let params = use_params_map();
 
     move || {
-        let room_id = params
-            .read()
-            .get("room_id")
-            .and_then(|value| Uuid::parse_str(&value).ok());
+        let room_id = params.read().get("room_id").and_then(|value| Some(value));
 
         match room_id {
             Some(room_id) => view! { <ChatPage room_id /> }.into_any(),
@@ -121,6 +118,8 @@ pub fn ChatPage(room_id: String) -> impl IntoView {
         let socket = Rc::clone(&socket);
 
         move |_| {
+            let room_id = room_id.clone();
+
             let content = draft.get_untracked().trim().to_string();
 
             if content.is_empty() {

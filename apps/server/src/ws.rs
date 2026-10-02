@@ -8,7 +8,6 @@ use axum::{
 };
 use shared::{ClientEvent, ServerEvent};
 use tokio::sync::broadcast;
-use uuid::Uuid;
 
 pub async fn ws_handler(
     Path(room_id): Path<String>,
@@ -19,7 +18,7 @@ pub async fn ws_handler(
 }
 
 async fn handle_socket(mut socket: WebSocket, state: AppState, room_id: String) {
-    let (room_sender, mut room_events) = state.room_hub.subscribe(room_id);
+    let (room_sender, mut room_events) = state.room_hub.subscribe(room_id.clone());
 
     loop {
         tokio::select! {
@@ -36,7 +35,7 @@ async fn handle_socket(mut socket: WebSocket, state: AppState, room_id: String) 
                 };
 
                 if let Message::Text(text) = message {
-                    if let Err(error) = handle_client_event(&mut socket, &state, text.as_str(), room_id).await {
+                    if let Err(error) = handle_client_event(&mut socket, &state, text.as_str(), room_id.clone()).await {
                         eprintln!("client message error: {error}");
                         break;
                     }
@@ -64,7 +63,7 @@ async fn handle_socket(mut socket: WebSocket, state: AppState, room_id: String) 
 
     drop(room_events);
 
-    state.room_hub.cleanup(room_id, &room_sender);
+    state.room_hub.cleanup(room_id.clone(), &room_sender);
 }
 
 async fn handle_client_event(
@@ -92,10 +91,10 @@ async fn handle_client_event(
                 return Ok(());
             }
 
-            let message = state.chat_service.send_message(room_id, content);
+            let message = state.chat_service.send_message(room_id.clone(), content);
             state
                 .room_hub
-                .publish(room_id, ServerEvent::MessageCreated(message));
+                .publish(room_id.clone(), ServerEvent::MessageCreated(message));
         }
         ClientEvent::Typing { .. } => {
             // 後面再做 presence / typing。

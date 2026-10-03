@@ -6,6 +6,8 @@ use tauri::{Emitter, Manager, PhysicalPosition, State};
 const ROAM_STEP_X: i32 = 2;
 const ROAM_STEP_Y: i32 = 1;
 const ROAM_INTERVAL: std::time::Duration = std::time::Duration::from_millis(50);
+const ROAM_VERIFY_INTERVAL: std::time::Duration = std::time::Duration::from_millis(200);
+const ROAM_STALL_LIMIT: u8 = 3;
 
 struct AiState {
     model: Arc<dyn ChatModel>,
@@ -18,18 +20,60 @@ impl AiState {
 }
 
 async fn roam_desktop(app: tauri::AppHandle) {
+    let mut stalled_attempts = 0_u8;
+
     loop {
-        let Some(window) = app.get_webview_window("main") else {
-            break;
+        let window = match app.get_webview_window("main") {
+            Some(window) => window,
+            None => {
+                println!("desktop roaming unavailable: main window not found");
+                break;
+            }
         };
 
-        if let Ok(position) = window.outer_position() {
-            let next = PhysicalPosition {
-                x: position.x + ROAM_STEP_X,
-                y: position.y + ROAM_STEP_Y,
-            };
-            let _ = window.set_position(next);
+        let before = match window.outer_position() {
+            Ok(position) => position,
+            Err(error) => {
+                eprintln!("desktop roaming unavailable: {error}");
+                break;
+            }
+        };
+
+        let requested = PhysicalPosition {
+            x: before.x + ROAM_STEP_X,
+            y: before.y + ROAM_STEP_Y,
+        };
+
+        if let Err(error) = window.set_position(requested) {
+            eprintln!("desktop roaming unavailable: {error}");
+            break;
         }
+
+        tokio::time::sleep(ROAM_VERIFY_INTERVAL).await;
+
+        let after = match window.outer_position() {
+            Ok(position) => position,
+            Err(error) => {
+                eprintln!("desktop roaming verification unavailable: {error}");
+                break;
+            }
+        };
+
+        if after == before {
+            stalled_attempts += 1;
+
+            if stalled_attempts >= ROAM_STALL_LIMIT {
+                eprintln!(
+                    "desktop roaming unavailable: \
+                     window position did not change after \
+                     {ROAM_STALL_LIMIT} attempts"
+                );
+                break;
+            }
+        } else {
+            stalled_attempts = 0;
+        }
+
         tokio::time::sleep(ROAM_INTERVAL).await;
     }
 }

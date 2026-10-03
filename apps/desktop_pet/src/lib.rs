@@ -78,6 +78,25 @@ async fn roam_desktop(app: tauri::AppHandle) {
     }
 }
 
+fn dispatch_pet_command(
+    app: &tauri::AppHandle,
+    pet: &Mutex<PetMachine>,
+    command: PetCommand,
+) -> Result<PetSnapshot, String> {
+    let snapshot = {
+        let mut pet = pet
+            .lock()
+            .map_err(|_| "pet state lock poisoned".to_string())?;
+
+        pet.dispatch(command).map_err(|error| error.to_string())?
+    };
+
+    app.emit("pet://state-changed", snapshot.clone())
+        .map_err(|error| error.to_string())?;
+
+    Ok(snapshot)
+}
+
 #[tauri::command]
 fn get_pet_state(pet: State<'_, Mutex<PetMachine>>) -> Result<PetSnapshot, String> {
     let pet = pet.lock().map_err(|_| "pet state unavailable")?;
@@ -90,15 +109,7 @@ fn send_pet_command(
     pet: State<'_, Mutex<PetMachine>>,
     command: PetCommand,
 ) -> Result<PetSnapshot, String> {
-    let snapshot = {
-        let mut pet = pet.lock().map_err(|_| "pet state lock poisoned")?;
-        pet.dispatch(command).map_err(|error| error.to_string())?
-    };
-
-    app.emit("pet://state-changed", snapshot.clone())
-        .map_err(|error| error.to_string())?;
-
-    Ok(snapshot)
+    dispatch_pet_command(&app, pet.inner(), command)
 }
 
 #[tauri::command]
@@ -119,6 +130,32 @@ pub fn application() {
         .manage(Mutex::new(PetMachine::default()))
         .manage(AiState::new(Arc::new(MockChatModel)))
         .setup(|app| {
+            /*
+             * JS Menu.new() 建立的 native menu item
+             * 仍會產生 native menu event。
+             *
+             * Linux 不再依賴 JS action callback
+             * 才能 dispatch PetCommand。
+             */
+            app.on_menu_event(|app_handle, event| {
+                let command = match event.id().0.as_str() {
+                    "interact" => Some(PetCommand::Interact),
+                    "sleep" => Some(PetCommand::Sleep),
+                    "wake" => Some(PetCommand::Wake),
+                    _ => None,
+                };
+
+                let Some(command) = command else {
+                    return;
+                };
+
+                let pet = app_handle.state::<Mutex<PetMachine>>();
+
+                if let Err(error) = dispatch_pet_command(app_handle, pet.inner(), command) {
+                    eprintln!("pet context menu command failed: {error}");
+                }
+            });
+
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 roam_desktop(app_handle).await;

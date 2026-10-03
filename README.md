@@ -40,8 +40,8 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 - RoomRepository trait 與 PostgreSQL adapter 已存在，但尚未完整接入 runtime use case。
 - Web Chat 尚未完成 message persistence、history、login/session、authorization、reconnect、presence、typing、AI streaming 與 persona runtime。
 - AI Core 已有 `ChatModel` abstraction 與 `MockChatModel`，目前真實 AI provider 尚未接入 Web Chat。
-- Desktop AI Pet 已有 Tauri managed state、Pet state machine、frontend bridge、mock chat 與基本桌面移動。
-- Desktop AI Pet 尚未完成真實 AI provider、streaming、memory、agent behavior、完整移動邊界控制與發佈流程。
+- Desktop AI Pet 已有 Tauri managed state、Pet state machine、frontend bridge、mock chat、native context-menu command dispatch，以及具位置變更驗證與 stall 停止機制的基本桌面移動。
+- Desktop AI Pet 尚未完成 monitor/work-area bounds、碰邊反向、依 PetState / 拖曳協調移動、真實 AI provider、streaming、memory、agent behavior 與發佈流程。
 - Observability、完整部署、自動化 E2E 測試仍未完成。
 
 ## 最終目標
@@ -115,17 +115,18 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 
 ## 共同實作規則
 
-1. 每次開始新章節或新功能前，先讀取實際 GitHub repository 並進行 code review，再決定下一個缺口。
-2. Repository 的實際程式碼是功能完成與否的主要依據；Notion roadmap 或 Day 編號不能取代實際驗證。
-3. 實作前核對官方 **latest stable** 與 API 差異，不直接採用 alpha、beta、RC。
-4. Dependency 升級必須連同程式修改與驗證一起完成。
-5. `Cargo.toml` dependency requirement 只寫 major/minor，例如 `leptos = "0.8"`、`tokio = "1.53"`。
-6. 精確解析版本由 `Cargo.lock` 保留；可重現建置與 CI 優先使用 `--locked`。
-7. `[package].version` 保留完整 SemVer，例如 `0.1.0`。
-8. Database / domain 欄位優先使用跨資料庫通用表示，避免不必要地把 domain 綁定特定 database 型別。
-9. 每一章只完成可驗證的小目標；完成後再依實際 repository 缺口決定下一章。
-10. 未來規劃、預留 protocol、placeholder crate 或尚未 wiring 的能力不得標示為已完成。
-11. GitHub README 只維護 repository 實況；深入原理、逐步教學與章節說明放在 Notion。
+1. 每完成一章，先讀取並 code review 實際 GitHub repository，再更新 README 的目前現況、已完成項目與後續缺口。
+2. 下一章或下一個功能必須依 code review 後的實際 repository 缺口決定，不能只沿用既有 roadmap 推測程式結構。
+3. Repository 的實際程式碼是功能完成與否的主要依據；Notion roadmap 或 Day 編號不能取代實際驗證。
+4. 實作前核對官方 **latest stable** 與 API 差異，不直接採用 alpha、beta、RC。
+5. Dependency 升級必須連同程式修改與驗證一起完成。
+6. `Cargo.toml` dependency requirement 只寫 major/minor，例如 `leptos = "0.8"`、`tokio = "1.53"`。
+7. 精確解析版本由 `Cargo.lock` 保留；可重現建置與 CI 優先使用 `--locked`。
+8. `[package].version` 保留完整 SemVer，例如 `0.1.0`。
+9. Database / domain 欄位優先使用跨資料庫通用表示，避免不必要地把 domain 綁定特定 database 型別。
+10. 每一章只完成可驗證的小目標；完成後再依實際 repository 缺口決定下一章。
+11. 未來規劃、預留 protocol、placeholder crate 或尚未 wiring 的能力不得標示為已完成。
+12. GitHub README 只維護 repository 實際程式說明；深入原理、逐步教學、設計理由與每日章節內容只放在 Notion。
 
 ## 測試與 CI 範圍
 

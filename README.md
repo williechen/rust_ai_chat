@@ -158,6 +158,13 @@ cargo test -p shared
 cargo test -p ui
 ```
 
+Persistence CI 另外執行：
+
+```bash
+sqlx migrate run
+cargo test -p persistence --locked
+```
+
 ### Build
 
 目前 CI 執行：
@@ -172,7 +179,6 @@ trunk build --release
 
 ### 尚未納入 CI 的主要範圍
 
-- PostgreSQL service / persistence integration test
 - Browser E2E
 - WebSocket E2E
 - Tauri desktop E2E
@@ -180,11 +186,7 @@ trunk build --release
 - Deployment verification
 - OpenTelemetry integration verification
 
-Persistence repository test 目前需要自行準備 `DATABASE_URL`、migration 與測試資料後執行：
-
-```bash
-cargo test -p persistence test_room_repository_find_by_id
-```
+Persistence integration test 已納入 GitHub Actions 的 `persistence-test` job：CI 會啟動 PostgreSQL 17 service container、設定臨時 `DATABASE_URL`、執行 migrations，再執行 `cargo test -p persistence --locked`。現有 `test_room_repository_find_by_id` 會自行建立與清理測試資料，不依賴本機既有 seed。
 
 ## 開發與執行
 

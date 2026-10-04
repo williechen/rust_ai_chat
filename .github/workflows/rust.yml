@@ -216,7 +216,7 @@ jobs:
       - name: Build server
         run: cargo leptos build --release
 
-build-pet:
+  build-pet:
     runs-on: ubuntu-latest
 
     steps:

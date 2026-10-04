@@ -9,7 +9,6 @@ async-trait.workspace = true
 chat-application = { path = "../chat_application" }
 chat-domain = { path = "../chat_domain" }
 
-dotenv.workspace = true
 
 sqlx.workspace = true
 

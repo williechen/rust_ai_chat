@@ -101,7 +101,7 @@ jobs:
             libwebkit2gtk-4.1-dev
 
       - name: Test desktop-pet
-        run: cargo test -p desktop-pet --locked
+        run: cargo test -p desktop-pet
 
       - name: Test ai core
         run: cargo test -p ai-core

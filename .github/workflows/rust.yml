@@ -74,6 +74,9 @@ jobs:
       - name: Check desktop frontend
         run: cargo check -p desktop-pet-frontend --target wasm32-unknown-unknown
 
+      - name: Test desktop-pet
+        run: cargo test -p desktop-pet --locked
+
       - name: Test ai core
         run: cargo test -p ai-core
 

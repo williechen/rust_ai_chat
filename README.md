@@ -186,7 +186,7 @@ trunk build --release
 - Deployment verification
 - OpenTelemetry integration verification
 
-Persistence integration test 已納入 GitHub Actions 的 `persistence-test` job：CI 會啟動 PostgreSQL 17 service container、設定臨時 `DATABASE_URL`、執行 migrations，再執行 `cargo test -p persistence --locked`。現有 `test_room_repository_find_by_id` 會自行建立與清理測試資料，不依賴本機既有 seed。
+Persistence integration test 已納入 GitHub Actions 的 `persistence-test` job：CI 會啟動 PostgreSQL 17 service container、設定臨時 `DATABASE_URL`、驗證 migrations，再執行 `cargo test -p persistence --locked`。目前真實 PostgreSQL repository test 已改用 `#[sqlx::test(migrations = "../../migrations")]`；SQLx 會為測試建立隔離 database 並套用 migrations，測試本身只建立必要 fixture，不依賴本機既有 seed，也不需要手動 cleanup。
 
 ## 開發與執行
 

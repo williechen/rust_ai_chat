@@ -139,7 +139,7 @@ GitHub Actions：`.github/workflows/rust.yml`
 
 ### Check
 
-目前 CI 執行：
+`rust.yml` 以 `check-chat`、`check-pet`、`unit-test` 與 `unit-of-work-test` jobs 驗證程式碼。Check jobs 執行：
 
 ```bash
 cargo check -p server --features ssr
@@ -148,8 +148,12 @@ cargo check -p ui --features hydrate --target wasm32-unknown-unknown
 
 cargo check --workspace --exclude desktop-pet-frontend
 cargo check -p desktop-pet-frontend --target wasm32-unknown-unknown
+```
 
-cargo test -p desktop-pet --locked
+`unit-test` job 執行：
+
+```bash
+cargo test -p desktop-pet
 cargo test -p ai-core
 cargo test -p chat-application
 cargo test -p chat-domain
@@ -158,16 +162,16 @@ cargo test -p shared
 cargo test -p ui
 ```
 
-Persistence CI 另外執行：
+`unit-of-work-test` job 啟動 `postgres:latest` service，設定臨時 `DATABASE_URL`，執行 migrations 與 persistence tests：
 
 ```bash
 sqlx migrate run
-cargo test -p persistence --locked
+cargo test -p persistence
 ```
 
 ### Build
 
-目前 CI 執行：
+`build-chat` 與 `build-pet` jobs 執行：
 
 ```bash
 cargo build --workspace --exclude desktop-pet-frontend --verbose
@@ -186,7 +190,7 @@ trunk build --release
 - Deployment verification
 - OpenTelemetry integration verification
 
-Persistence integration test 已納入 GitHub Actions 的 `persistence-test` job：CI 會啟動 PostgreSQL 17 service container、設定臨時 `DATABASE_URL`、驗證 migrations，再執行 `cargo test -p persistence --locked`。目前真實 PostgreSQL repository test 已改用 `#[sqlx::test(migrations = "../../migrations")]`；SQLx 會為測試建立隔離 database 並套用 migrations，測試本身只建立必要 fixture，不依賴本機既有 seed，也不需要手動 cleanup。
+Persistence integration test 已納入 GitHub Actions 的 `unit-of-work-test` job：CI 會啟動 PostgreSQL service container、設定臨時 `DATABASE_URL`、執行 migrations，再執行 `cargo test -p persistence`。Repository test 使用 `#[sqlx::test(migrations = "../../migrations")]`；SQLx 會為測試建立隔離 database 並套用 migrations，測試本身只建立必要 fixture，不依賴本機既有 seed，也不需要手動 cleanup。
 
 ## 開發與執行
 

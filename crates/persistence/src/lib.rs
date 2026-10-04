@@ -69,23 +69,8 @@ impl RoomRepository for PostgresRoomRepository {
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_room_repository_find_by_id() {
-        dotenv::dotenv().ok();
-
-        let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-        let db = sqlx::PgPool::connect(&database_url)
-            .await
-            .expect("Failed to connect to database");
-
-        migrate(&db).await.expect("Failed to run migrations");
-
-        sqlx::query("DELETE FROM rooms WHERE id = $1")
-            .bind("room-rust")
-            .execute(&db)
-            .await
-            .expect("Failed to clean existing test room");
-
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn test_room_repository_find_by_id(pool: PgPool) {
         sqlx::query(
             r#"
             INSERT INTO rooms (
@@ -101,11 +86,11 @@ mod tests {
         .bind("room-rust")
         .bind("category-programming")
         .bind("Rust")
-        .execute(&db)
+        .execute(&pool)
         .await
         .expect("Failed to seed test room");
 
-        let repo = PostgresRoomRepository::new(db.clone());
+        let repo = PostgresRoomRepository::new(pool);
 
         let room = repo
             .find_by_id("room-rust")
@@ -116,11 +101,5 @@ mod tests {
         assert_eq!(room.id, "room-rust");
         assert_eq!(room.category_room_id, "category-programming");
         assert_eq!(room.name, "Rust");
-
-        sqlx::query("DELETE FROM rooms WHERE id = $1")
-            .bind("room-rust")
-            .execute(&db)
-            .await
-            .expect("Failed to clean test room");
     }
 }

@@ -45,10 +45,10 @@ fn bounded_next_position(
         *dx = 0;
     } else if next_x < min_x {
         next_x = min_x;
-        *dx = -*dx;
+        *dx = dx.saturating_abs();
     } else if next_x > max_x {
         next_x = max_x;
-        *dx = -*dx;
+        *dx = -dx.saturating_abs();
     }
 
     if max_y <= min_y {
@@ -56,10 +56,10 @@ fn bounded_next_position(
         *dy = 0;
     } else if next_y < min_y {
         next_y = min_y;
-        *dy = -*dy;
+        *dy = dy.saturating_abs();
     } else if next_y > max_y {
         next_y = max_y;
-        *dy = -*dy;
+        *dy = -dy.saturating_abs();
     }
 
     PhysicalPosition {

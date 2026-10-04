@@ -8,7 +8,7 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 > **文件分工**
 >
 > - **GitHub Repository / README**：只記錄實際程式大綱、最終目標、後續缺口、共同實作規則、測試與 CI 範圍、開發與執行方式。
-> - **Notion**：記錄每日章節、設計理由、觀念解說、實作過程與深入淺出教學。
+> - **Notion**：記錄每日章節、設計理由與**深入淺出的實作教學**；必須包含實作步驟、程式碼修改、驗證方式與實作細節，不只是概念或原理解說。
 >
 > README 以實際 repository 為準，不以 Day 編號或教學規劃判定功能是否完成。
 
@@ -37,11 +37,11 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 
 - Web Chat 已具備 Axum + Leptos SSR/hydration、room route、WebSocket 即時 broadcast。
 - Chat domain / protocol 的主要識別碼使用跨資料庫較通用的字串表示。
-- RoomRepository trait 與 PostgreSQL adapter 已存在，但尚未完整接入 runtime use case。
+- RoomRepository trait 與 PostgreSQL adapter 已存在，並已注入 server runtime；WebSocket upgrade 前會透過 repository 驗證 room 是否存在。
 - Web Chat 尚未完成 message persistence、history、login/session、authorization、reconnect、presence、typing、AI streaming 與 persona runtime。
 - AI Core 已有 `ChatModel` abstraction 與 `MockChatModel`，目前真實 AI provider 尚未接入 Web Chat。
-- Desktop AI Pet 已有 Tauri managed state、Pet state machine、frontend bridge、mock chat、native context-menu command dispatch，以及具位置變更驗證與 stall 停止機制的基本桌面移動。
-- Desktop AI Pet 尚未完成 monitor/work-area bounds、碰邊反向、依 PetState / 拖曳協調移動、真實 AI provider、streaming、memory、agent behavior 與發佈流程。
+- Desktop AI Pet 已有 Tauri managed state、Pet state machine、frontend bridge、mock chat、native context-menu command dispatch，以及具 work-area bounds、碰邊反向、位置變更驗證與 stall 停止機制的桌面移動。
+- Desktop AI Pet 尚未完成依 PetState / 使用者拖曳協調移動、真實 AI provider、streaming、memory、agent behavior 與發佈流程。
 - Observability、完整部署、自動化 E2E 測試仍未完成。
 
 ## 最終目標
@@ -89,7 +89,7 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 
 優先缺口：
 
-1. Room create / lookup use case 與 repository runtime injection。
+1. Room create use case 與 UI / application wiring；目前 room lookup 已用於 WebSocket 連線驗證。
 2. Message persistence 與 history loading。
 3. ID validation 與 application-level input validation。
 4. User identity、login、session、authorization。
@@ -103,15 +103,14 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 
 優先缺口：
 
-1. Monitor / work-area bounds 與安全桌面移動。
-2. 移動與 Pet state、使用者拖曳之間的協調。
-3. 真實 AI provider。
-4. Streaming conversation 與 conversation history。
-5. Persistent memory。
-6. Learning / Teaching agent loop。
-7. RAG、MCP、Agent Runtime。
-8. OpenTelemetry AI Observability。
-9. Installer、updater 與 release pipeline。
+1. 移動與 Pet state、使用者拖曳之間的協調；work-area bounds 與碰邊反向已完成基線。
+2. 真實 AI provider。
+3. Streaming conversation 與 conversation history。
+4. Persistent memory。
+5. Learning / Teaching agent loop。
+6. RAG、MCP、Agent Runtime。
+7. OpenTelemetry AI Observability。
+8. Installer、updater 與 release pipeline。
 
 ## 共同實作規則
 
@@ -126,7 +125,8 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 9. Database / domain 欄位優先使用跨資料庫通用表示，避免不必要地把 domain 綁定特定 database 型別。
 10. 每一章只完成可驗證的小目標；完成後再依實際 repository 缺口決定下一章。
 11. 未來規劃、預留 protocol、placeholder crate 或尚未 wiring 的能力不得標示為已完成。
-12. GitHub README 只維護 repository 實際程式說明；深入原理、逐步教學、設計理由與每日章節內容只放在 Notion。
+12. GitHub README 只維護 repository 的實際程式說明，不承擔章節式教學內容。
+13. Notion 才是深入淺出的**實作教學**：每章必須包含實際修改位置、完整或關鍵程式碼、操作步驟、測試/驗證方式、預期結果與必要的設計理由；不能只寫深入淺出的概念說明。
 
 ## 測試與 CI 範圍
 
@@ -149,6 +149,7 @@ cargo check -p ui --features hydrate --target wasm32-unknown-unknown
 cargo check --workspace --exclude desktop-pet-frontend
 cargo check -p desktop-pet-frontend --target wasm32-unknown-unknown
 
+cargo test -p desktop-pet --locked
 cargo test -p ai-core
 cargo test -p chat-application
 cargo test -p chat-domain

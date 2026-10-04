@@ -10,7 +10,46 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  check:
+  check-chat:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y dist-upgrade
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libxdo-dev \
+            librsvg2-dev \
+            libwebkit2gtk-4.1-dev
+
+      - name: Install cargo-leptos
+        run: cargo install cargo-leptos --locked
+
+      - name: Check server ssr
+        run: cargo check -p server --features ssr
+
+      - name: Check ui ssr
+        run: cargo check -p ui --features ssr
+
+      - name: Check ui
+        run: cargo check -p ui --features hydrate --target wasm32-unknown-unknown
+
+
+  check-pet:
     runs-on: ubuntu-latest
 
     steps:
@@ -52,18 +91,6 @@ jobs:
 
           echo "WebKitGTK:"
           pkg-config --modversion webkit2gtk-4.1
-
-      - name: Install cargo-leptos
-        run: cargo install cargo-leptos --locked
-
-      - name: Check server ssr
-        run: cargo check -p server --features ssr
-
-      - name: Check ui ssr
-        run: cargo check -p ui --features ssr
-
-      - name: Check ui
-        run: cargo check -p ui --features hydrate --target wasm32-unknown-unknown
 
       - name: Install trunk
         run: cargo install trunk --locked
@@ -157,7 +184,39 @@ jobs:
       - name: Test persistence
         run: cargo test -p persistence
 
-  build:
+  build-chat:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y dist-upgrade
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libxdo-dev \
+            librsvg2-dev \
+            libwebkit2gtk-4.1-dev
+
+      - name: Install cargo-leptos
+        run: cargo install cargo-leptos --locked
+
+      - name: Build server
+        run: cargo leptos build --release
+
+build-pet:
     runs-on: ubuntu-latest
 
     steps:
@@ -185,12 +244,6 @@ jobs:
 
       - name: Check native dependencies
         run: cargo build --workspace --exclude desktop-pet-frontend --verbose
-
-      - name: Install cargo-leptos
-        run: cargo install cargo-leptos --locked
-
-      - name: Build server
-        run: cargo leptos build --release
 
       - name: Install trunk
         run: cargo install trunk --locked

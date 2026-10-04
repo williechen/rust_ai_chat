@@ -62,7 +62,7 @@ jobs:
       - name: Check ui ssr
         run: cargo check -p ui --features ssr
 
-      - name: Check ui 
+      - name: Check ui
         run: cargo check -p ui --features hydrate --target wasm32-unknown-unknown
 
       - name: Install trunk
@@ -85,7 +85,7 @@ jobs:
 
       - name: Test chat domain
         run: cargo test -p chat-domain
-      
+
       - name: Test pet domain
         run: cargo test -p pet-domain
 
@@ -94,6 +94,42 @@ jobs:
 
       - name: Test ui
         run: cargo test -p ui
+
+  persistence-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rust_ai_chat_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d rust_ai_chat_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rust_ai_chat_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install sqlx-cli
+        run: cargo install sqlx-cli --version "^0.9" --no-default-features --features postgres --locked
+
+      - name: Run database migrations
+        run: sqlx migrate run
+
+      - name: Test persistence
+        run: cargo test -p persistence --locked
 
   build:
     runs-on: ubuntu-latest

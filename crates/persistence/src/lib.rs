@@ -52,8 +52,8 @@ impl RoomRepository for PostgresRoomRepository {
         sqlx::query_as::<_, RoomRow>(
             r#"SELECT id
                     , category_room_id
-                    , name 
-                FROM rooms 
+                    , name
+                FROM rooms
                 WHERE id = $1
             "#,
         )
@@ -77,13 +77,50 @@ mod tests {
         let db = sqlx::PgPool::connect(&database_url)
             .await
             .expect("Failed to connect to database");
-        let repo = PostgresRoomRepository::new(db);
+
+        migrate(&db).await.expect("Failed to run migrations");
+
+        sqlx::query("DELETE FROM rooms WHERE id = $1")
+            .bind("room-rust")
+            .execute(&db)
+            .await
+            .expect("Failed to clean existing test room");
+
+        sqlx::query(
+            r#"
+            INSERT INTO rooms (
+                id,
+                category_room_id,
+                name,
+                created_at,
+                updated_at
+            )
+            VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            "#,
+        )
+        .bind("room-rust")
+        .bind("category-programming")
+        .bind("Rust")
+        .execute(&db)
+        .await
+        .expect("Failed to seed test room");
+
+        let repo = PostgresRoomRepository::new(db.clone());
 
         let room = repo
             .find_by_id("room-rust")
             .await
-            .expect("room should exist");
+            .expect("room query should succeed")
+            .expect("room-rust should exist");
 
-        assert_eq!(room.unwrap().name, "Rust");
+        assert_eq!(room.id, "room-rust");
+        assert_eq!(room.category_room_id, "category-programming");
+        assert_eq!(room.name, "Rust");
+
+        sqlx::query("DELETE FROM rooms WHERE id = $1")
+            .bind("room-rust")
+            .execute(&db)
+            .await
+            .expect("Failed to clean test room");
     }
 }

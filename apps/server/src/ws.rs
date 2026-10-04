@@ -14,7 +14,20 @@ pub async fn ws_handler(
     State(state): State<AppState>,
     ws: WebSocketUpgrade,
 ) -> Response {
-    ws.on_upgrade(move |socket| handle_socket(socket, state, room_id))
+    match state.room_repository.find_by_id(&room_id).await {
+        Ok(Some(_room)) => ws.on_upgrade(move |socket| handle_socket(socket, state, room_id)),
+        Ok(None) => Response::builder()
+            .status(404)
+            .body("Room not found".into())
+            .unwrap(),
+        Err(error) => {
+            eprintln!("websocket room lookup error: {:?}", error);
+            Response::builder()
+                .status(500)
+                .body("Internal server error".into())
+                .unwrap()
+        }
+    }
 }
 
 async fn handle_socket(mut socket: WebSocket, state: AppState, room_id: String) {

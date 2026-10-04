@@ -1,25 +1,27 @@
 use crate::hub::RoomHub;
-use chat_application::ChatService;
-use sqlx::PgPool;
+use chat_application::{ChatService, RoomRepository};
 use std::sync::Arc;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AppState {
-    pub service_name: &'static str,
     pub chat_service: Arc<ChatService>,
-    pub room_hub: RoomHub,
     pub leptos_options: leptos_config::LeptosOptions,
-    pub db: PgPool,
+    pub room_hub: RoomHub,
+    pub room_repository: Arc<dyn RoomRepository>,
+    pub service_name: &'static str,
 }
 
 impl AppState {
-    pub fn new(leptos_options: leptos_config::LeptosOptions, db: PgPool) -> Self {
+    pub fn new(
+        leptos_options: leptos_config::LeptosOptions,
+        room_repository: Arc<dyn RoomRepository>,
+    ) -> Self {
         Self {
             service_name: "rust_ai_chat",
             chat_service: Arc::new(ChatService::new()),
             room_hub: RoomHub::new(128),
             leptos_options,
-            db,
+            room_repository,
         }
     }
 }

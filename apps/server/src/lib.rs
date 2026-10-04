@@ -4,6 +4,8 @@ mod ssr;
 mod state;
 mod ws;
 
+use std::sync::Arc;
+
 use any_spawner::Executor;
 use axum::{
     Router,
@@ -26,7 +28,9 @@ pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
 
     persistence::migrate(&db).await?;
 
-    let state = state::AppState::new(leptos_options, db);
+    let room_repository = Arc::new(persistence::PostgresRoomRepository::new(db));
+
+    let state = state::AppState::new(leptos_options, room_repository);
 
     let app = Router::new()
         .route_service(&pkg_path, pkg_service)

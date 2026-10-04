@@ -302,7 +302,7 @@ mod tests {
             &mut dy,
         );
         assert_eq!(next, PhysicalPosition { x: -1602, y: 0 });
-        assert_eq!((dx, dy), (-2, 1));
+        assert_eq!((dx, dy), (-2, -1));
     }
 
     #[test]

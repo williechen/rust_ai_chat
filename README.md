@@ -12,7 +12,6 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 >
 > README 以實際 repository 為準，不以 Day 編號或教學規劃判定功能是否完成。
 
-專案方向與共同規則對照：[Notion 聊天室主頁](https://app.notion.com/p/3e3e51d4509381df860bf52cc2a4a827)、[Notion 桌面小動物主頁](https://app.notion.com/p/3e3e51d4509381639005e7c9c63f6917)。主頁與章節中的規劃不代表程式已完成。
 
 ## 大綱
 
@@ -35,12 +34,12 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 | `deploy` | 部署相關設定，目前仍以 placeholder 為主 |
 | `tests` | Repository-level test 預留目錄；目前多數測試仍位於各 crate 內 |
 
-本輪核對基線：`main` commit [`2735b135`](https://github.com/williechen/rust_ai_chat/commit/2735b135b581b5b1d74a256a8adcf11b7a15aece)（2026-10-05，Asia/Taipei）。以下「已完成」指程式已接線的基線能力；完整使用流程仍受後續缺口限制。
+本輪核對基線：`main` commit `fbd9cdf8`（2026-10-05）。以下「已完成」只表示實際程式碼中已存在並接線的基線能力；完整使用流程仍受後續缺口限制。
 
 目前實作基線：
 
 - Web Chat 已具備 Axum + Leptos SSR/hydration、首頁與 `/room/:room_id` 路由、`/health`、同房間 WebSocket broadcast、應用層 Ping/Pong，以及訊息 room ID 與連線 room ID 的一致性檢查。
-- 首頁 `Create Room` 目前只產生 UUID 並跳轉，未呼叫建立房間 use case，也未寫入資料庫；房間建立流程尚未完成。
+- Server 已有 `POST /api/rooms`、application `create_room` use case 與 repository `create` 寫入；但首頁 `Create Room` 仍只在 browser 產生 UUID 後直接 navigate，尚未呼叫 API，因此 UI 建房流程尚未完成。
 - Chat domain / protocol 的主要識別碼使用跨資料庫較通用的字串表示。
 - RoomRepository trait 與 PostgreSQL adapter 已存在，並已注入 server runtime；WebSocket upgrade 前會透過 repository 驗證 room 是否存在。
 - Web Chat 尚未完成 message persistence、history、login/session、authorization、reconnect、presence、typing、AI streaming 與 persona runtime。
@@ -48,7 +47,7 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 - AI Core 已有 `ChatModel` abstraction 與 `MockChatModel`，目前真實 AI provider 尚未接入 Web Chat。
 - Desktop AI Pet 已有 Tauri managed state、Pet state machine、frontend bridge、mock chat、native context-menu command dispatch，以及具 work-area bounds、碰邊反向、位置變更驗證與 stall 停止機制的桌面移動。
 - Desktop AI Pet 尚未完成依 PetState / 使用者拖曳協調移動、真實 AI provider、streaming、memory、agent behavior 與發佈流程。
-- Filesystem / FileOrganizer / Trash 尚無實作；Desktop Pet 啟動流程亦尚無 effective UID 為 0 時拒絕執行的檢查。
+- Desktop Pet 已有 `file_organizer` 基線：`AuthorizedRoot` canonicalize、Unix effective UID root 拒絕、regular-file scan、symlink skip、opaque item ID、相同 size duplicate candidate preview 與單元測試；目前尚未接入 Tauri command / UI / runtime workflow，也尚未實作 hash duplicate、move / consume / Trash。
 - Observability、完整部署、自動化 E2E 測試仍未完成。
 
 ## 最終目標
@@ -101,7 +100,7 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 
 優先缺口：
 
-1. 完成 Room create use case、repository write port 與 UI 接線；目前首頁產生的房間 ID 未入庫，WebSocket lookup 因而回傳 404。
+1. 完成首頁 Room create UI 接線：server/application/repository 寫入基線已存在，但首頁仍未 `POST /api/rooms`，目前按鈕產生的 browser UUID 不會入庫，隨後 WebSocket lookup 仍會 404。
 2. Message persistence 與 history loading。
 3. Server/application 層的 ID、空白訊息、內容長度與速率驗證；目前空白內容只由 UI 過濾，直接發送 WebSocket event 仍可繞過。
 4. User identity、login、session、authorization；目前所有訊息均為 `AnonymousUser`，UI 一律顯示 `You`，無法辨識其他發言者。Nested / protected routes 與 ServerFn 亦尚未實作。
@@ -119,8 +118,8 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 優先缺口：
 
 1. 移動與 Pet state、使用者拖曳之間的協調；work-area bounds 與碰邊反向已完成基線。
-2. FileOrganizer scan / suggestion / hash duplicate preview、TrashFeedSource，以及受控 move / consume；目前沒有對應 source、port 或 runtime 接線。
-3. Filesystem 安全邊界與 non-root runtime guard：authorized root、opaque ID、path traversal / symlink escape 防護、操作前重新驗證、preview 與 confirmation。
+2. 把現有 FileOrganizer scan preview 接入 Tauri command / UI / application workflow，並補上 hash duplicate 判定、suggestion、TrashFeedSource 與受控 move / consume。
+3. 補完整 Filesystem 安全邊界：目前已有 AuthorizedRoot canonicalize、root EUID 拒絕、opaque ID 與 symlink skip 基線；仍需 path traversal / symlink race 防護、操作前重新驗證、preview / confirmation，以及應用啟動層級的 non-root runtime guard。
 4. 真實 AI provider、streaming conversation 與 conversation history。
 5. Persistent memory、learner model、owner feedback learning 與主動 Learning / Teaching loop。
 6. Retriever abstraction、RAG、MCP、Agent Runtime。
@@ -151,7 +150,7 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 19. Desktop Pet 必須以一般登入使用者執行；帳號可有 sudo 權限，但 process effective UID 不得為 0，禁止以 `sudo` 啟動。OS 設定可由具 sudo 權限的使用者操作；runtime guard 目前仍是缺口。
 20. Filesystem 操作只接受 authorized root 內經驗證的 opaque ID；防止 path traversal 與 symlink escape。先 preview，破壞性操作需明確確認與重新驗證；telemetry 不記錄檔案內容、完整私人 path 或不必要敏感資料。
 21. native / wasm32 分別使用正確 target 與 features 驗證；compile / CI 通過不取代必要 GUI/runtime 驗收。
-22. Notion 才是深入淺出的**實作教學**：每章包含實際修改位置、必要程式碼、操作步驟、測試、預期結果與設計理由。舊 Day 的落差修正放入下一個合理章節；最新 Day 子頁排在最上方，章節細節不複製到 README。
+22. Notion 才是深入淺出的**實作教學**：每章包含實際修改位置、必要程式碼、操作步驟、測試 / 驗證、預期結果與設計理由，不只是概念說明。每完成一章先 code review 實際 repository，再更新 README 現況；教學內容只更新 Notion。
 
 ## 測試與 CI 範圍
 
@@ -293,7 +292,7 @@ Server 目前在程式內固定綁定 `127.0.0.1:3000`，並非可透過 listen-
 http://127.0.0.1:3000
 ```
 
-目前須先在上述 `.env` 指向的資料庫建立測試房間，再直接開啟房間網址；首頁按鈕尚不能完成建立流程：
+首頁按鈕目前尚未接上 `POST /api/rooms`，因此從 UI 建房仍不能完成資料庫寫入。可先手動建立測試房間後直接開啟房間網址：
 
 ```sql
 INSERT INTO rooms (id, category_room_id, name, created_at, updated_at)

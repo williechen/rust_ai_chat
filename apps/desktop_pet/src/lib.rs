@@ -1,3 +1,5 @@
+mod file_organizer;
+
 use ai_core::{ChatModel, ChatRequest, MockChatModel};
 use pet_domain::{PetCommand, PetMachine, PetSnapshot};
 use std::sync::{Arc, Mutex};

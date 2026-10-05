@@ -11,7 +11,11 @@ pet-domain = { path = "../../crates/pet_domain" }
 serde.workspace = true
 
 tauri = { version = "2.12", features = [] }
+thiserror.workspace = true
 tokio.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
 
 [build-dependencies]
 tauri-build = { version = "2.7", features = [] }

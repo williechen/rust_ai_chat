@@ -935,10 +935,12 @@ name = "desktop-pet"
 version = "0.1.0"
 dependencies = [
  "ai-core",
+ "libc",
  "pet-domain",
  "serde",
  "tauri",
  "tauri-build",
+ "thiserror 2.0.21",
  "tokio",
 ]
 

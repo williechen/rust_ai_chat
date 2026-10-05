@@ -63,6 +63,28 @@ impl RoomRepository for PostgresRoomRepository {
         .map(|row| row.map(Room::from))
         .map_err(|error| RoomRepositoryError::Repository(error.to_string()))
     }
+
+    async fn create(&self, room: &Room) -> Result<(), RoomRepositoryError> {
+        sqlx::query(
+            r#"
+            INSERT INTO rooms (
+                id
+                , category_room_id
+                , name
+                , created_at
+                , updated_at
+            )
+            VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            "#,
+        )
+        .bind(&room.id)
+        .bind(&room.category_room_id)
+        .bind(&room.name)
+        .execute(&self.pool)
+        .await
+        .map(|_| ())
+        .map_err(|error| RoomRepositoryError::Repository(error.to_string()))
+    }
 }
 
 #[cfg(test)]

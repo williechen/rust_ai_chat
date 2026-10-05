@@ -21,6 +21,26 @@ impl ChatService {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct CreateRoom {
+    pub id: String,
+    pub category_room_id: String,
+    pub name: String,
+}
+
+pub async fn create_room(
+    room_repository: &dyn RoomRepository,
+    input: CreateRoom,
+) -> Result<Room, RoomRepositoryError> {
+    let room = Room {
+        id: input.id,
+        category_room_id: input.category_room_id,
+        name: input.name,
+    };
+    room_repository.create(&room).await?;
+    Ok(room)
+}
+
 #[derive(Debug, Error)]
 pub enum RoomRepositoryError {
     #[error("repository error: {0}")]
@@ -30,6 +50,8 @@ pub enum RoomRepositoryError {
 #[async_trait]
 pub trait RoomRepository: Send + Sync {
     async fn find_by_id(&self, room_id: &str) -> Result<Option<Room>, RoomRepositoryError>;
+
+    async fn create(&self, room: &Room) -> Result<(), RoomRepositoryError>;
 }
 
 #[cfg(test)]

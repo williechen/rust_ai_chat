@@ -9,7 +9,7 @@ use std::sync::Arc;
 use any_spawner::Executor;
 use axum::{
     Router,
-    routing::{any, get},
+    routing::{any, get, post},
 };
 use leptos_axum::{site_pkg_dir_service, site_pkg_dir_service_route_path};
 use leptos_config::get_configuration;
@@ -35,6 +35,7 @@ pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         .route_service(&pkg_path, pkg_service)
         .route("/health", get(http::health))
+        .route("/api/rooms", post(http::create_room))
         .route("/ws/{room_id}", any(ws::ws_handler))
         .route("/room/{room_id}", get(ssr::app_handler))
         .route("/", get(ssr::app_handler))

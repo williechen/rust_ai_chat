@@ -66,6 +66,7 @@ pub fn App() -> impl IntoView {
 #[component]
 fn HomePage() -> impl IntoView {
     let navigate = use_navigate();
+
     view! {
         <p>"Welcome to Rust AI Chat!"</p>
         <button

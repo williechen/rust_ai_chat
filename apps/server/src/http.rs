@@ -1,7 +1,8 @@
 use crate::state::AppState;
 use axum::extract::State;
 use axum::{Json, http::StatusCode};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use shared::{CreateRoomRequest, CreateRoomResponse};
 
 #[derive(Debug, Serialize)]
 pub struct HealthResponse {
@@ -16,16 +17,6 @@ pub async fn health(State(state): State<AppState>) -> Json<HealthResponse> {
     })
 }
 
-#[derive(Debug, Deserialize)]
-pub struct CreateRoomRequest {
-    pub name: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct CreateRoomResponse {
-    pub id: String,
-}
-
 pub async fn create_room(
     State(state): State<AppState>,
     Json(request): Json<CreateRoomRequest>,
@@ -35,7 +26,7 @@ pub async fn create_room(
     let room = chat_application::create_room(
         state.room_repository.as_ref(),
         chat_application::CreateRoom {
-            id: room_id.clone(),
+            id: room_id,
             category_room_id: "default-category".to_string(),
             name: request.name,
         },
@@ -43,5 +34,5 @@ pub async fn create_room(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Json(CreateRoomResponse { id: room_id }))
+    Ok(Json(CreateRoomResponse { id: room.id }))
 }

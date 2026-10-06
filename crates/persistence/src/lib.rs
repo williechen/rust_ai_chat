@@ -124,4 +124,27 @@ mod tests {
         assert_eq!(room.category_room_id, "category-programming");
         assert_eq!(room.name, "Rust");
     }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn test_room_repository_create_then_find(pool: PgPool) {
+        let repo = PostgresRoomRepository::new(pool);
+
+        let room = Room {
+            id: "room-create-test".to_string(),
+            category_room_id: "default-category".to_string(),
+            name: "Created Room".to_string(),
+        };
+
+        repo.create(&room)
+            .await
+            .expect("room create should succeed");
+
+        let saved = repo
+            .find_by_id(&room.id)
+            .await
+            .expect("room lookup should succeed")
+            .expect("created room should exist");
+
+        assert_eq!(saved, room);
+    }
 }

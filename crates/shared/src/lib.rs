@@ -27,6 +27,16 @@ pub enum ServerEvent {
     Pong,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CreateRoomRequest {
+    pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CreateRoomResponse {
+    pub id: String,
+}
+
 #[cfg(test)]
 mod tests {
     use chat_domain::MessageAuthor;
@@ -63,5 +73,30 @@ mod tests {
         let decoded: ServerEvent = serde_json::from_str(&json).unwrap();
 
         assert_eq!(decoded, event);
+    }
+
+    #[test]
+    fn create_room_http_contract_roundtrip() {
+        let request = CreateRoomRequest {
+            name: "New Room".to_string(),
+        };
+
+        let json = serde_json::to_string(&request).expect("create room request should serialize");
+
+        let decoded: CreateRoomRequest =
+            serde_json::from_str(&json).expect("create room request should deserialize");
+
+        assert_eq!(decoded, request);
+
+        let response = CreateRoomResponse {
+            id: "room-001".to_string(),
+        };
+
+        let json = serde_json::to_string(&response).expect("create room response should serialize");
+
+        let decoded: CreateRoomResponse =
+            serde_json::from_str(&json).expect("create room response should deserialize");
+
+        assert_eq!(decoded, response);
     }
 }

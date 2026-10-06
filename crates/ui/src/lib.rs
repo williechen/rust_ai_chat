@@ -1,5 +1,8 @@
 mod chat_socket;
 
+#[cfg(target_arch = "wasm32")]
+mod room_api;
+
 use std::rc::Rc;
 
 use chat_domain::{ChatMessage, MessageAuthor};
@@ -10,7 +13,6 @@ use leptos_router::{
     path,
 };
 use shared::{ClientEvent, ServerEvent};
-use uuid::Uuid;
 
 use chat_socket::ChatSocket;
 
@@ -67,16 +69,51 @@ pub fn App() -> impl IntoView {
 fn HomePage() -> impl IntoView {
     let navigate = use_navigate();
 
+    let (creating, set_creating) = signal(false);
+    let (create_error, set_create_error) = signal(None::<String>);
+
+    let create_room = move |_| {
+        if creating.get_untracked() {
+            return;
+        }
+
+        set_creating.set(true);
+        set_create_error.set(None);
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let navigate = navigate.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                match room_api::create_room("New Room").await {
+                    Ok(room) => {
+                        let path = format!("/room/{}", room.id);
+                        navigate(&path, Default::default());
+                    }
+                    Err(error) => {
+                        set_create_error.set(Some(error));
+                        set_creating.set(false);
+                    }
+                }
+            });
+        }
+    };
+
     view! {
         <p>"Welcome to Rust AI Chat!"</p>
         <button
             type="button"
-            on:click=move |_| {
-                let room_id = Uuid::new_v4();
-                let path = format!("/room/{}", room_id);
-                navigate(&path, Default::default());
+            disabled = move || creating.get()
+            on:click=create_room
+        >{move || {
+            if creating.get() {
+                "Creating..."
+            } else {
+                "Create Room"
             }
-        >"Create Room"</button>
+        }}
+        </button>
+
+        {move || create_error.get().map(|message| view! { <p>{message}</p> })}
     }
 }
 

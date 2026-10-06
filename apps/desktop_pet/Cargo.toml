@@ -9,6 +9,7 @@ ai-core = { path = "../../crates/ai_core" }
 pet-domain = { path = "../../crates/pet_domain" }
 
 serde.workspace = true
+sha2.workspace = true
 
 tauri = { version = "2.12", features = [] }
 thiserror.workspace = true

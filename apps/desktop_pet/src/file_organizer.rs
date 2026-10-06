@@ -1,6 +1,10 @@
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs;
+use std::io::BufReader;
+use std::io::Error;
+use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 use thiserror::Error;
@@ -85,9 +89,12 @@ impl AuthorizedRoot {
     }
 }
 
-pub fn scan_preview(root: &AuthorizedRoot) -> Result<ScanPreview, FileOrganizerError> {
+pub fn scan(root: &AuthorizedRoot) -> Result<FileScan, FileOrganizerError> {
+    ensure_non_root_process()?;
+
     let mut files = Vec::new();
     let mut warnings = Vec::new();
+    let mut by_digest: BTreeMap<String, ScannedFile> = BTreeMap::new();
 
     scan_dir(root.path(), root.path(), &mut files, &mut warnings)?;
 
@@ -95,15 +102,30 @@ pub fn scan_preview(root: &AuthorizedRoot) -> Result<ScanPreview, FileOrganizerE
 
     for (index, file) in files.iter_mut().enumerate() {
         file.id = format!("item-{index:06}");
+        by_digest.insert(
+            file.id.clone(),
+            ScannedFile {
+                id: file.id.clone(),
+                path: PathBuf::from(root.path()).join(&file.relative_path),
+                size_bytes: file.size_bytes,
+            },
+        );
     }
 
     let duplicate_size_candidates = build_size_candidates(&files);
 
-    Ok(ScanPreview {
-        files,
-        duplicate_size_candidates,
-        warnings,
+    Ok(FileScan {
+        preview: ScanPreview {
+            files,
+            duplicate_size_candidates,
+            warnings,
+        },
+        items: by_digest,
     })
+}
+
+pub fn scan_preview(root: &AuthorizedRoot) -> Result<ScanPreview, FileOrganizerError> {
+    Ok(scan(root)?.preview)
 }
 
 fn scan_dir(
@@ -203,6 +225,99 @@ fn reject_root_euid(euid: u32) -> Result<(), FileOrganizerError> {
     } else {
         Ok(())
     }
+}
+
+#[derive(Debug, Clone)]
+struct ScannedFile {
+    id: String,
+    path: PathBuf,
+    size_bytes: u64,
+}
+
+#[derive(Debug)]
+pub struct FileScan {
+    pub preview: ScanPreview,
+    items: BTreeMap<String, ScannedFile>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DuplicateGroup {
+    pub digest_sha256: String,
+    pub size_bytes: u64,
+    pub item_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DuplicatePreview {
+    pub groups: Vec<DuplicateGroup>,
+    pub warnings: Vec<ScanWarning>,
+}
+
+fn sha256_file(path: &Path) -> Result<String, Error> {
+    let file = fs::File::open(path)?;
+    let mut reader = BufReader::new(file);
+    let mut hasher = Sha256::new();
+    let mut buffer = [0_u8; 64 * 1024];
+
+    loop {
+        let read = reader.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    let digest = hasher.finalize();
+
+    let hash = digest
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+
+    Ok(hash)
+}
+
+pub fn duplicate_preview(scan: &FileScan) -> DuplicatePreview {
+    let mut warnings = Vec::new();
+    let mut groups = Vec::new();
+
+    for size_group in &scan.preview.duplicate_size_candidates {
+        let mut by_digest: BTreeMap<String, Vec<String>> = BTreeMap::new();
+
+        for item_id in &size_group.item_ids {
+            let Some(item) = scan.items.get(item_id) else {
+                warnings.push(ScanWarning {
+                    relative_path: "<opaque-item>".to_string(),
+                    message: format!("missing scan item: {item_id}"),
+                });
+                continue;
+            };
+
+            match sha256_file(&item.path) {
+                Ok(digest) => {
+                    by_digest.entry(digest).or_default().push(item.id.clone());
+                }
+                Err(error) => {
+                    warnings.push(ScanWarning {
+                        relative_path: "<opaque-item>".to_string(),
+                        message: error.to_string(),
+                    });
+                }
+            }
+        }
+
+        for (digest_sha256, item_ids) in by_digest {
+            if item_ids.len() >= 2 {
+                groups.push(DuplicateGroup {
+                    digest_sha256: digest_sha256,
+                    size_bytes: size_group.size_bytes,
+                    item_ids,
+                });
+            }
+        }
+    }
+    DuplicatePreview { groups, warnings }
 }
 
 #[cfg(test)]
@@ -306,5 +421,46 @@ mod tests {
             Err(FileOrganizerError::RootProcess)
         ));
         assert!(reject_root_euid(1000).is_ok());
+    }
+
+    #[test]
+    fn same_size_different_content_is_not_duplicate() {
+        let sandbox = TestDir::new("same-size-different");
+        fs::write(sandbox.path.join("a.txt"), b"abc").unwrap();
+        fs::write(sandbox.path.join("b.txt"), b"xyz").unwrap();
+
+        let root = AuthorizedRoot::new(&sandbox.path).unwrap();
+        let scan = scan(&root).unwrap();
+        let duplicates = duplicate_preview(&scan);
+
+        assert!(duplicates.groups.is_empty());
+    }
+
+    #[test]
+    fn same_content_is_grouped_as_duplicate() {
+        let sandbox = TestDir::new("same-content");
+        fs::write(sandbox.path.join("a.txt"), b"same").unwrap();
+        fs::write(sandbox.path.join("b.txt"), b"same").unwrap();
+
+        let root = AuthorizedRoot::new(&sandbox.path).unwrap();
+        let scan = scan(&root).unwrap();
+        let duplicates = duplicate_preview(&scan);
+
+        assert_eq!(duplicates.groups.len(), 1);
+        assert_eq!(duplicates.groups[0].size_bytes, 4);
+        assert_eq!(duplicates.groups[0].item_ids.len(), 2);
+    }
+
+    #[test]
+    fn unique_size_file_is_not_hashed_into_duplicate_group() {
+        let sandbox = TestDir::new("unique-size");
+        fs::write(sandbox.path.join("a.txt"), b"a").unwrap();
+        fs::write(sandbox.path.join("b.txt"), b"longer").unwrap();
+
+        let root = AuthorizedRoot::new(&sandbox.path).unwrap();
+        let scan = scan(&root).unwrap();
+        let duplicates = duplicate_preview(&scan);
+
+        assert!(duplicates.groups.is_empty());
     }
 }

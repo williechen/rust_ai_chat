@@ -1,32 +1,24 @@
 # Rust AI Chat
 
-Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向：
+## 大綱
+
+Rust AI Chat 是一個持續演進的 Rust workspace，目前包含兩個產品方向：
 
 - **Web Chat**：以 Rust、Axum、Leptos、WebSocket 與 PostgreSQL 建構多人即時聊天室，最終加入多 AI Persona。
 - **Desktop AI Pet**：以 Rust、Tauri、Leptos 與 AI model abstraction 建構可互動、可學習、可教學的桌面 AI 角色。
-
-> **文件分工**
->
-> - **GitHub Repository / README**：只記錄實際程式大綱、最終目標、後續缺口、共同實作規則、測試與 CI 範圍、開發與執行方式。
-> - **Notion**：記錄每日章節、設計理由與**深入淺出的實作教學**；必須包含實作步驟、程式碼修改、驗證方式與實作細節，不只是概念或原理解說。
->
-> README 以實際 repository 為準，不以 Day 編號或教學規劃判定功能是否完成。
-
-
-## 大綱
 
 目前 workspace 主要結構：
 
 | 路徑 | 實際責任 |
 | --- | --- |
-| `apps/server` | Axum Web server、Leptos SSR、WebSocket、room hub、PostgreSQL 啟動 |
-| `apps/desktop_pet` | Tauri desktop application、managed state、commands、桌面移動 |
+| `apps/server` | Axum Web server、Leptos SSR、HTTP API、WebSocket、room hub、PostgreSQL 啟動 |
+| `apps/desktop_pet` | Tauri desktop application、managed state、commands、桌面移動、FileOrganizer 基線 |
 | `apps/desktop_pet/frontend` | Desktop Pet 的 Leptos WASM frontend |
 | `crates/chat_domain` | Room、ChatMessage、MessageAuthor 等 chat domain model |
-| `crates/chat_application` | Chat use case、RoomRepository port |
-| `crates/shared` | WebSocket client/server protocol |
-| `crates/ui` | Web Chat 的 Leptos Router、SSR/hydration 與 browser socket adapter |
-| `crates/persistence` | PostgreSQL connection、migration、Room repository adapter |
+| `crates/chat_application` | Chat use case、RoomRepository port、room create use case |
+| `crates/shared` | WebSocket protocol 與 Create Room HTTP contract |
+| `crates/ui` | Web Chat 的 Leptos Router、SSR/hydration、room create browser API、browser socket adapter |
+| `crates/persistence` | PostgreSQL connection、migration、Room repository read/write adapter |
 | `crates/ai_core` | AI model abstraction、request/response、MockChatModel |
 | `crates/pet_domain` | Desktop Pet state machine |
 | `crates/telemetry` | Observability 預留 crate，目前尚未完成 |
@@ -34,21 +26,22 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 | `deploy` | 部署相關設定，目前仍以 placeholder 為主 |
 | `tests` | Repository-level test 預留目錄；目前多數測試仍位於各 crate 內 |
 
-本輪核對基線：`main` commit `fbd9cdf8`（2026-10-05）。以下「已完成」只表示實際程式碼中已存在並接線的基線能力；完整使用流程仍受後續缺口限制。
+本輪 code review 基線：`main` commit `139468a6`（2026-10-07，Asia/Taipei）。
 
 目前實作基線：
 
-- Web Chat 已具備 Axum + Leptos SSR/hydration、首頁與 `/room/:room_id` 路由、`/health`、同房間 WebSocket broadcast、應用層 Ping/Pong，以及訊息 room ID 與連線 room ID 的一致性檢查。
-- Server 已有 `POST /api/rooms`、application `create_room` use case 與 repository `create` 寫入；但首頁 `Create Room` 仍只在 browser 產生 UUID 後直接 navigate，尚未呼叫 API，因此 UI 建房流程尚未完成。
-- Chat domain / protocol 的主要識別碼使用跨資料庫較通用的字串表示。
-- RoomRepository trait 與 PostgreSQL adapter 已存在，並已注入 server runtime；WebSocket upgrade 前會透過 repository 驗證 room 是否存在。
-- Web Chat 尚未完成 message persistence、history、login/session、authorization、reconnect、presence、typing、AI streaming 與 persona runtime。
-- `Typing`、`PresenceChanged`、`AiDelta`、`AiCompleted` 只是預留 protocol；server 的 typing 分支尚未處理，Web UI 目前只消費 `MessageCreated`。
-- AI Core 已有 `ChatModel` abstraction 與 `MockChatModel`，目前真實 AI provider 尚未接入 Web Chat。
-- Desktop AI Pet 已有 Tauri managed state、Pet state machine、frontend bridge、mock chat、native context-menu command dispatch，以及具 work-area bounds、碰邊反向、位置變更驗證與 stall 停止機制的桌面移動。
-- Desktop AI Pet 尚未完成依 PetState / 使用者拖曳協調移動、真實 AI provider、streaming、memory、agent behavior 與發佈流程。
-- Desktop Pet 已有 `file_organizer` 基線：`AuthorizedRoot` canonicalize、Unix effective UID root 拒絕、regular-file scan、symlink skip、opaque item ID、相同 size duplicate candidate preview 與單元測試；目前尚未接入 Tauri command / UI / runtime workflow，也尚未實作 hash duplicate、move / consume / Trash。
-- Observability、完整部署、自動化 E2E 測試仍未完成。
+- Web Chat 已具備 Axum + Leptos SSR/hydration、首頁與 `/room/:room_id` 路由、`/health`、同房間 WebSocket broadcast、Ping/Pong，以及 message room ID 與 connection room ID 一致性檢查。
+- Room create 流程已接通：首頁呼叫同源 `POST /api/rooms`，server 建立 UUID，application `create_room` 呼叫 repository `create` 寫入 PostgreSQL，成功回傳 room ID 後前端才 navigate。
+- Create Room HTTP request / response contract 已移至 `shared`，server 與 browser 共用。
+- RoomRepository trait 與 PostgreSQL adapter 已具備 `find_by_id` / `create`；WebSocket upgrade 前會驗證 room 是否存在。
+- Persistence tests 已涵蓋 room lookup 與 create-then-find。
+- Web Chat 訊息目前仍只在記憶體 broadcast，尚無 message persistence / history。
+- `Typing`、`PresenceChanged`、`AiDelta`、`AiCompleted` 仍只是部分 protocol 基線，尚未完整 wiring。
+- AI Core 已有 `ChatModel` abstraction 與 `MockChatModel`；真實 AI provider 尚未接入 Web Chat。
+- Desktop AI Pet 已有 Tauri managed state、Pet state machine、frontend bridge、mock chat、native context-menu command dispatch，以及 work-area bounds、碰邊反向、位置變更驗證與 stall 停止。
+- FileOrganizer 已有 authorized root canonicalization、Unix root EUID 拒絕、regular-file scan、symlink skip、opaque item ID、size candidate grouping、SHA-256 duplicate preview 與對應單元測試。
+- FileOrganizer 尚未接入 Tauri command / UI /完整 runtime workflow，也尚未實作 move / consume / Trash。
+- Observability、完整 deployment、自動化 E2E 與 release pipeline 仍未完成。
 
 ## 最終目標
 
@@ -56,8 +49,13 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 
 建立 **Multi-topic + Multi-user + Multi-AI-Persona** 即時聊天室。
 
-最終 AI Persona 應是房間中的正式參與者，具備：
+最終能力包含：
 
+- User identity、login、session、authorization
+- Message persistence 與 history
+- Typing / presence
+- Reconnect、send queue、漏失訊息恢復
+- 真實 AI provider 與 streaming
 - Persona identity
 - Conversation context
 - Memory
@@ -66,10 +64,9 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 - Reply target
 - Cooldown / silence policy
 - Turn budget 與受控 AI ↔ AI 對話
-- Streaming response
-- 可辨識但自然融入群聊的 AI 身份，不冒充真實人物
-
-最終由 provider abstraction 接入 OpenAI HTTP/SSE，並完成 portable persistence、OpenTelemetry traces / metrics / logs、VirtualBox Linux VM、nginx、systemd、TLS 與 production hardening。後續依需求加入 Retriever abstraction 下的 RAG、MCP、Agent Runtime、Domain Events、自製 Queue 與 Transactional Outbox。
+- OpenTelemetry traces / metrics / logs
+- Production deployment 與 hardening
+- 依實際需求逐步加入 RAG、MCP、Agent Runtime、Domain Events、Queue 與 Transactional Outbox
 
 ### Desktop AI Pet
 
@@ -91,66 +88,65 @@ Rust AI Chat 是一個持續演進的 Rust workspace，包含兩個產品方向�
 - MCP
 - Agent Runtime
 - OpenTelemetry AI Observability
-- 授權範圍內的環境觀察、檔案整理與 Trash metadata；move / consume / delete 以預覽、重新驗證與明確確認為前提
-- 可檢視、修改、刪除的 memory / preference / policy，以及可追蹤的主動決策
+- 授權範圍內的環境觀察、檔案整理與 Trash metadata
+- move / consume / delete 的 preview、重新驗證與明確確認
+- 可檢視、修改、刪除的 memory / preference / policy
+- 可追蹤的主動決策
+- Installer、updater 與 release pipeline
 
 ## 後續缺口
 
 ### Web Chat
 
-優先缺口：
-
-1. 完成首頁 Room create UI 接線：server/application/repository 寫入基線已存在，但首頁仍未 `POST /api/rooms`，目前按鈕產生的 browser UUID 不會入庫，隨後 WebSocket lookup 仍會 404。
-2. Message persistence 與 history loading。
-3. Server/application 層的 ID、空白訊息、內容長度與速率驗證；目前空白內容只由 UI 過濾，直接發送 WebSocket event 仍可繞過。
-4. User identity、login、session、authorization；目前所有訊息均為 `AnonymousUser`，UI 一律顯示 `You`，無法辨識其他發言者。Nested / protected routes 與 ServerFn 亦尚未實作。
-5. Connection state、reconnect、send queue、漏失訊息補回；browser socket URL 目前固定為 `ws://localhost:3000`，需改為依頁面 origin 與 HTTPS 決定 host / `wss`。斷線、連線未就緒與送出失敗亦需提供 UI 回饋。
+1. Message persistence 與 history loading。
+2. Server/application 層的 ID、空白訊息、內容長度與速率驗證。
+3. User identity、login、session、authorization；目前訊息仍為匿名，Nested / protected routes 與 ServerFn 尚未實作。
+4. Connection state、reconnect、send queue 與漏失訊息恢復。
+5. Browser WebSocket URL 目前仍固定為 `ws://localhost:3000`，尚未依頁面 origin / HTTPS 自動切換 host 與 `wss`。
 6. Typing / presence 完整 wiring。
 7. 真實 AI provider 與 streaming。
 8. `AiPersona`、`RoomAiMember`、reply policy、speaker selection、turn budget、cooldown 與受控 AI ↔ AI orchestration。
-9. 慢速 subscriber 的事件漏失恢復；目前 broadcast capacity 為 128，lagged 只記錄跳過數量，尚未補回。
+9. 慢速 subscriber 的事件漏失恢復；目前 process-local broadcast lag 只記錄 skipped count。
 10. Production-ready observability、deployment 與連線資源限制。
-11. Domain/application events、自製 Queue、durable delivery 與 Transactional Outbox；目前僅有 process-local broadcast。
-12. 隱私與日誌整理；browser socket 目前會把完整收到的 JSON 寫入 console，尚無 tracing subscriber 或 OpenTelemetry 接線。
+11. Domain/application events、Queue、durable delivery 與 Transactional Outbox。
+12. 隱私與日誌邊界；tracing subscriber / OpenTelemetry 尚未完整接線。
 
 ### Desktop AI Pet
 
-優先缺口：
-
-1. 移動與 Pet state、使用者拖曳之間的協調；work-area bounds 與碰邊反向已完成基線。
-2. 把現有 FileOrganizer scan preview 接入 Tauri command / UI / application workflow，並補上 hash duplicate 判定、suggestion、TrashFeedSource 與受控 move / consume。
-3. 補完整 Filesystem 安全邊界：目前已有 AuthorizedRoot canonicalize、root EUID 拒絕、opaque ID 與 symlink skip 基線；仍需 path traversal / symlink race 防護、操作前重新驗證、preview / confirmation，以及應用啟動層級的 non-root runtime guard。
-4. 真實 AI provider、streaming conversation 與 conversation history。
-5. Persistent memory、learner model、owner feedback learning 與主動 Learning / Teaching loop。
-6. Retriever abstraction、RAG、MCP、Agent Runtime。
-7. Domain/application events、自製 Queue / outbox、retry、dead-letter、idempotency 與 graceful shutdown。
-8. OpenTelemetry distributed trace / metrics / logs，以及敏感資料的日誌邊界。
-9. Installer、updater 與 release pipeline。
+1. 移動與 PetState、使用者拖曳之間的協調。
+2. 將現有 FileOrganizer scan / duplicate preview 接入 Tauri command、UI 與 application workflow。
+3. FileOrganizer suggestion、受控 move / consume、TrashFeedSource 與 Trash metadata。
+4. Filesystem 操作前重新驗證、path traversal / symlink race 防護、preview / confirmation，以及應用啟動層級的 non-root runtime guard。
+5. 真實 AI provider、streaming conversation 與 conversation history。
+6. Persistent memory、learner model、owner feedback learning 與主動 Learning / Teaching loop。
+7. Retriever abstraction、RAG、MCP、Agent Runtime。
+8. Domain/application events、Queue / outbox、retry、dead-letter、idempotency 與 graceful shutdown。
+9. OpenTelemetry distributed trace / metrics / logs，以及敏感資料的日誌邊界。
+10. Installer、updater 與 release pipeline。
 
 ## 共同實作規則
 
-1. 每完成一章，先讀取並 code review 實際 GitHub repository，再更新 README 的目前現況、已完成項目與後續缺口。
-2. 下一章或下一個功能必須依 code review 後的實際 repository 缺口決定，不能只沿用既有 roadmap 推測程式結構。
-3. Repository 的實際程式碼是功能完成與否的主要依據；Notion roadmap 或 Day 編號不能取代實際驗證。
-4. 實作前核對官方 **latest stable** 與 API 差異，不直接採用 alpha、beta、RC。
-5. Dependency 升級必須連同程式修改與驗證一起完成。
-6. `Cargo.toml` dependency requirement 只寫 major/minor，例如 `leptos = "0.8"`、`tokio = "1.53"`。
-7. 精確解析版本由 `Cargo.lock` 保留；可重現建置與 CI 優先使用 `--locked`。
-8. `[package].version` 保留完整 SemVer，例如 `0.1.0`。
-9. Database / domain 欄位優先使用跨資料庫通用表示，避免不必要地把 domain 綁定特定 database 型別。
-10. 每一章只完成可驗證的小目標；完成後再依實際 repository 缺口決定下一章。
-11. 未來規劃、預留 protocol、placeholder crate 或尚未 wiring 的能力不得標示為已完成。
-12. GitHub README 只維護 repository 的實際程式說明，不承擔章節式教學內容。
-13. Domain / application 不依賴 Axum、Tauri、Leptos、SQLx、OS API、模型 SDK 或特定 broker；以 port / adapter 接入 infrastructure。Tauri 負責 desktop composition root，Leptos 透過 command / event / bridge 投影狀態。
-14. OpenAI provider 直接使用 HTTP/SSE，不使用 SDK；RAG 使用 Retriever abstraction，不使用 pgvector，也不把核心 schema 綁定特定 vector database。
-15. ID 可使用 UUID 生成後轉為字串，但 domain 與資料庫 ID 欄位不採 PostgreSQL UUID 型別；目前 `rooms.id` / `category_room_id` 為 `varchar(40)`。其他 DB adapter 尚未實作，SQL 方言與 migrations 的可攜性仍需另行驗證。
-16. TDD / DDD 在規則與複雜度需要時漸進導入，不預先建立空架構。必要重構先鎖住行為，再驗證 caller migration 與 regression。
-17. 事件驅動先從 process-local events 與 modular monolith 開始；有獨立部署、failure isolation 或 scaling 需求後才評估 microservices。
-18. Queue 優先自製：FIFO、bounded capacity、backpressure、ACK/NACK、retry/backoff、visibility timeout、DLQ、idempotency、shutdown 與 telemetry；需要 durability 時加入 persistence-backed queue / Transactional Outbox，再依實際瓶頸比較外部 broker。現有 `tokio::broadcast` 不代表已完成此 Queue。
-19. Desktop Pet 必須以一般登入使用者執行；帳號可有 sudo 權限，但 process effective UID 不得為 0，禁止以 `sudo` 啟動。OS 設定可由具 sudo 權限的使用者操作；runtime guard 目前仍是缺口。
-20. Filesystem 操作只接受 authorized root 內經驗證的 opaque ID；防止 path traversal 與 symlink escape。先 preview，破壞性操作需明確確認與重新驗證；telemetry 不記錄檔案內容、完整私人 path 或不必要敏感資料。
-21. native / wasm32 分別使用正確 target 與 features 驗證；compile / CI 通過不取代必要 GUI/runtime 驗收。
-22. Notion 才是深入淺出的**實作教學**：每章包含實際修改位置、必要程式碼、操作步驟、測試 / 驗證、預期結果與設計理由，不只是概念說明。每完成一章先 code review 實際 repository，再更新 README 現況；教學內容只更新 Notion。
+1. 每完成一章，先 code review 實際 GitHub repository，再更新 README 的目前現況與後續缺口。
+2. 下一章或下一個功能依 code review 後的實際 repository 缺口決定，不只沿用 roadmap 或 Day 編號推測程式結構。
+3. **Repository = 實際程式說明；Notion = 深入淺出實作教學。**
+4. README 只維護本文件六個區塊：大綱、最終目標、後續缺口、共同實作規則、測試與 CI 範圍、開發與執行。
+5. 教學內容只更新 Notion；每章應包含實際修改位置、必要程式碼、操作步驟、測試 / 驗證、預期結果與設計理由，不複製到 README。
+6. Repository 的實際程式碼是功能完成與否的主要依據；Notion roadmap 或 Day 編號不能取代實際驗證。
+7. 實作前核對官方 latest stable 與 API 差異，不直接採用 alpha / beta / RC。
+8. Dependency 升級必須連同程式修改與驗證一起完成。
+9. `Cargo.toml` dependency requirement 只寫 major/minor；精確解析版本由 `Cargo.lock` 保留。
+10. `[package].version` 保留完整 SemVer。
+11. Database / domain ID 優先使用跨資料庫通用表示，避免 domain 不必要地綁定特定 database 型別。
+12. Domain / application 不依賴 Axum、Tauri、Leptos、SQLx、OS API、模型 SDK 或特定 broker；以 port / adapter 接入 infrastructure。
+13. OpenAI provider 使用 HTTP/SSE abstraction；RAG 使用 Retriever abstraction，不把核心 schema 綁定特定 vector database。
+14. TDD / DDD 依規則與複雜度漸進導入，不預先建立空架構。
+15. 事件驅動先從 modular monolith / process-local events 開始，只有在獨立部署、failure isolation 或 scaling 需求出現後才評估 microservices。
+16. Queue 需要明確涵蓋 bounded capacity、backpressure、ACK/NACK、retry/backoff、visibility timeout、DLQ、idempotency、shutdown 與 telemetry；現有 `tokio::broadcast` 不視為完成 Queue。
+17. Desktop Pet 必須以一般登入使用者執行；帳號可以有 sudo 權限，但 process effective UID 不得為 0。
+18. Filesystem 操作只接受 authorized root 內經驗證的 opaque ID；破壞性操作前必須重新驗證、preview 並取得明確確認。
+19. Telemetry 不記錄檔案內容、完整私人 path 或不必要的敏感資料。
+20. Native / wasm32 分別使用正確 target 與 features 驗證；compile / CI 通過不能取代必要 GUI/runtime 驗收。
+21. 未來規劃、預留 protocol、placeholder crate 或尚未 wiring 的能力不得標示為已完成。
 
 ## 測試與 CI 範圍
 
@@ -161,9 +157,16 @@ GitHub Actions：`.github/workflows/rust.yml`
 - push to `main`
 - pull request to `main`
 
-### Check
+目前 jobs：
 
-`rust.yml` 以 `check-chat`、`check-pet`、`unit-test` 與 `unit-of-work-test` jobs 驗證程式碼。Check jobs 執行：
+- `check-chat`
+- `check-pet`
+- `unit-test`
+- `unit-of-work-test`
+- `build-chat`
+- `build-pet`
+
+主要 check：
 
 ```bash
 cargo check -p server --features ssr
@@ -174,7 +177,7 @@ cargo check --workspace --exclude desktop-pet-frontend
 cargo check -p desktop-pet-frontend --target wasm32-unknown-unknown
 ```
 
-`unit-test` job 執行：
+Unit tests：
 
 ```bash
 cargo test -p desktop-pet
@@ -186,34 +189,32 @@ cargo test -p shared
 cargo test -p ui
 ```
 
-`unit-of-work-test` job 啟動 `postgres:latest` service，設定臨時 `DATABASE_URL`，執行 migrations 與 persistence tests：
+Persistence integration test：
 
 ```bash
 sqlx migrate run
 cargo test -p persistence
 ```
 
-### Build
+`unit-of-work-test` 會啟動 `postgres:latest` service、設定臨時 `DATABASE_URL`、執行 migrations，再執行 persistence tests。目前涵蓋 Room repository lookup 與 create-then-find；job 名稱不代表已存在 Unit of Work transaction abstraction。
 
-`build-chat` 與 `build-pet` jobs 執行：
+Build：
 
 ```bash
-cargo build --workspace --exclude desktop-pet-frontend --verbose
 cargo leptos build --release
+
+cargo build --workspace --exclude desktop-pet-frontend --verbose
 
 cd apps/desktop_pet/frontend
 trunk build --release
 ```
 
-目前已核對 [Rust workflow Run #98](https://github.com/williechen/rust_ai_chat/actions/runs/37185855876)：對應上述 commit，六個 jobs 全部成功。本輪未在本機重跑測試。
+目前尚未納入 CI 的主要範圍：
 
-`unit-of-work-test` 是 job 名稱，目前實際測試的是 Room repository 查詢與 migrations，尚無 Unit of Work transaction abstraction。`cargo test -p chat-domain` 目前沒有自訂測試案例；不能以命令通過推定 domain 行為已全面覆蓋。
-
-### 尚未納入 CI 的主要範圍
-
-- `cargo fmt --check`、Clippy（VS Code task 存在，但 GitHub workflow 未執行）
-- Desktop frontend 的 `project_pose` 單元測試（目前只 check / build WASM）
-- Server / room hub 行為測試與不存在房間、跨房間、lagged 等回歸測試
+- `cargo fmt --check`
+- Clippy
+- Desktop frontend 的 WASM 單元測試
+- Server / RoomHub 行為回歸測試
 - Browser E2E
 - WebSocket E2E
 - Tauri desktop E2E
@@ -221,13 +222,11 @@ trunk build --release
 - Deployment verification
 - OpenTelemetry integration verification
 
-Persistence integration test 已納入 GitHub Actions 的 `unit-of-work-test` job：CI 會啟動 PostgreSQL service container、設定臨時 `DATABASE_URL`、執行 migrations，再執行 `cargo test -p persistence`。Repository test 使用 `#[sqlx::test(migrations = "../../migrations")]`；SQLx 會為測試建立隔離 database 並套用 migrations，測試本身只建立必要 fixture，不依賴本機既有 seed，也不需要手動 cleanup。
-
 ## 開發與執行
 
 Rust toolchain 使用 stable，workspace 使用 Rust edition 2024、resolver 3。
 
-### 基本工具
+基本工具：
 
 ```bash
 rustup target add wasm32-unknown-unknown
@@ -237,7 +236,7 @@ cargo install trunk --locked
 cargo install tauri-cli --version "^2" --locked
 ```
 
-Linux native build 需要：
+Linux native build dependencies：
 
 ```bash
 sudo apt-get install -y \
@@ -245,28 +244,22 @@ sudo apt-get install -y \
   libssl-dev libxdo-dev librsvg2-dev libwebkit2gtk-4.1-dev
 ```
 
-### PostgreSQL
-
-先安裝並啟動 PostgreSQL，以下操作使用自己的資料庫帳號。
-
-建立 database：
+PostgreSQL：
 
 ```sql
 CREATE DATABASE rust_ai_chat;
 ```
 
-在 repository root 建立 `.env`：
+Repository root `.env`：
 
 ```dotenv
 RUST_LOG=debug
 DATABASE_URL=postgres://username:password@localhost:5432/rust_ai_chat
 ```
 
-Server 啟動時會執行 migration；目前 Web Chat 啟動依賴 PostgreSQL 可連線。
+Server 啟動時會執行 migration；Web Chat 目前依賴 PostgreSQL 可連線。
 
-### Web Chat
-
-開發：
+Web Chat 開發：
 
 ```bash
 cargo leptos watch
@@ -278,37 +271,30 @@ Release build：
 cargo leptos build --release
 ```
 
-Release 執行（在 repository root，保留 `target/site` 並確保 `.env` 可讀）：
+Release 執行：
 
 ```bash
-LEPTOS_OUTPUT_NAME=rust_ai_chat LEPTOS_SITE_ROOT=target/site LEPTOS_SITE_PKG_DIR=pkg ./target/release/server
+LEPTOS_OUTPUT_NAME=rust_ai_chat \
+LEPTOS_SITE_ROOT=target/site \
+LEPTOS_SITE_PKG_DIR=pkg \
+./target/release/server
 ```
 
-Server 目前在程式內固定綁定 `127.0.0.1:3000`，並非可透過 listen-address 環境變數調整。
-
-預設開啟：
+Server 目前固定綁定：
 
 ```text
 http://127.0.0.1:3000
 ```
 
-首頁按鈕目前尚未接上 `POST /api/rooms`，因此從 UI 建房仍不能完成資料庫寫入。可先手動建立測試房間後直接開啟房間網址：
+首頁 `Create Room` 已接上 `POST /api/rooms`；建立成功後才 navigate 到新 room。訊息目前仍只存在記憶體，重新載入不會取得歷史；browser WebSocket URL 目前固定使用 localhost，因此現況主要適用本機開發。
 
-```sql
-INSERT INTO rooms (id, category_room_id, name, created_at, updated_at)
-VALUES ('room-rust', 'category-programming', 'Rust', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-ON CONFLICT (id) DO NOTHING;
-```
-
-開啟 `http://localhost:3000/room/room-rust`；可用兩個分頁測試同房間 broadcast。訊息目前只存在記憶體，重新載入不會取得歷史。browser socket 固定連到 localhost，因此此操作方式僅適用本機開發。
-
-### Desktop AI Pet
+Desktop AI Pet：
 
 ```bash
 cd apps/desktop_pet
 cargo tauri dev
 ```
 
-Tauri 會依設定啟動 frontend development server；單獨以一般 browser 開啟 frontend 無法取代完整 Tauri runtime。
+Tauri 會啟動 frontend development server；單獨以一般 browser 開啟 frontend 無法取代完整 Tauri runtime。
 
-目前 `tauri.conf.json` 的 `bundle.active` 為 `false`，CI native build 與 Trunk build 不代表已產生安裝包。桌面移動與選單需在實際桌面環境驗證；CI 未驗證視窗管理器行為。
+目前 `tauri.conf.json` 的 `bundle.active` 為 `false`；CI native build 與 Trunk build 不代表已產生安裝包。桌面移動、native menu 與 filesystem workflow 仍需要實際桌面環境驗收。

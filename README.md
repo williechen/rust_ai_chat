@@ -26,7 +26,7 @@ Rust AI Chat 是一個持續演進的 Rust workspace，目前包含兩個產品�
 | `deploy` | 部署相關設定，目前仍以 placeholder 為主 |
 | `tests` | Repository-level test 預留目錄；目前多數測試仍位於各 crate 內 |
 
-本輪 code review 基線：`main` commit `139468a6`（2026-10-07，Asia/Taipei）。
+Phase 1 正式封版基線：branch `Phase1`、tag `Phase-1(Chat&Pet)`，固定指向 commit `2fc1c0f86e047379c4f5a934d70a866f1b0550a7`（2026-10-07，Asia/Taipei）。Phase 2 從此封版基線之上繼續於 `main` 演進；後續 code review 一律以當下 `main` HEAD 與實際 source 為準。
 
 目前實作基線：
 
@@ -128,7 +128,7 @@ Rust AI Chat 是一個持續演進的 Rust workspace，目前包含兩個產品�
 
 1. 每完成一章，先 code review 實際 GitHub repository，再更新 README 的目前現況與後續缺口。
 2. 下一章或下一個功能依 code review 後的實際 repository 缺口決定，不只沿用 roadmap 或 Day 編號推測程式結構。
-3. **Repository = 實際程式說明；Notion = 深入淺出實作教學。**
+3. **Repository = 實際程式說明；Notion = 深入淺出實作教學。** Phase 2 起只以 Notion「Rust AI Chat + Desktop Pet｜共同主頁」作為唯一 roadmap、共同規則與進度入口；舊 Chat / Desktop Pet 主頁只保留 Phase 1 歷史資料。
 4. README 只維護本文件六個區塊：大綱、最終目標、後續缺口、共同實作規則、測試與 CI 範圍、開發與執行。
 5. 教學內容只更新 Notion；每章應包含實際修改位置、必要程式碼、操作步驟、測試 / 驗證、預期結果與設計理由，不複製到 README。
 6. Repository 的實際程式碼是功能完成與否的主要依據；Notion roadmap 或 Day 編號不能取代實際驗證。
@@ -147,6 +147,7 @@ Rust AI Chat 是一個持續演進的 Rust workspace，目前包含兩個產品�
 19. Telemetry 不記錄檔案內容、完整私人 path 或不必要的敏感資料。
 20. Native / wasm32 分別使用正確 target 與 features 驗證；compile / CI 通過不能取代必要 GUI/runtime 驗收。
 21. 未來規劃、預留 protocol、placeholder crate 或尚未 wiring 的能力不得標示為已完成。
+22. Phase 2 Day 編號重新從 Day 1 開始，不沿用 Phase 1 舊 Day 編號；Chat 起跑 vertical slice 為 message persistence → history loading，Desktop Pet 起跑 vertical slice 為 Leptos UI → bridge → Tauri command/application → `scan_preview()` → `ScanPreview` → UI，且每天仍須先依當下 repository code review 再確認最小實作範圍。
 
 ## 測試與 CI 範圍
 

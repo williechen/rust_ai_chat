@@ -128,10 +128,10 @@ Phase 1 正式封版基線：branch `Phase1`、tag `Phase-1(Chat&Pet)`，固定�
 
 1. 每完成一章，先 code review 實際 GitHub repository，再更新 README 的目前現況與後續缺口。
 2. 下一章或下一個功能依 code review 後的實際 repository 缺口決定，不只沿用 roadmap 或 Day 編號推測程式結構。
-3. **Repository = 實際程式說明；Notion = 深入淺出實作教學。** Phase 2 起只以 Notion「Rust AI Chat + Desktop Pet｜共同主頁」作為唯一 roadmap、共同規則與進度入口；舊 Chat / Desktop Pet 主頁只保留 Phase 1 歷史資料。
-4. README 只維護本文件六個區塊：大綱、最終目標、後續缺口、共同實作規則、測試與 CI 範圍、開發與執行。
-5. 教學內容只更新 Notion；每章應包含實際修改位置、必要程式碼、操作步驟、測試 / 驗證、預期結果與設計理由，不複製到 README。
-6. Repository 的實際程式碼是功能完成與否的主要依據；Notion roadmap 或 Day 編號不能取代實際驗證。
+3. **三處資訊責任固定**：GitHub repository 是功能完成與否的 source of truth；Notion「Rust AI Chat + Desktop Pet｜共同主頁」是 Phase 2 roadmap、共同規則、每日格式與進度的唯一完整規範；每日 08:00 排程只依共同主頁規則執行。
+4. README 只維護本文件六個區塊：大綱、最終目標、後續缺口、共同實作規則、測試與 CI 範圍、開發與執行；不複製每日 Day 教學與詳細格式規則。
+5. 每個 Day 只處理一個最小、一天可完成且可驗證的 vertical slice；固定六個教學區塊為：學習大綱、實作內容、套件版本、重構內容、驗證項目、啟動程式方式。詳細格式以 Notion 共同主頁為準。
+6. Repository 的實際 source、tests、build 與 runtime 驗收是功能完成與否的主要依據；roadmap、排程或 Day 編號不能取代實際驗證。
 7. 實作前核對官方 latest stable 與 API 差異，不直接採用 alpha / beta / RC。
 8. Dependency 升級必須連同程式修改與驗證一起完成。
 9. `Cargo.toml` dependency requirement 只寫 major/minor；精確解析版本由 `Cargo.lock` 保留。
@@ -148,6 +148,7 @@ Phase 1 正式封版基線：branch `Phase1`、tag `Phase-1(Chat&Pet)`，固定�
 20. Native / wasm32 分別使用正確 target 與 features 驗證；compile / CI 通過不能取代必要 GUI/runtime 驗收。
 21. 未來規劃、預留 protocol、placeholder crate 或尚未 wiring 的能力不得標示為已完成。
 22. Phase 2 Day 編號重新從 Day 1 開始，不沿用 Phase 1 舊 Day 編號；Chat 起跑 vertical slice 為 message persistence → history loading，Desktop Pet 起跑 vertical slice 為 Leptos UI → bridge → Tauri command/application → `scan_preview()` → `ScanPreview` → UI，且每天仍須先依當下 repository code review 再確認最小實作範圍。
+23. **語系與 i18n**：目前自有使用者可見文案以繁體中文（zh-TW）為預設；自己撰寫的標題、說明、提示、操作文字與自訂 `error` / `message` 使用繁體中文。第三方 crate、framework、database driver、OS/runtime 或外部 API 的原始 `error` / `message` 保留原文；需要面向使用者時，可在 UI/presentation 邊界補充繁體中文說明，但不改寫原始錯誤。程式名稱、方法／函式名稱、API、變數、型別、trait、crate/package、檔案路徑、CLI 指令、設定鍵與 protocol 欄位名稱保留原文。所有教學程式註解使用繁體中文。i18n/localization 為正式需求；自有文案應集中在 UI/presentation 或可替換訊息層，實際需要多語系時再導入相關 infrastructure，不預先建立空架構。
 
 ## 測試與 CI 範圍
 

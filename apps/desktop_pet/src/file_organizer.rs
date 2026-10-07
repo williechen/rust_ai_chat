@@ -20,6 +20,12 @@ pub enum FileOrganizerError {
     #[error("authorized root is not a directory")]
     RootNotDirectory,
 
+    #[error("file item is no longer a regular file: {0}")]
+    UnsafeItem(String),
+
+    #[error("file item changed after scan: {0}")]
+    ItemChanged(String),
+
     #[error("filesystem scan failed: {0}")]
     Io(#[from] std::io::Error),
 }
@@ -255,6 +261,28 @@ pub struct DuplicatePreview {
     pub warnings: Vec<ScanWarning>,
 }
 
+fn revalidate_scanned_file(item: &ScannedFile) -> Result<(), FileOrganizerError> {
+    ensure_non_root_process()?;
+
+    let metadata = fs::symlink_metadata(&item.path)?;
+
+    if metadata.file_type().is_symlink() || !metadata.file_type().is_file() {
+        return Err(FileOrganizerError::UnsafeItem(item.id.clone()));
+    }
+
+    if metadata.len() != item.size_bytes {
+        return Err(FileOrganizerError::ItemChanged(item.id.clone()));
+    }
+
+    let canonical = fs::canonicalize(&item.path)?;
+
+    if canonical != item.path {
+        return Err(FileOrganizerError::UnsafeItem(item.id.clone()));
+    }
+
+    Ok(())
+}
+
 fn sha256_file(path: &Path) -> Result<String, Error> {
     let file = fs::File::open(path)?;
     let mut reader = BufReader::new(file);
@@ -293,6 +321,14 @@ pub fn duplicate_preview(scan: &FileScan) -> DuplicatePreview {
                 });
                 continue;
             };
+
+            if let Err(error) = revalidate_scanned_file(item) {
+                warnings.push(ScanWarning {
+                    relative_path: "<opaque-item>".to_string(),
+                    message: error.to_string(),
+                });
+                continue;
+            }
 
             match sha256_file(&item.path) {
                 Ok(digest) => {
@@ -462,5 +498,54 @@ mod tests {
         let duplicates = duplicate_preview(&scan);
 
         assert!(duplicates.groups.is_empty());
+    }
+
+    #[test]
+    fn duplicate_preview_warns_when_file_size_changes_after_scan() {
+        let sandbox = TestDir::new("changed-size");
+
+        let a = sandbox.path.join("a.txt");
+        let b = sandbox.path.join("b.txt");
+
+        fs::write(&a, b"same").unwrap();
+        fs::write(&b, b"same").unwrap();
+
+        let root = AuthorizedRoot::new(&sandbox.path).unwrap();
+        let scan = scan(&root).unwrap();
+
+        fs::write(&b, b"changed-size").unwrap();
+
+        let duplicates = duplicate_preview(&scan);
+
+        assert!(duplicates.groups.is_empty());
+        assert_eq!(duplicates.warnings.len(), 1);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn duplicate_preview_warns_when_file_is_replaced_by_symlink() {
+        use std::os::unix::fs::symlink;
+
+        let sandbox = TestDir::new("replaced-symlink");
+        let outside = TestDir::new("replaced-symlink-outside");
+
+        let a = sandbox.path.join("a.txt");
+        let b = sandbox.path.join("b.txt");
+        let outside_file = outside.path.join("outside.txt");
+
+        fs::write(&a, b"same").unwrap();
+        fs::write(&b, b"same").unwrap();
+        fs::write(&outside_file, b"same").unwrap();
+
+        let root = AuthorizedRoot::new(&sandbox.path).unwrap();
+        let scan = scan(&root).unwrap();
+
+        fs::remove_file(&b).unwrap();
+        symlink(&outside_file, &b).unwrap();
+
+        let duplicates = duplicate_preview(&scan);
+
+        assert!(duplicates.groups.is_empty());
+        assert_eq!(duplicates.warnings.len(), 1);
     }
 }

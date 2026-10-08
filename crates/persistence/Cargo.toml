@@ -11,6 +11,5 @@ chat-domain = { path = "../chat_domain" }
 
 
 sqlx.workspace = true
-serde_json.workspace = true
 
 tokio.workspace = true

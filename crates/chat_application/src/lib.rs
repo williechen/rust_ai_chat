@@ -54,25 +54,6 @@ pub trait RoomRepository: Send + Sync {
     async fn create(&self, room: &Room) -> Result<(), RoomRepositoryError>;
 }
 
-#[derive(Debug, Error)]
-pub enum MessageRepositoryError {
-    #[error("訊息儲存失敗：{0}")]
-    Repository(String),
-}
-
-#[async_trait]
-pub trait MessageRepository: Send + Sync {
-    // 訊息建立完成後，透過此介面持久化。
-    async fn create(&self, message: &ChatMessage) -> Result<(), MessageRepositoryError>;
-}
-
-pub async fn persist_message(
-    repository: &dyn MessageRepository,
-    message: &ChatMessage,
-) -> Result<(), MessageRepositoryError> {
-    repository.create(message).await
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -87,70 +87,9 @@ impl RoomRepository for PostgresRoomRepository {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct PostgresMessageRepository {
-    pool: PgPool,
-}
-
-impl PostgresMessageRepository {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
-    }
-}
-
-#[async_trait]
-impl chat_application::MessageRepository for PostgresMessageRepository {
-    async fn create(
-        &self,
-        message: &chat_domain::ChatMessage,
-    ) -> Result<(), chat_application::MessageRepositoryError> {
-        // JSON 保留 MessageAuthor 各種類型與未來擴充欄位。
-        let author = serde_json::to_value(&message.author)
-            .map_err(|error| chat_application::MessageRepositoryError::Repository(error.to_string()))?;
-        sqlx::query(
-            "INSERT INTO messages (id, room_id, author, content) VALUES ($1, $2, $3, $4)",
-        )
-        .bind(&message.id)
-        .bind(&message.room_id)
-        .bind(author)
-        .bind(&message.content)
-        .execute(&self.pool)
-        .await
-        .map(|_| ())
-        .map_err(|error| chat_application::MessageRepositoryError::Repository(error.to_string()))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[sqlx::test(migrations = "../../migrations")]
-    async fn test_message_repository_create(pool: PgPool) {
-        let rooms = PostgresRoomRepository::new(pool.clone());
-        rooms.create(&Room {
-            id: "message-test-room".to_string(),
-            category_room_id: "default-category".to_string(),
-            name: "測試聊天室".to_string(),
-        }).await.expect("聊天室建立應成功");
-
-        let message = chat_domain::ChatMessage {
-            id: "message-test-id".to_string(),
-            room_id: "message-test-room".to_string(),
-            author: chat_domain::MessageAuthor::AnonymousUser,
-            content: "儲存驗證".to_string(),
-        };
-        let repository = PostgresMessageRepository::new(pool.clone());
-        chat_application::MessageRepository::create(&repository, &message)
-            .await.expect("訊息寫入應成功");
-
-        let (content,): (String,) =
-            sqlx::query_as("SELECT content FROM messages WHERE id = $1")
-                .bind(&message.id)
-                .fetch_one(&pool)
-                .await.expect("應可讀取已儲存的訊息");
-        assert_eq!(content, "儲存驗證");
-    }
 
     #[sqlx::test(migrations = "../../migrations")]
     async fn test_room_repository_find_by_id(pool: PgPool) {

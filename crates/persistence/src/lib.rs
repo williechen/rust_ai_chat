@@ -87,6 +87,40 @@ impl RoomRepository for PostgresRoomRepository {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct PostgresMessageRepository {
+    pool: PgPool,
+}
+
+impl PostgresMessageRepository {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+}
+
+#[async_trait]
+impl chat_application::MessageRepository for PostgresMessageRepository {
+    async fn create(
+        &self,
+        message: &chat_domain::ChatMessage,
+    ) -> Result<(), chat_application::MessageRepositoryError> {
+        // JSON 保留 MessageAuthor 各種類型與未來擴充欄位。
+        let author = serde_json::to_value(&message.author)
+            .map_err(|error| chat_application::MessageRepositoryError::Repository(error.to_string()))?;
+        sqlx::query(
+            "INSERT INTO messages (id, room_id, author, content) VALUES ($1, $2, $3, $4)",
+        )
+        .bind(&message.id)
+        .bind(&message.room_id)
+        .bind(author)
+        .bind(&message.content)
+        .execute(&self.pool)
+        .await
+        .map(|_| ())
+        .map_err(|error| chat_application::MessageRepositoryError::Repository(error.to_string()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

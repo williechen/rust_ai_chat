@@ -193,4 +193,127 @@ mod tests {
 
         assert_eq!(saved, room);
     }
+
+    // 沿用既有 tests 模組的 use super::*，及根目錄的 migrations。
+    // 每個 sqlx::test 取得獨立的測試資料庫，先套用 Migration。
+    async fn insert_test_room(pool: &PgPool, id: &str) {
+        sqlx::query(
+            "INSERT INTO rooms (id, category_room_id, name, created_at, updated_at)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+        )
+        .bind(id)
+        .bind("category-programming")
+        .bind("整合測試房間")
+        .execute(pool)
+        .await
+        .expect("建立測試房間");
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn test_message_repository_all_author_kinds(pool: PgPool) {
+        use chat_application::MessageRepository;
+        use chat_domain::{ChatMessage, MessageAuthor};
+
+        insert_test_room(&pool, "message-room").await;
+        let repo = PostgresMessageRepository::new(pool.clone());
+        let inputs = [
+            (
+                "msg-anon",
+                MessageAuthor::AnonymousUser,
+                "anonymous_user",
+                None,
+            ),
+            (
+                "msg-user",
+                MessageAuthor::User {
+                    user_id: "u-1".into(),
+                },
+                "user",
+                Some("u-1"),
+            ),
+            (
+                "msg-ai",
+                MessageAuthor::Ai {
+                    persona_id: "p-1".into(),
+                },
+                "ai",
+                Some("p-1"),
+            ),
+            ("msg-system", MessageAuthor::System, "system", None),
+        ];
+        for (id, author, expected_kind, expected_author_id) in inputs {
+            let message = ChatMessage {
+                id: id.to_string(),
+                room_id: "message-room".to_string(),
+                author,
+                content: format!("內容-{id}"),
+            };
+            repo.create(&message).await.expect("寫入訊息");
+            let row: (String, String, String, Option<String>, String) = sqlx::query_as(
+                "SELECT id, room_id, author_kind, author_id, content
+                 FROM messages WHERE id = $1",
+            )
+            .bind(id)
+            .fetch_one(&pool)
+            .await
+            .expect("重新查詢訊息");
+            assert_eq!(row.0, id);
+            assert_eq!(row.1, "message-room");
+            assert_eq!(row.2, expected_kind);
+            assert_eq!(row.3.as_deref(), expected_author_id);
+            assert_eq!(row.4, format!("內容-{id}"));
+        }
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn test_message_repository_rejects_missing_room(pool: PgPool) {
+        use chat_application::MessageRepository;
+        let repo = PostgresMessageRepository::new(pool);
+        let message = chat_domain::ChatMessage {
+            id: "orphan-message".to_string(),
+            room_id: "missing-room".to_string(),
+            author: chat_domain::MessageAuthor::AnonymousUser,
+            content: "不應成功".to_string(),
+        };
+        assert!(
+            repo.create(&message).await.is_err(),
+            "FK 應拒絕不存在的房間"
+        );
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn test_message_schema_rejects_invalid_author_and_length(pool: PgPool) {
+        insert_test_room(&pool, "constraint-room").await;
+        // 直接使用 SQL 測試 DB CHECK / 長度約束；Domain API 不會產生非法 enum。
+        for (id, kind, author_id) in [
+            ("bad-user", "user", None),
+            ("bad-anon", "anonymous_user", Some("unexpected")),
+            ("bad-kind", "unknown", None),
+        ] {
+            let result = sqlx::query(
+                "INSERT INTO messages (id, room_id, author_kind, author_id, content)
+             VALUES ($1, $2, $3, $4, $5)",
+            )
+            .bind(id)
+            .bind("constraint-room")
+            .bind(kind)
+            .bind(author_id)
+            .bind("測試內容")
+            .execute(&pool)
+            .await;
+            assert!(result.is_err(), "{id} 應被資料庫約束拒絕");
+        }
+        let long_id = "x".repeat(41);
+        let result = sqlx::query(
+            "INSERT INTO messages (id, room_id, author_kind, content)
+         VALUES ($1, $2, $3, $4)",
+        )
+        .bind(&long_id)
+        .bind("constraint-room")
+        .bind("system")
+        .bind("不應成功")
+        .execute(&pool)
+        .await;
+        assert!(result.is_err(), "id VARCHAR(40) 不應接受 41 字元");
+    }
 }

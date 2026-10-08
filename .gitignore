@@ -3,4 +3,4 @@
 /apps/desktop_pet/gen
 /apps/desktop_pet/frontend/dist
 
-#.env
+.env

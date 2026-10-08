@@ -28,9 +28,10 @@ pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
 
     persistence::migrate(&db).await?;
 
-    let room_repository = Arc::new(persistence::PostgresRoomRepository::new(db));
+    let room_repository = Arc::new(persistence::PostgresRoomRepository::new(db.clone()));
+    let message_repository = Arc::new(persistence::PostgresMessageRepository::new(db.clone()));
 
-    let state = state::AppState::new(leptos_options, room_repository);
+    let state = state::AppState::new(leptos_options, room_repository, message_repository);
 
     let app = Router::new()
         .route_service(&pkg_path, pkg_service)

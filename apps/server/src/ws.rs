@@ -105,6 +105,18 @@ async fn handle_client_event(
             }
 
             let message = state.chat_service.send_message(room_id.clone(), content);
+            if let Err(error) = state.message_repository.create(&message).await {
+                eprintln!("message persistence failed: {error}");
+                send_event(
+                    socket,
+                    ServerEvent::Error {
+                        code: "message_persistence_failed".to_owned(),
+                        message: "訊息儲存失敗，請稍後重試".to_owned(),
+                    },
+                )
+                .await?;
+                return Ok(());
+            }
             state
                 .room_hub
                 .publish(room_id.clone(), ServerEvent::MessageCreated(message));

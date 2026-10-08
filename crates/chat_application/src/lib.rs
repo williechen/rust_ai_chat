@@ -54,6 +54,17 @@ pub trait RoomRepository: Send + Sync {
     async fn create(&self, room: &Room) -> Result<(), RoomRepositoryError>;
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum MessageRepositoryError {
+    #[error("message repository failure: {0}")]
+    Repository(String),
+}
+
+#[async_trait]
+pub trait MessageRepository: Send + Sync {
+    async fn create(&self, message: &ChatMessage) -> Result<(), MessageRepositoryError>;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -35,7 +35,7 @@ impl From<RoomRow> for Room {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PostgresRoomRepository {
     pool: PgPool,
 }
@@ -84,6 +84,52 @@ impl RoomRepository for PostgresRoomRepository {
         .await
         .map(|_| ())
         .map_err(|error| RoomRepositoryError::Repository(error.to_string()))
+    }
+}
+
+#[derive(Clone)]
+pub struct PostgresMessageRepository {
+    pool: sqlx::PgPool,
+}
+
+impl PostgresMessageRepository {
+    pub fn new(pool: sqlx::PgPool) -> Self {
+        Self { pool }
+    }
+}
+
+#[async_trait]
+impl chat_application::MessageRepository for PostgresMessageRepository {
+    async fn create(
+        &self,
+        message: &chat_domain::ChatMessage,
+    ) -> Result<(), chat_application::MessageRepositoryError> {
+        // 僅在 Infrastructure 映射 domain enum 到既有資料欄位。
+        let (kind, author_id): (&str, Option<&str>) = match &message.author {
+            chat_domain::MessageAuthor::AnonymousUser => ("anonymous_user", None),
+            chat_domain::MessageAuthor::User { user_id } => ("user", Some(user_id)),
+            chat_domain::MessageAuthor::Ai { persona_id } => ("ai", Some(persona_id)),
+            chat_domain::MessageAuthor::System => ("system", None),
+        };
+        // 標準 INSERT 語意；$1~$5 僅是 PostgreSQL driver placeholder。
+        sqlx::query(
+            "INSERT INTO messages (
+                id
+                , room_id
+                , author_kind
+                , author_id
+                , content)
+            VALUES ($1, $2, $3, $4, $5)",
+        )
+        .bind(&message.id)
+        .bind(&message.room_id)
+        .bind(kind)
+        .bind(author_id)
+        .bind(&message.content)
+        .execute(&self.pool)
+        .await
+        .map(|_| ())
+        .map_err(|e| chat_application::MessageRepositoryError::Repository(e.to_string()))
     }
 }
 

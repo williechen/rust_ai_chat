@@ -196,6 +196,17 @@ async fn chat_with_pet(
     Ok(response.text)
 }
 
+// 從應用程式授權的根目錄取得唯讀掃描預覽，不執行移動或刪除。
+#[tauri::command]
+fn scan_file_preview() -> Result<file_organizer::ScanPreview, String> {
+    let path = std::env::var("PET_AUTHORIZED_ROOT")
+        .map_err(|_| "尚未設定檔案掃描的授權目錄".to_string())?;
+    let root = file_organizer::AuthorizedRoot::new(path)
+        .map_err(|error| format!("無法使用授權目錄：{error}"))?;
+    file_organizer::scan_preview(&root)
+        .map_err(|error| format!("無法取得檔案預覽：{error}"))
+}
+
 pub fn application() {
     tauri::Builder::default()
         .manage(Mutex::new(PetMachine::default()))
@@ -236,7 +247,8 @@ pub fn application() {
         .invoke_handler(tauri::generate_handler![
             get_pet_state,
             send_pet_command,
-            chat_with_pet
+            chat_with_pet,
+            scan_file_preview
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Rust AI Desktop Pet");

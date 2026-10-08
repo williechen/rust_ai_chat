@@ -97,7 +97,7 @@ async fn handle_client_event(
                     socket,
                     ServerEvent::Error {
                         code: "room_mismatch".to_string(),
-                        message: "message room does not match connection room".to_string(),
+                        message: "訊息所屬聊天室與目前連線不一致".to_string(),
                     },
                 )
                 .await?;
@@ -105,6 +105,17 @@ async fn handle_client_event(
             }
 
             let message = state.chat_service.send_message(room_id.clone(), content);
+            // 先完成資料庫寫入，成功後才對房間廣播。
+            if let Err(error) =
+                chat_application::persist_message(state.message_repository.as_ref(), &message).await
+            {
+                eprintln!("訊息持久化失敗：{error}");
+                send_event(socket, ServerEvent::Error {
+                    code: "message_persistence_failed".to_string(),
+                    message: "訊息儲存失敗，請稍後重試".to_string(),
+                }).await?;
+                return Ok(());
+            }
             state
                 .room_hub
                 .publish(room_id.clone(), ServerEvent::MessageCreated(message));

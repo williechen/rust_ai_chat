@@ -35,7 +35,7 @@ Phase 1 正式封版基線：branch `Phase1`、tag `Phase-1(Chat&Pet)`，固定�
 - Create Room HTTP request / response contract 已移至 `shared`，server 與 browser 共用。
 - RoomRepository trait 與 PostgreSQL adapter 已具備 `find_by_id` / `create`；WebSocket upgrade 前會驗證 room 是否存在。
 - Persistence tests 已涵蓋 room lookup 與 create-then-find。
-- Web Chat 訊息目前仍只在記憶體 broadcast，尚無 message persistence / history。
+- Web Chat 已在 Phase 2 Day 1 提交 `MessageRepository`、PostgreSQL `messages` migration 與 WebSocket 先儲存後 broadcast 接線；尚未完成編譯、資料庫整合測試與 runtime 驗收，因此目前仍屬待驗證功能，history loading 尚未實作。
 - `Typing`、`PresenceChanged`、`AiDelta`、`AiCompleted` 仍只是部分 protocol 基線，尚未完整 wiring。
 - AI Core 已有 `ChatModel` abstraction 與 `MockChatModel`；真實 AI provider 尚未接入 Web Chat。
 - Desktop AI Pet 已有 Tauri managed state、Pet state machine、frontend bridge、mock chat、native context-menu command dispatch，以及 work-area bounds、碰邊反向、位置變更驗證與 stall 停止。
@@ -98,7 +98,7 @@ Phase 1 正式封版基線：branch `Phase1`、tag `Phase-1(Chat&Pet)`，固定�
 
 ### Web Chat
 
-1. Message persistence 與 history loading。
+1. Message persistence 已提交程式碼但尚待 `cargo check`、PostgreSQL integration test 與 WebSocket runtime 驗收；history loading 尚未實作。
 2. Server/application 層的 ID、空白訊息、內容長度與速率驗證。
 3. User identity、login、session、authorization；目前訊息仍為匿名，Nested / protected routes 與 ServerFn 尚未實作。
 4. Connection state、reconnect、send queue 與漏失訊息恢復。

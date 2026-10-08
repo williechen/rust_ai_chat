@@ -40,7 +40,7 @@ Phase 1 正式封版基線：branch `Phase1`、tag `Phase-1(Chat&Pet)`，固定�
 - AI Core 已有 `ChatModel` abstraction 與 `MockChatModel`；真實 AI provider 尚未接入 Web Chat。
 - Desktop AI Pet 已有 Tauri managed state、Pet state machine、frontend bridge、mock chat、native context-menu command dispatch，以及 work-area bounds、碰邊反向、位置變更驗證與 stall 停止。
 - FileOrganizer 已有 authorized root canonicalization、Unix root EUID 拒絕、regular-file scan、symlink skip、opaque item ID、size candidate grouping、SHA-256 duplicate preview 與對應單元測試。
-- FileOrganizer 尚未接入 Tauri command / UI /完整 runtime workflow，也尚未實作 move / consume / Trash。
+- FileOrganizer 已新增 `scan_file_preview()` 唯讀 Tauri command（透過 `PET_AUTHORIZED_ROOT` 指定授權目錄）；尚未完成編譯與執行驗收，也尚未接入前端 bridge / UI 或實作 move / consume / Trash。
 - Observability、完整 deployment、自動化 E2E 與 release pipeline 仍未完成。
 
 ## 最終目標
@@ -114,7 +114,7 @@ Phase 1 正式封版基線：branch `Phase1`、tag `Phase-1(Chat&Pet)`，固定�
 ### Desktop AI Pet
 
 1. 移動與 PetState、使用者拖曳之間的協調。
-2. 將現有 FileOrganizer scan / duplicate preview 接入 Tauri command、UI 與 application workflow。
+2. 已提交 FileOrganizer 唯讀 Tauri command，仍需編譯與實際 runtime 驗證，並接通 frontend bridge、UI 與 application workflow。
 3. FileOrganizer suggestion、受控 move / consume、TrashFeedSource 與 Trash metadata。
 4. Filesystem 操作前重新驗證、path traversal / symlink race 防護、preview / confirmation，以及應用啟動層級的 non-root runtime guard。
 5. 真實 AI provider、streaming conversation 與 conversation history。

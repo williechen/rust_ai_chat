@@ -9,6 +9,20 @@ use axum::{
 use shared::{ClientEvent, ServerEvent};
 use tokio::sync::broadcast;
 
+// 防止跨房間發送；空白識別碼不可視為合法房間。
+fn room_matches_connection(connection: &str, event: &str) -> bool {
+    !connection.trim().is_empty() && !event.trim().is_empty() && connection == event
+}
+
+async fn send_event(
+    socket: &mut WebSocket,
+    event: ServerEvent,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let json = serde_json::to_string(&event)?;
+    socket.send(Message::Text(json.into())).await?;
+    Ok(())
+}
+
 pub async fn ws_handler(
     Path(room_id): Path<String>,
     State(state): State<AppState>,
@@ -92,7 +106,7 @@ async fn handle_client_event(
             send_event(socket, ServerEvent::Pong).await?;
         }
         ClientEvent::SendMessage { room_id, content } => {
-            if event_room_id != room_id {
+            if !room_matches_connection(&event_room_id, &room_id) {
                 send_event(
                     socket,
                     ServerEvent::Error {
@@ -129,11 +143,20 @@ async fn handle_client_event(
     Ok(())
 }
 
-async fn send_event(
-    socket: &mut WebSocket,
-    event: ServerEvent,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let json = serde_json::to_string(&event)?;
-    socket.send(Message::Text(json.into())).await?;
-    Ok(())
+#[cfg(test)]
+mod room_guard_tests {
+    use super::room_matches_connection;
+    #[test]
+    fn matching_room() {
+        assert!(room_matches_connection("room-a", "room-a"));
+    }
+    #[test]
+    fn different_room() {
+        assert!(!room_matches_connection("room-a", "room-b"));
+    }
+    #[test]
+    fn blank_room() {
+        assert!(!room_matches_connection("", ""));
+        assert!(!room_matches_connection("room-a", " "));
+    }
 }

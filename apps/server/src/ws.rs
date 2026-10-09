@@ -9,6 +9,11 @@ use axum::{
 use shared::{ClientEvent, ServerEvent};
 use tokio::sync::broadcast;
 
+// 訊息內容不可僅有空白；保留原始內容，不自動裁切。
+fn valid_message_content(content: &str) -> bool {
+    !content.trim().is_empty()
+}
+
 // 防止跨房間發送；空白識別碼不可視為合法房間。
 fn room_matches_connection(connection: &str, event: &str) -> bool {
     !connection.trim().is_empty() && !event.trim().is_empty() && connection == event
@@ -118,6 +123,18 @@ async fn handle_client_event(
                 return Ok(());
             }
 
+            if !valid_message_content(&content) {
+                send_event(
+                    socket,
+                    ServerEvent::Error {
+                        code: "invalid_message_content".to_owned(),
+                        message: "訊息不可為空白".to_owned(),
+                    },
+                )
+                .await?;
+                return Ok(());
+            }
+
             let message = state.chat_service.send_message(room_id.clone(), content);
             if let Err(error) = state.message_repository.create(&message).await {
                 eprintln!("message persistence failed: {error}");
@@ -144,19 +161,34 @@ async fn handle_client_event(
 }
 
 #[cfg(test)]
-mod room_guard_tests {
-    use super::room_matches_connection;
+mod tests {
+    use super::{room_matches_connection, valid_message_content};
+
     #[test]
     fn matching_room() {
         assert!(room_matches_connection("room-a", "room-a"));
     }
+
     #[test]
     fn different_room() {
         assert!(!room_matches_connection("room-a", "room-b"));
     }
+
     #[test]
     fn blank_room() {
         assert!(!room_matches_connection("", ""));
         assert!(!room_matches_connection("room-a", " "));
+    }
+
+    #[test]
+    fn accepts_nonblank_content() {
+        assert!(valid_message_content("你好"));
+        assert!(valid_message_content(" 你好 "));
+    }
+
+    #[test]
+    fn rejects_blank_content() {
+        assert!(!valid_message_content(""));
+        assert!(!valid_message_content(" \n\t "));
     }
 }

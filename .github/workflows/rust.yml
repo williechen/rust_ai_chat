@@ -180,11 +180,8 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Node.js dependencies
-        run: npm install
-
       - name: Run Node.js tests
-        run: npm test
+        run: node --test
 
   unit-of-work-test:
     runs-on: ubuntu-latest

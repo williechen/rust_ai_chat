@@ -14,10 +14,16 @@ struct EventInput {
     event_type: String,
 }
 
+// 事件類型長度以 UTF-8 位元組計算，避免儲存層限制不一致。
+fn valid_event_type(value: &str) -> bool {
+    let value = value.trim();
+    !value.is_empty() && value.len() <= 128
+}
+
 // 純輸入檢查，不代表事件已完成持久化。
 fn valid_event(event: &EventInput) -> bool {
     matches!(event.source_app.as_str(), "web_chat" | "desktop_pet")
-        && !event.event_type.trim().is_empty()
+        && valid_event_type(event.event_type.as_str())
 }
 
 // 有效事件尚未驗證身分／落 DB，不可假裝已處理。
@@ -74,5 +80,15 @@ mod tests {
             ingest(Json(input("unknown", "x"))).await,
             StatusCode::BAD_REQUEST
         );
+    }
+    #[test]
+    fn accepts_normal_kind() {
+        assert!(valid_event_type("message_sent"));
+    }
+    #[test]
+    fn rejects_blank_or_long_kind() {
+        assert!(!valid_event_type(" \t "));
+        assert!(!valid_event_type(&"x".repeat(129)));
+        assert!(valid_event_type(&"x".repeat(128)));
     }
 }

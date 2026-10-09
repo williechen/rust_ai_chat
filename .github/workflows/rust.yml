@@ -145,6 +145,12 @@ jobs:
       - name: Test desktop-pet
         run: cargo test -p desktop-pet
 
+      - name: Test server
+        run: cargo test -p server
+      
+      - name: Test stats server
+        run: cargo test -p stats-server
+
       - name: Test ai core
         run: cargo test -p ai-core
 

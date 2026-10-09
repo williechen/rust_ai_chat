@@ -34,6 +34,12 @@ extern "C" {
         js_name = chatWithPet
     )]
     fn chat_with_pet_js(message: &str) -> Promise;
+
+    #[wasm_bindgen(
+        js_namespace = window,
+        js_name = scanFilePreview
+    )]
+    fn scan_file_preview_js() -> Promise;
 }
 
 fn js_error(value: JsValue) -> String {
@@ -91,4 +97,10 @@ pub async fn chat_with_pet(message: String) -> Result<String, String> {
     value
         .as_string()
         .ok_or_else(|| "Failed to convert chat_with_pet result to string".to_string())
+}
+
+pub async fn scan_file_preview() -> Result<JsValue, String> {
+    JsFuture::from(scan_file_preview_js())
+        .await
+        .map_err(js_error)
 }

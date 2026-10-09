@@ -16,7 +16,6 @@
   <script>
     const { invoke } = window.__TAURI__.core;
     const { listen } = window.__TAURI__.event;
-    
 
     window.getPetState = () => {
       return invoke("get_pet_state");
@@ -83,6 +82,10 @@
         new LogicalPosition(x, y),
         appWindow,
       );
+    };
+
+    window.scanFilePreview = async () => {
+      return invoke("scan_file_preview");
     };
 
   </script>

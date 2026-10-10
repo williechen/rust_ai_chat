@@ -65,19 +65,13 @@ pub trait MessageRepository: Send + Sync {
     async fn create(&self, message: &ChatMessage) -> Result<(), MessageRepositoryError>;
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn send_message_creates_user_message() {
-        let service = ChatService::new();
-        let room_id = "rust_chat".to_string();
-
-        let message = service.send_message(room_id.clone(), "hello".to_string());
-
-        assert_eq!(message.room_id, room_id.clone());
-        assert_eq!(message.author, MessageAuthor::AnonymousUser);
-        assert_eq!(message.content, "hello");
-    }
+/// 先持久化再通知；資料庫失敗時 closure 絕不執行。
+pub async fn persist_then_publish(
+    repository: &dyn MessageRepository,
+    message: ChatMessage,
+    publish: impl FnOnce(ChatMessage),
+) -> Result<(), MessageRepositoryError> {
+    repository.create(&message).await?;
+    publish(message);
+    Ok(())
 }

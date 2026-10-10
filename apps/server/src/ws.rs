@@ -6,6 +6,7 @@ use axum::{
     },
     response::Response,
 };
+use chat_application::persist_then_publish;
 use shared::{ClientEvent, ServerEvent};
 use tokio::sync::broadcast;
 
@@ -136,7 +137,17 @@ async fn handle_client_event(
             }
 
             let message = state.chat_service.send_message(room_id.clone(), content);
-            if let Err(error) = state.message_repository.create(&message).await {
+            if let Err(error) = chat_application::persist_then_publish(
+                state.message_repository.as_ref(),
+                message,
+                |saved| {
+                    state
+                        .room_hub
+                        .publish(room_id.clone(), ServerEvent::MessageCreated(saved))
+                },
+            )
+            .await
+            {
                 eprintln!("message persistence failed: {error}");
                 send_event(
                     socket,
@@ -148,9 +159,6 @@ async fn handle_client_event(
                 .await?;
                 return Ok(());
             }
-            state
-                .room_hub
-                .publish(room_id.clone(), ServerEvent::MessageCreated(message));
         }
         ClientEvent::Typing { .. } => {
             // 後面再做 presence / typing。

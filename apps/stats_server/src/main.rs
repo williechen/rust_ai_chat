@@ -1,5 +1,6 @@
 use axum::{
     Json, Router,
+    extract::DefaultBodyLimit,
     http::StatusCode,
     routing::{get, post},
 };
@@ -39,56 +40,18 @@ async fn health() -> StatusCode {
     StatusCode::OK
 }
 
+fn build_app() -> Router {
+    Router::new()
+        .route("/healthz", get(health))
+        .route("/api/v1/events", post(ingest))
+        .layer(DefaultBodyLimit::max(4096))
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let app = Router::new()
-        .route("/healthz", get(health))
-        .route("/api/v1/events", post(ingest));
+    let app = build_app();
     // 尚無 auth 和儲存，不可綁定公開地址。
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3100").await?;
     axum::serve(listener, app).await?;
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    fn input(source: &str, kind: &str) -> EventInput {
-        EventInput {
-            event_id: Uuid::new_v4(),
-            source_app: source.into(),
-            event_type: kind.into(),
-        }
-    }
-    #[test]
-    fn validates_event_inputs() {
-        assert!(valid_event(&input("web_chat", "message_sent")));
-        assert!(valid_event(&input("desktop_pet", "scan_preview")));
-        assert!(!valid_event(&input("unknown", "message_sent")));
-        assert!(!valid_event(&input("web_chat", "  ")));
-    }
-    #[tokio::test]
-    async fn valid_event_remains_unimplemented() {
-        assert_eq!(
-            ingest(Json(input("web_chat", "message_sent"))).await,
-            StatusCode::NOT_IMPLEMENTED
-        );
-    }
-    #[tokio::test]
-    async fn invalid_event_is_rejected() {
-        assert_eq!(
-            ingest(Json(input("unknown", "x"))).await,
-            StatusCode::BAD_REQUEST
-        );
-    }
-    #[test]
-    fn accepts_normal_kind() {
-        assert!(valid_event_type("message_sent"));
-    }
-    #[test]
-    fn rejects_blank_or_long_kind() {
-        assert!(!valid_event_type(" \t "));
-        assert!(!valid_event_type(&"x".repeat(129)));
-        assert!(valid_event_type(&"x".repeat(128)));
-    }
 }

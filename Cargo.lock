@@ -498,6 +498,7 @@ dependencies = [
  "async-trait",
  "chat-domain",
  "thiserror 2.0.21",
+ "tokio",
  "uuid",
 ]
 
@@ -4547,6 +4548,7 @@ dependencies = [
  "axum",
  "serde",
  "tokio",
+ "tower",
  "uuid",
 ]
 

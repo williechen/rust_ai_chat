@@ -11,3 +11,6 @@ chat-domain = { path = "../chat_domain" }
 thiserror.workspace = true
 
 uuid.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }

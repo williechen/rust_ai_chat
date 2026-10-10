@@ -17,10 +17,10 @@ Rust AI Chat 是一個持續演進的 Rust workspace，目前包含三個產品�
 | `apps/desktop_pet` | Tauri desktop application、managed state、commands、桌面移動、FileOrganizer 基線 |
 | `apps/desktop_pet/frontend` | Desktop Pet 的 Leptos WASM frontend |
 | `crates/chat_domain` | Room、ChatMessage、MessageAuthor 等 chat domain model |
-| `crates/chat_application` | Chat use case、RoomRepository port、room create use case |
+| `crates/chat_application` | Chat use case、RoomRepository / MessageRepository ports、room create、先儲存再發布流程 |
 | `crates/shared` | WebSocket protocol 與 Create Room HTTP contract |
 | `crates/ui` | Web Chat 的 Leptos Router、SSR/hydration、room create browser API、browser socket adapter |
-| `crates/persistence` | PostgreSQL connection、migration、Room repository read/write adapter |
+| `crates/persistence` | PostgreSQL connection、migrations、Room / Message repository adapter |
 | `crates/ai_core` | AI model abstraction、request/response、MockChatModel |
 | `crates/pet_domain` | Desktop Pet state machine、`PetProfile` 與外觀覆寫資料契約 |
 | `crates/telemetry` | Observability 預留 crate，目前尚未完成 |
@@ -28,7 +28,7 @@ Rust AI Chat 是一個持續演進的 Rust workspace，目前包含三個產品�
 | `deploy` | 部署相關設定，目前仍以 placeholder 為主 |
 | `tests` | Repository-level test 預留目錄；目前多數測試仍位於各 crate 內 |
 
-Phase 1 正式封版基線：branch `Phase1`、tag `Phase-1(Chat&Pet)`，固定指向 commit `2fc1c0f86e047379c4f5a934d70a866f1b0550a7`（2026-10-07，Asia/Taipei）。Phase 2 從此封版基線之上繼續於 `main` 演進；後續 code review 一律以當下 `main` HEAD 與實際 source 為準。
+Phase 1 正式封版基線：branch `Phase1`、tag `Phase-1(Chat&Pet)`，固定指向 commit `2fc1c0f86e047379c4f5a934d70a866f1b0550a7`（2026-10-07，Asia/Taipei）。Phase 2 從此封版基線之上繼續於 `main` 演進；後續 code review 一律以當下 `main` HEAD 與實際 source 為準。本次文件同步基準為 2026-10-10 Phase 2 Day 5，commit `21d2ac5a8f2f2733d2b7ac01d498a29ea34eb6f3`。
 
 目前實作基線：
 
@@ -38,13 +38,16 @@ Phase 1 正式封版基線：branch `Phase1`、tag `Phase-1(Chat&Pet)`，固定�
 - RoomRepository trait 與 PostgreSQL adapter 已具備 `find_by_id` / `create`；WebSocket upgrade 前會驗證 room 是否存在。
 - Persistence tests 已涵蓋 room lookup 與 create-then-find。
 - Web Chat Phase 2 已加入 `MessageRepository`、PostgreSQL `messages` migration 與 `persist_then_publish` application 流程。WebSocket 傳訊會先寫入 repository，成功才向房間 broadcast；失敗則回傳 `message_persistence_failed`。已新增此順序與失敗不發布的 mock repository 測試；完整 PostgreSQL / WebSocket runtime 驗收狀態仍需以 CI 及實測確認，history loading 尚未實作。
+- Phase 2 Day 5 新增 `RoomHub::subscriber_count` 與 server 測試：房間間事件隔離、同房間多訂閱者、最後訂閱者 cleanup、訂閱數生命週期。這些是 process-local unit tests，不等於 WebSocket E2E。
 - `Typing`、`PresenceChanged`、`AiDelta`、`AiCompleted` 仍只是部分 protocol 基線，尚未完整 wiring。
 - AI Core 已有 `ChatModel` abstraction 與 `MockChatModel`；真實 AI provider 尚未接入 Web Chat。
 - Desktop AI Pet 已有 Tauri managed state、Pet state machine、frontend bridge、mock chat、native context-menu command dispatch，以及 work-area bounds、碰邊反向、位置變更驗證與 stall 停止。
 - FileOrganizer 已有 authorized root canonicalization、Unix root EUID 拒絕、regular-file scan、symlink skip、opaque item ID、size candidate grouping、SHA-256 duplicate preview 與對應單元測試。
-- FileOrganizer 已新增 `scan_file_preview()` 唯讀 Tauri command（透過 `PET_AUTHORIZED_ROOT` 指定授權目錄）；尚未確認完整 GUI / runtime 驗收，也尚未接入前端 bridge / UI 或實作 move / consume / Trash。
-- Desktop Pet Phase 2 已加入 `PetProfile` 五個必要欄位（名字、種類、喜好、個性、興趣）與可選外觀（顏色、風格），支援 serde JSON 與非空白驗證；已新增 domain contract tests，但尚未接入 UI、持久化或 AI 行為。
+- FileOrganizer 的 `scan_file_preview()` 唯讀 Tauri command 已透過 JS / WASM bridge 接到 frontend，Leptos `App` 啟動時呼叫掃描；目前成功結果尚未呈現於 UI，錯誤僅寫入既有 error signal。Desktop Pet main 已加入 `dotenv::dotenv().ok()`，允許從 `.env` 讀取 `PET_AUTHORIZED_ROOT`。尚未完成完整 GUI/runtime 驗收，也未實作 move / consume / Trash。
+- Desktop Pet Phase 2 已加入 `PetProfile` 五個必要欄位（名字、種類、喜好、個性、興趣）與可選外觀（顏色、風格），支援 serde JSON、非空白驗證與 Day 5 `decode_profile` / `encode_profile` codec（先驗證再序列化），並新增相關 domain tests；尚未接入 UI、持久化或 AI 行為。
 - Stats Server 已建立獨立 Axum app：`GET /healthz` 回傳 200；`POST /api/v1/events` 只接受 `web_chat` / `desktop_pet` 來源、非空白且不超過 128 UTF-8 bytes 的 `event_type`，限制 JSON body 4096 bytes 並拒絕未知欄位。有效輸入刻意回傳 `501 Not Implemented`，因尚無 auth / DB；目前僅綁定 `127.0.0.1:3100`。已有輸入及 HTTP contract tests。
+- Stats Server Phase 2 Day 5 加入 `EventIdentity(source_app, event_id)` 與 `InMemoryDeduplicator` 的 `HashSet` 去重及對應測試；目前仍是獨立純記憶體元件，**尚未接入 HTTP ingest**，有效事件仍回傳 501，無 durable deduplication。
+- CI 已從單一 `rust.yml` 拆分為 `ai_chat.yml`、`desktop_pet.yml`、`dashboard.yml`、`persistence.yml`、`test.yml`、`node.yml`；各 job 的執行結果需另查 GitHub Actions。
 - Observability、完整 deployment、自動化 E2E 與 release pipeline 仍未完成。
 
 ## 最終目標
@@ -122,10 +125,10 @@ Phase 1 正式封版基線：branch `Phase1`、tag `Phase-1(Chat&Pet)`，固定�
 ### Desktop AI Pet
 
 1. 移動與 PetState、使用者拖曳之間的協調。
-2. FileOrganizer 唯讀 Tauri command 仍需完整 runtime 驗證，並接通 frontend bridge、UI 與 application workflow。
+2. FileOrganizer 唯讀 Tauri command 已接 frontend bridge 且在 App 啟動時呼叫，但目前未顯示掃描結果；仍需完整 runtime 驗證、可操作的預覽 UI 與 application workflow。
 3. FileOrganizer suggestion、受控 move / consume、TrashFeedSource 與 Trash metadata。
 4. Filesystem 操作前重新驗證、path traversal / symlink race 防護、preview / confirmation，以及應用啟動層級的 non-root runtime guard。
-5. `PetProfile` 已有資料契約與測試，仍需 UI 編輯、序列化儲存及 profile 驅動的角色行為；真實 AI provider、streaming conversation 與 conversation history 尚未實作。
+5. `PetProfile` 已有資料契約、JSON encode/decode codec 與測試，仍需 UI 編輯、持久化儲存及 profile 驅動的角色行為；真實 AI provider、streaming conversation 與 conversation history 尚未實作。
 6. Persistent memory、learner model、owner feedback learning 與主動 Learning / Teaching loop。
 7. Retriever abstraction、RAG、MCP、Agent Runtime。
 8. Domain/application events、Queue / outbox、retry、dead-letter、idempotency 與 graceful shutdown。
@@ -135,7 +138,7 @@ Phase 1 正式封版基線：branch `Phase1`、tag `Phase-1(Chat&Pet)`，固定�
 ### Stats Server / Dashboard
 
 1. 為事件 API 增加明確的驗證與授權邊界；未實作前維持 loopback-only，不對外暴露。
-2. 設計事件去重／idempotency、可靠持久化、查詢與保留政策，避免將 HTTP `501` 視為成功 ingest。
+2. 已有記憶體 `EventIdentity` / `InMemoryDeduplicator` 基線；仍需將去重接上 ingest、定義 durable idempotency、可靠持久化、查詢與保留政策，避免將 HTTP `501` 視為成功 ingest。
 3. 新增真正的 dashboard UI、統計聚合及整合測試；目前獨立 server 不代表已完成 Dashboard。
 
 ## 共同實作規則
@@ -166,23 +169,18 @@ Phase 1 正式封版基線：branch `Phase1`、tag `Phase-1(Chat&Pet)`，固定�
 
 ## 測試與 CI 範圍
 
-GitHub Actions：`.github/workflows/rust.yml`
+GitHub Actions 已拆分為六個 workflow，均針對 `main` 的 push / pull request：
 
-觸發：
+| Workflow | 主要 jobs |
+| --- | --- |
+| `.github/workflows/ai_chat.yml` | `check-chat`、`build-chat` |
+| `.github/workflows/desktop_pet.yml` | `check-pet`、`build-pet` |
+| `.github/workflows/dashboard.yml` | `check-dashboard`、`build-dashboard` |
+| `.github/workflows/persistence.yml` | `test-persistence`（PostgreSQL service + migrations） |
+| `.github/workflows/test.yml` | 分 crate 的 Rust test jobs |
+| `.github/workflows/node.yml` | `test-node`（Node.js 24） |
 
-- push to `main`
-- pull request to `main`
-
-目前 jobs：
-
-- `check-chat`
-- `check-pet`
-- `unit-test`
-- `unit-of-work-test`
-- `build-chat`
-- `build-pet`
-- `check-dashboard`
-- `node-test`
+這是 pipeline 分工調整，不代表已完成 E2E / release verification。
 
 主要 check：
 
@@ -217,7 +215,7 @@ sqlx migrate run
 cargo test -p persistence
 ```
 
-`unit-of-work-test` 會啟動 `postgres:latest` service、設定臨時 `DATABASE_URL`、執行 migrations，再執行 persistence tests。目前涵蓋 Room repository lookup 與 create-then-find；job 名稱不代表已存在 Unit of Work transaction abstraction。
+`test-persistence` 會啟動 `postgres:latest` service、設定臨時 `DATABASE_URL`、執行 migrations，再執行 persistence tests。目前涵蓋 Room repository lookup 與 create-then-find；job 名稱不代表已存在 Unit of Work transaction abstraction。
 
 Build：
 
@@ -230,14 +228,14 @@ cd apps/desktop_pet/frontend
 trunk build --release
 ```
 
-另有 `node-test` 執行 `node --test`（Node.js 24）；`stats-server` HTTP contract tests 涵蓋 200 / 400 / 413 / 422 / 501 回應。新增的工作與測試項目不等於所有 CI job 均已通過，實際結果以 GitHub Actions run 為準。
+另有 `test-node` 執行 `node --test`（Node.js 24）；`stats-server` HTTP contract tests 涵蓋 200 / 400 / 413 / 422 / 501 回應。新增的工作與測試項目不等於所有 CI job 均已通過，實際結果以 GitHub Actions run 為準。
 
 目前尚未納入 CI 的主要範圍：
 
 - `cargo fmt --check`
 - Clippy
 - Desktop frontend 的 WASM 單元測試
-- Server / RoomHub 行為回歸測試
+- WebSocket runtime / RoomHub 整合回歸測試（Day 5 已有 RoomHub 單元測試）
 - Browser E2E
 - WebSocket E2E
 - Tauri desktop E2E
@@ -318,7 +316,7 @@ cd apps/desktop_pet
 cargo tauri dev
 ```
 
-Tauri 會啟動 frontend development server；單獨以一般 browser 開啟 frontend 無法取代完整 Tauri runtime。
+Tauri 會啟動 frontend development server；單獨以一般 browser 開啟 frontend 無法取代完整 Tauri runtime。可在 repository root 的 `.env` 設定 `PET_AUTHORIZED_ROOT=/path/to/authorized/directory`；Desktop Pet 啟動時載入 `.env`，啟動後會執行一次唯讀 scan preview，但目前僅處理錯誤，不會在 UI 展示成功的掃描結果。
 
 目前 `tauri.conf.json` 的 `bundle.active` 為 `false`；CI native build 與 Trunk build 不代表已產生安裝包。桌面移動、native menu 與 filesystem workflow 仍需要實際桌面環境驗收。
 

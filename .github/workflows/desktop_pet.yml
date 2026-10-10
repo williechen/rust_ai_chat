@@ -56,6 +56,12 @@ jobs:
       - name: Install trunk
         run: cargo install trunk --locked
 
+      - name: format server
+        run: cargo fmt --all -- --check
+
+      - name: clippy
+        run: cargo clippy --all -- -D warnings
+
       - name: Check native workspace
         run: cargo check --workspace --exclude desktop-pet-frontend
 

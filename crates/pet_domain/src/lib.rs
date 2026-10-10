@@ -1,4 +1,5 @@
 pub mod error;
+pub mod profile;
 
 use crate::error::PetError;
 use serde::{Deserialize, Serialize};

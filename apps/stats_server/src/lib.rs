@@ -20,6 +20,7 @@ pub struct EventIdentity {
     source_app: String,
     event_id: String,
 }
+
 impl EventIdentity {
     pub fn new(source_app: impl Into<String>, event_id: impl Into<String>) -> Self {
         Self {
@@ -33,6 +34,7 @@ impl EventIdentity {
 pub struct InMemoryDeduplicator {
     seen: std::collections::HashSet<EventIdentity>,
 }
+
 impl InMemoryDeduplicator {
     pub fn accept_once(&mut self, identity: EventIdentity) -> bool {
         self.seen.insert(identity)
@@ -60,7 +62,7 @@ pub async fn ingest(Json(event): Json<EventInput>) -> StatusCode {
     StatusCode::NOT_IMPLEMENTED
 }
 
-pub async fn health() -> StatusCode {
+async fn health() -> StatusCode {
     StatusCode::OK
 }
 

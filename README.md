@@ -2,16 +2,18 @@
 
 ## 大綱
 
-Rust AI Chat 是一個持續演進的 Rust workspace，目前包含兩個產品方向：
+Rust AI Chat 是一個持續演進的 Rust workspace，目前包含三個產品方向：
 
 - **Web Chat**：以 Rust、Axum、Leptos、WebSocket 與 PostgreSQL 建構多人即時聊天室，最終加入多 AI Persona。
 - **Desktop AI Pet**：以 Rust、Tauri、Leptos 與 AI model abstraction 建構可互動、可學習、可教學的桌面 AI 角色。
+- **Stats Server / Dashboard 後端基線**：獨立的 Axum HTTP 服務，先建立事件輸入契約與驗證；尚未實作授權、儲存、查詢及 dashboard UI。
 
 目前 workspace 主要結構：
 
 | 路徑 | 實際責任 |
 | --- | --- |
 | `apps/server` | Axum Web server、Leptos SSR、HTTP API、WebSocket、room hub、PostgreSQL 啟動 |
+| `apps/stats_server` | 獨立 Axum stats HTTP server、`/healthz`、`/api/v1/events` 輸入驗證及契約測試 |
 | `apps/desktop_pet` | Tauri desktop application、managed state、commands、桌面移動、FileOrganizer 基線 |
 | `apps/desktop_pet/frontend` | Desktop Pet 的 Leptos WASM frontend |
 | `crates/chat_domain` | Room、ChatMessage、MessageAuthor 等 chat domain model |
@@ -20,7 +22,7 @@ Rust AI Chat 是一個持續演進的 Rust workspace，目前包含兩個產品�
 | `crates/ui` | Web Chat 的 Leptos Router、SSR/hydration、room create browser API、browser socket adapter |
 | `crates/persistence` | PostgreSQL connection、migration、Room repository read/write adapter |
 | `crates/ai_core` | AI model abstraction、request/response、MockChatModel |
-| `crates/pet_domain` | Desktop Pet state machine |
+| `crates/pet_domain` | Desktop Pet state machine、`PetProfile` 與外觀覆寫資料契約 |
 | `crates/telemetry` | Observability 預留 crate，目前尚未完成 |
 | `migrations` | Database migrations |
 | `deploy` | 部署相關設定，目前仍以 placeholder 為主 |
@@ -35,12 +37,14 @@ Phase 1 正式封版基線：branch `Phase1`、tag `Phase-1(Chat&Pet)`，固定�
 - Create Room HTTP request / response contract 已移至 `shared`，server 與 browser 共用。
 - RoomRepository trait 與 PostgreSQL adapter 已具備 `find_by_id` / `create`；WebSocket upgrade 前會驗證 room 是否存在。
 - Persistence tests 已涵蓋 room lookup 與 create-then-find。
-- Web Chat 已在 Phase 2 Day 1 提交 `MessageRepository`、PostgreSQL `messages` migration 與 WebSocket 先儲存後 broadcast 接線；尚未完成編譯、資料庫整合測試與 runtime 驗收，因此目前仍屬待驗證功能，history loading 尚未實作。
+- Web Chat Phase 2 已加入 `MessageRepository`、PostgreSQL `messages` migration 與 `persist_then_publish` application 流程。WebSocket 傳訊會先寫入 repository，成功才向房間 broadcast；失敗則回傳 `message_persistence_failed`。已新增此順序與失敗不發布的 mock repository 測試；完整 PostgreSQL / WebSocket runtime 驗收狀態仍需以 CI 及實測確認，history loading 尚未實作。
 - `Typing`、`PresenceChanged`、`AiDelta`、`AiCompleted` 仍只是部分 protocol 基線，尚未完整 wiring。
 - AI Core 已有 `ChatModel` abstraction 與 `MockChatModel`；真實 AI provider 尚未接入 Web Chat。
 - Desktop AI Pet 已有 Tauri managed state、Pet state machine、frontend bridge、mock chat、native context-menu command dispatch，以及 work-area bounds、碰邊反向、位置變更驗證與 stall 停止。
 - FileOrganizer 已有 authorized root canonicalization、Unix root EUID 拒絕、regular-file scan、symlink skip、opaque item ID、size candidate grouping、SHA-256 duplicate preview 與對應單元測試。
-- FileOrganizer 已新增 `scan_file_preview()` 唯讀 Tauri command（透過 `PET_AUTHORIZED_ROOT` 指定授權目錄）；尚未完成編譯與執行驗收，也尚未接入前端 bridge / UI 或實作 move / consume / Trash。
+- FileOrganizer 已新增 `scan_file_preview()` 唯讀 Tauri command（透過 `PET_AUTHORIZED_ROOT` 指定授權目錄）；尚未確認完整 GUI / runtime 驗收，也尚未接入前端 bridge / UI 或實作 move / consume / Trash。
+- Desktop Pet Phase 2 已加入 `PetProfile` 五個必要欄位（名字、種類、喜好、個性、興趣）與可選外觀（顏色、風格），支援 serde JSON 與非空白驗證；已新增 domain contract tests，但尚未接入 UI、持久化或 AI 行為。
+- Stats Server 已建立獨立 Axum app：`GET /healthz` 回傳 200；`POST /api/v1/events` 只接受 `web_chat` / `desktop_pet` 來源、非空白且不超過 128 UTF-8 bytes 的 `event_type`，限制 JSON body 4096 bytes 並拒絕未知欄位。有效輸入刻意回傳 `501 Not Implemented`，因尚無 auth / DB；目前僅綁定 `127.0.0.1:3100`。已有輸入及 HTTP contract tests。
 - Observability、完整 deployment、自動化 E2E 與 release pipeline 仍未完成。
 
 ## 最終目標
@@ -94,11 +98,15 @@ Phase 1 正式封版基線：branch `Phase1`、tag `Phase-1(Chat&Pet)`，固定�
 - 可追蹤的主動決策
 - Installer、updater 與 release pipeline
 
+### Stats Server / Dashboard
+
+目標是以具備身分驗證、可靠持久化與查詢能力的獨立服務支援 Web Chat / Desktop Pet 事件統計與視覺化。目前只有 HTTP contract 基線；後續需定義可追蹤的事件結構、儲存與查詢、授權及 dashboard UI。
+
 ## 後續缺口
 
 ### Web Chat
 
-1. Message persistence 已提交程式碼但尚待 `cargo check`、PostgreSQL integration test 與 WebSocket runtime 驗收；history loading 尚未實作。
+1. Message persistence 已具備先儲存再 broadcast 的 application / WebSocket 接線與 mock 測試，仍需確認 PostgreSQL integration、WebSocket runtime / 失敗路徑驗收；history loading 尚未實作。
 2. Server/application 層的 ID、空白訊息、內容長度與速率驗證。
 3. User identity、login、session、authorization；目前訊息仍為匿名，Nested / protected routes 與 ServerFn 尚未實作。
 4. Connection state、reconnect、send queue 與漏失訊息恢復。
@@ -114,15 +122,21 @@ Phase 1 正式封版基線：branch `Phase1`、tag `Phase-1(Chat&Pet)`，固定�
 ### Desktop AI Pet
 
 1. 移動與 PetState、使用者拖曳之間的協調。
-2. 已提交 FileOrganizer 唯讀 Tauri command，仍需編譯與實際 runtime 驗證，並接通 frontend bridge、UI 與 application workflow。
+2. FileOrganizer 唯讀 Tauri command 仍需完整 runtime 驗證，並接通 frontend bridge、UI 與 application workflow。
 3. FileOrganizer suggestion、受控 move / consume、TrashFeedSource 與 Trash metadata。
 4. Filesystem 操作前重新驗證、path traversal / symlink race 防護、preview / confirmation，以及應用啟動層級的 non-root runtime guard。
-5. 真實 AI provider、streaming conversation 與 conversation history。
+5. `PetProfile` 已有資料契約與測試，仍需 UI 編輯、序列化儲存及 profile 驅動的角色行為；真實 AI provider、streaming conversation 與 conversation history 尚未實作。
 6. Persistent memory、learner model、owner feedback learning 與主動 Learning / Teaching loop。
 7. Retriever abstraction、RAG、MCP、Agent Runtime。
 8. Domain/application events、Queue / outbox、retry、dead-letter、idempotency 與 graceful shutdown。
 9. OpenTelemetry distributed trace / metrics / logs，以及敏感資料的日誌邊界。
 10. Installer、updater 與 release pipeline。
+
+### Stats Server / Dashboard
+
+1. 為事件 API 增加明確的驗證與授權邊界；未實作前維持 loopback-only，不對外暴露。
+2. 設計事件去重／idempotency、可靠持久化、查詢與保留政策，避免將 HTTP `501` 視為成功 ingest。
+3. 新增真正的 dashboard UI、統計聚合及整合測試；目前獨立 server 不代表已完成 Dashboard。
 
 ## 共同實作規則
 
@@ -167,6 +181,8 @@ GitHub Actions：`.github/workflows/rust.yml`
 - `unit-of-work-test`
 - `build-chat`
 - `build-pet`
+- `check-dashboard`
+- `node-test`
 
 主要 check：
 
@@ -177,12 +193,15 @@ cargo check -p ui --features hydrate --target wasm32-unknown-unknown
 
 cargo check --workspace --exclude desktop-pet-frontend
 cargo check -p desktop-pet-frontend --target wasm32-unknown-unknown
+cargo check -p stats-server
 ```
 
 Unit tests：
 
 ```bash
 cargo test -p desktop-pet
+cargo test -p server
+cargo test -p stats-server
 cargo test -p ai-core
 cargo test -p chat-application
 cargo test -p chat-domain
@@ -210,6 +229,8 @@ cargo build --workspace --exclude desktop-pet-frontend --verbose
 cd apps/desktop_pet/frontend
 trunk build --release
 ```
+
+另有 `node-test` 執行 `node --test`（Node.js 24）；`stats-server` HTTP contract tests 涵蓋 200 / 400 / 413 / 422 / 501 回應。新增的工作與測試項目不等於所有 CI job 均已通過，實際結果以 GitHub Actions run 為準。
 
 目前尚未納入 CI 的主要範圍：
 
@@ -288,7 +309,7 @@ Server 目前固定綁定：
 http://127.0.0.1:3000
 ```
 
-首頁 `Create Room` 已接上 `POST /api/rooms`；建立成功後才 navigate 到新 room。訊息目前仍只存在記憶體，重新載入不會取得歷史；browser WebSocket URL 目前固定使用 localhost，因此現況主要適用本機開發。
+首頁 `Create Room` 已接上 `POST /api/rooms`；建立成功後才 navigate 到新 room。訊息已接上 PostgreSQL 持久化寫入流程，但尚未提供 history loading，因此重新載入不會取得歷史；browser WebSocket URL 目前固定使用 localhost，因此現況主要適用本機開發。
 
 Desktop AI Pet：
 
@@ -300,3 +321,15 @@ cargo tauri dev
 Tauri 會啟動 frontend development server；單獨以一般 browser 開啟 frontend 無法取代完整 Tauri runtime。
 
 目前 `tauri.conf.json` 的 `bundle.active` 為 `false`；CI native build 與 Trunk build 不代表已產生安裝包。桌面移動、native menu 與 filesystem workflow 仍需要實際桌面環境驗收。
+
+Stats Server（獨立開發基線）：
+
+```bash
+cargo run -p stats-server
+curl -i http://127.0.0.1:3100/healthz
+curl -i -X POST http://127.0.0.1:3100/api/v1/events \
+  -H 'Content-Type: application/json' \
+  -d '{"event_id":"00000000-0000-4000-8000-000000000001","source_app":"web_chat","event_type":"message_sent"}'
+```
+
+`/healthz` 應回傳 200；合法事件目前應回傳 501（尚未處理、也沒有寫入資料庫），不是成功收件。禁止未經授權將此服務綁定公開網路介面。

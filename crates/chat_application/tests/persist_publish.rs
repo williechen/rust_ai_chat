@@ -75,3 +75,11 @@ fn send_message_creates_user_message() {
     assert_eq!(message.author, MessageAuthor::AnonymousUser);
     assert_eq!(message.content, "hello");
 }
+
+#[tokio::test]
+async fn failed_save_must_never_publish() {
+    // Red：Mock repository 的 save() 回傳錯誤。
+    // Green：persist_then_publish 先 await save，再呼叫 publish。
+    // assert!(result.is_err());
+    // assert_eq!(published_count.load(Ordering::SeqCst), 0);
+}

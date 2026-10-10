@@ -41,7 +41,6 @@ jobs:
       - name: Check ui
         run: cargo check -p ui --features hydrate --target wasm32-unknown-unknown
 
-
   check-pet:
     runs-on: ubuntu-latest
 
@@ -116,7 +115,7 @@ jobs:
       - name: Check stats server
         run: cargo check -p stats-server
         
-  unit-test:
+  test-desktop-pet:
     runs-on: ubuntu-latest
 
     steps:
@@ -145,45 +144,183 @@ jobs:
       - name: Test desktop-pet
         run: cargo test -p desktop-pet
 
-      - name: Test server
-        run: cargo test -p server
-      
-      - name: Test stats server
-        run: cargo test -p stats-server
-
-      - name: Test ai core
-        run: cargo test -p ai-core
-
-      - name: Test chat application
-        run: cargo test -p chat-application
-
-      - name: Test chat domain
-        run: cargo test -p chat-domain
-
-      - name: Test pet domain
-        run: cargo test -p pet-domain
-
-      - name: Test shared
-        run: cargo test -p shared
-
-      - name: Test ui
-        run: cargo test -p ui
-
-  node-test:
+  test-server:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Node.js
-        uses: actions/setup-node@v3
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          node-version: '24'
+          targets: wasm32-unknown-unknown
 
-      - name: Run Node.js tests
-        run: node --test
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y dist-upgrade
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config
 
-  unit-of-work-test:
+      - name: Test server
+        run: cargo test -p server
+
+  test-stats-server:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y dist-upgrade
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config 
+      
+      - name: Test stats server
+        run: cargo test -p stats-server
+
+  test-ai-core:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y dist-upgrade
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config 
+
+      - name: Test ai core
+        run: cargo test -p ai-core
+
+  test-chat-application:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y dist-upgrade
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config 
+
+      - name: Test chat application
+        run: cargo test -p chat-application
+
+  test-chat-domain:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y dist-upgrade
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config 
+
+      - name: Test chat domain
+        run: cargo test -p chat-domain  
+
+  test-pet-domain:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y dist-upgrade
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config 
+
+      - name: Test pet domain
+        run: cargo test -p pet-domain
+
+  test-shared:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y dist-upgrade
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config 
+
+      - name: Test shared
+        run: cargo test -p shared
+
+  test-ui:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y dist-upgrade
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config 
+
+      - name: Test ui
+        run: cargo test -p ui
+        
+  test-persistence:
     runs-on: ubuntu-latest
 
     services:
@@ -218,6 +355,20 @@ jobs:
 
       - name: Test persistence
         run: cargo test -p persistence
+
+  test-node:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '24'
+
+      - name: Run Node.js tests
+        run: node --test
 
   build-chat:
     runs-on: ubuntu-latest

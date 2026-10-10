@@ -122,7 +122,7 @@ fn RoomPage() -> impl IntoView {
     let params = use_params_map();
 
     move || {
-        let room_id = params.read().get("room_id").and_then(|value| Some(value));
+        let room_id = params.read().get("room_id");
 
         match room_id {
             Some(room_id) => view! { <ChatPage room_id /> }.into_any(),

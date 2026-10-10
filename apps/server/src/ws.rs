@@ -66,11 +66,10 @@ async fn handle_socket(mut socket: WebSocket, state: AppState, room_id: String) 
                     }
                 };
 
-                if let Message::Text(text) = message {
-                    if let Err(error) = handle_client_event(&mut socket, &state, text.as_str(), room_id.clone()).await {
+                if let Message::Text(text) = message
+                    && let Err(error) = handle_client_event(&mut socket, &state, text.as_str(), room_id.clone()).await {
                         eprintln!("client message error: {error}");
                         break;
-                    }
                 }
             }
             event = room_events.recv() => {

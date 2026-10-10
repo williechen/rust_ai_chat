@@ -346,7 +346,7 @@ pub fn duplicate_preview(scan: &FileScan) -> DuplicatePreview {
         for (digest_sha256, item_ids) in by_digest {
             if item_ids.len() >= 2 {
                 groups.push(DuplicateGroup {
-                    digest_sha256: digest_sha256,
+                    digest_sha256,
                     size_bytes: size_group.size_bytes,
                     item_ids,
                 });

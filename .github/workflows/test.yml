@@ -10,6 +10,35 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  test-workspace:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y dist-upgrade
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libxdo-dev \
+            librsvg2-dev \
+            libwebkit2gtk-4.1-dev
+
+      - name: Test workspace
+        run: cargo test --workspace
+
   test-desktop-pet:
     runs-on: ubuntu-latest
 

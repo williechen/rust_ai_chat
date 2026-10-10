@@ -53,13 +53,13 @@ impl PetProfile {
         {
             return Err(ProfileError::EmptyTag);
         }
-        if let Some(a) = &self.appearance {
-            if a.color.as_deref().is_some_and(|s| s.trim().is_empty())
-                || a.style.as_deref().is_some_and(|s| s.trim().is_empty())
-            {
-                return Err(ProfileError::EmptyOverride);
-            }
+        if let Some(a) = &self.appearance
+            && (a.color.as_deref().is_some_and(|s| s.trim().is_empty())
+                || a.style.as_deref().is_some_and(|s| s.trim().is_empty()))
+        {
+            return Err(ProfileError::EmptyOverride);
         }
+
         Ok(())
     }
 }

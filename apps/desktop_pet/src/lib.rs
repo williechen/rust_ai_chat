@@ -113,7 +113,7 @@ async fn roam_desktop(app: tauri::AppHandle) {
         };
 
         let requested =
-            bounded_next_position(before, window_size, &monitor.work_area(), &mut dx, &mut dy);
+            bounded_next_position(before, window_size, monitor.work_area(), &mut dx, &mut dy);
 
         if let Err(error) = window.set_position(requested) {
             eprintln!("desktop roaming unavailable: {error}");
@@ -162,7 +162,7 @@ fn dispatch_pet_command(
         pet.dispatch(command).map_err(|error| error.to_string())?
     };
 
-    app.emit("pet://state-changed", snapshot.clone())
+    app.emit("pet://state-changed", snapshot)
         .map_err(|error| error.to_string())?;
 
     Ok(snapshot)

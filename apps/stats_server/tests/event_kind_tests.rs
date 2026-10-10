@@ -1,5 +1,5 @@
 use axum::Json;
-use http::StatusCode;
+use axum::http::StatusCode;
 use stats_server::{EventInput, ingest, valid_event, valid_event_type};
 use uuid::Uuid;
 

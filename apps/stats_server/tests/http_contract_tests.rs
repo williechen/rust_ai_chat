@@ -1,8 +1,8 @@
-use super::build_app;
 use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
+use stats_server::build_app;
 use tower::ServiceExt;
 
 const ID: &str = "00000000-0000-4000-8000-000000000001";

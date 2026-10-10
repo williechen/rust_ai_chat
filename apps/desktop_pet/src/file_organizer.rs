@@ -60,6 +60,14 @@ pub struct ScanPreview {
     pub warnings: Vec<ScanWarning>,
 }
 
+fn reject_root_euid(euid: u32) -> Result<(), FileOrganizerError> {
+    if euid == 0 {
+        Err(FileOrganizerError::RootProcess)
+    } else {
+        Ok(())
+    }
+}
+
 #[cfg(unix)]
 fn ensure_non_root_process() -> Result<(), FileOrganizerError> {
     let euid = unsafe { libc::geteuid() };
@@ -95,43 +103,11 @@ impl AuthorizedRoot {
     }
 }
 
-pub fn scan(root: &AuthorizedRoot) -> Result<FileScan, FileOrganizerError> {
-    ensure_non_root_process()?;
-
-    let mut files = Vec::new();
-    let mut warnings = Vec::new();
-    let mut by_digest: BTreeMap<String, ScannedFile> = BTreeMap::new();
-
-    scan_dir(root.path(), root.path(), &mut files, &mut warnings)?;
-
-    files.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
-
-    for (index, file) in files.iter_mut().enumerate() {
-        file.id = format!("item-{index:06}");
-        by_digest.insert(
-            file.id.clone(),
-            ScannedFile {
-                id: file.id.clone(),
-                path: PathBuf::from(root.path()).join(&file.relative_path),
-                size_bytes: file.size_bytes,
-            },
-        );
-    }
-
-    let duplicate_size_candidates = build_size_candidates(&files);
-
-    Ok(FileScan {
-        preview: ScanPreview {
-            files,
-            duplicate_size_candidates,
-            warnings,
-        },
-        items: by_digest,
-    })
-}
-
-pub fn scan_preview(root: &AuthorizedRoot) -> Result<ScanPreview, FileOrganizerError> {
-    Ok(scan(root)?.preview)
+fn display_relative(root: &Path, path: &Path) -> String {
+    path.strip_prefix(root)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .into_owned()
 }
 
 fn scan_dir(
@@ -197,13 +173,6 @@ fn scan_dir(
     Ok(())
 }
 
-fn display_relative(root: &Path, path: &Path) -> String {
-    path.strip_prefix(root)
-        .unwrap_or(path)
-        .to_string_lossy()
-        .into_owned()
-}
-
 fn build_size_candidates(files: &[FilePreview]) -> Vec<SizeCandidateGroup> {
     let mut by_size: BTreeMap<u64, Vec<String>> = BTreeMap::new();
 
@@ -225,12 +194,43 @@ fn build_size_candidates(files: &[FilePreview]) -> Vec<SizeCandidateGroup> {
         .collect()
 }
 
-fn reject_root_euid(euid: u32) -> Result<(), FileOrganizerError> {
-    if euid == 0 {
-        Err(FileOrganizerError::RootProcess)
-    } else {
-        Ok(())
+pub fn scan(root: &AuthorizedRoot) -> Result<FileScan, FileOrganizerError> {
+    ensure_non_root_process()?;
+
+    let mut files = Vec::new();
+    let mut warnings = Vec::new();
+    let mut by_digest: BTreeMap<String, ScannedFile> = BTreeMap::new();
+
+    scan_dir(root.path(), root.path(), &mut files, &mut warnings)?;
+
+    files.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
+
+    for (index, file) in files.iter_mut().enumerate() {
+        file.id = format!("item-{index:06}");
+        by_digest.insert(
+            file.id.clone(),
+            ScannedFile {
+                id: file.id.clone(),
+                path: PathBuf::from(root.path()).join(&file.relative_path),
+                size_bytes: file.size_bytes,
+            },
+        );
     }
+
+    let duplicate_size_candidates = build_size_candidates(&files);
+
+    Ok(FileScan {
+        preview: ScanPreview {
+            files,
+            duplicate_size_candidates,
+            warnings,
+        },
+        items: by_digest,
+    })
+}
+
+pub fn scan_preview(root: &AuthorizedRoot) -> Result<ScanPreview, FileOrganizerError> {
+    Ok(scan(root)?.preview)
 }
 
 #[derive(Debug, Clone)]

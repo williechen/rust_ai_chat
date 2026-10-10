@@ -6,7 +6,6 @@ use axum::{
     },
     response::Response,
 };
-use chat_application::persist_then_publish;
 use shared::{ClientEvent, ServerEvent};
 use tokio::sync::broadcast;
 

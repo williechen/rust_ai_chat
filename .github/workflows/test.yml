@@ -37,7 +37,7 @@ jobs:
             libwebkit2gtk-4.1-dev
 
       - name: Test workspace
-        run: cargo test --workspace
+        run: cargo test -p workspace-tests
 
   test-desktop-pet:
     runs-on: ubuntu-latest

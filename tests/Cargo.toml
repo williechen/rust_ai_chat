@@ -1,0 +1,74 @@
+[package]
+name = "workspace-tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+autotests = false
+
+[dev-dependencies]
+async-trait.workspace = true
+axum.workspace = true
+
+chat-application = { path = "../crates/chat_application" }
+chat-domain = { path = "../crates/chat_domain" }
+
+desktop-pet = { path = "../apps/desktop_pet" }
+
+pet-domain = { path = "../crates/pet_domain" }
+
+serde_json.workspace = true
+
+shared = { path = "../crates/shared" }
+
+server = { path = "../apps/server" }
+stats-server = { path = "../apps/stats_server" }
+
+tokio.workspace = true
+
+tower = { version = "0.5", features = ["util"] }
+
+uuid.workspace = true
+
+[[test]]
+name = "analytics_event_kind_tests"
+path = "analytics/event_kind_tests.rs"
+
+[[test]]
+name = "analytics_http_contract_tests"
+path = "analytics/http_contract_tests.rs"
+
+[[test]]
+name = "analytics_idempotency_contract"
+path = "analytics/idempotency_contract.rs"
+
+[[test]]
+name = "analytics_postgres_ingest"
+path = "analytics/postgres_ingest.rs"
+
+[[test]]
+name = "chat_persist_publish"
+path = "chat/persist_publish.rs"
+
+[[test]]
+name = "desktop_pet_day5_tests"
+path = "desktop_pet/day5_tests.rs"
+
+[[test]]
+name = "pet_cleanup_contract"
+path = "pet/cleanup_contract.rs"
+
+[[test]]
+name = "pet_day5_codec_tests"
+path = "pet/day5_codec_tests.rs"
+
+[[test]]
+name = "pet_operation_event_contract"
+path = "pet/operation_event_contract.rs"
+
+[[test]]
+name = "pet_pet_machine"
+path = "pet/pet_machine.rs"
+
+[[test]]
+name = "pet_profile_contract"
+path = "pet/profile_contract.rs"

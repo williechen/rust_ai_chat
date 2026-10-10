@@ -41,6 +41,14 @@ impl RoomHub {
         (sender, receiver)
     }
 
+    pub fn subscriber_count(&self, room_id: &str) -> usize {
+        self.rooms
+            .lock()
+            .unwrap()
+            .get(room_id)
+            .map_or(0, |sender| sender.receiver_count())
+    }
+
     pub fn publish(&self, room_id: String, event: ServerEvent) {
         let sender = {
             let rooms = self.rooms.lock().unwrap();

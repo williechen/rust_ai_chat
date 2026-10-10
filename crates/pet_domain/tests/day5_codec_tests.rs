@@ -1,3 +1,5 @@
+use pet_domain::profile::{PetProfile, ProfileCodecError, decode_profile, encode_profile};
+
 const VALID: &str =
     r#"{"名字":"小啾","種類":"鳥","喜好":["水果"],"個性":["活潑"],"興趣":["音樂"]}"#;
 

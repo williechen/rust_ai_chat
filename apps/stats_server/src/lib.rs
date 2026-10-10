@@ -15,6 +15,30 @@ pub struct EventInput {
     pub event_type: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EventIdentity {
+    source_app: String,
+    event_id: String,
+}
+impl EventIdentity {
+    pub fn new(source_app: impl Into<String>, event_id: impl Into<String>) -> Self {
+        Self {
+            source_app: source_app.into(),
+            event_id: event_id.into(),
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct InMemoryDeduplicator {
+    seen: std::collections::HashSet<EventIdentity>,
+}
+impl InMemoryDeduplicator {
+    pub fn accept_once(&mut self, identity: EventIdentity) -> bool {
+        self.seen.insert(identity)
+    }
+}
+
 // 事件類型長度以 UTF-8 位元組計算，避免儲存層限制不一致。
 pub fn valid_event_type(value: &str) -> bool {
     let value = value.trim();

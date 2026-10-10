@@ -1,3 +1,5 @@
+use stats_server::{EventIdentity, InMemoryDeduplicator};
+
 #[test]
 fn same_source_and_id_is_duplicate() {
     let mut store = InMemoryDeduplicator::default();

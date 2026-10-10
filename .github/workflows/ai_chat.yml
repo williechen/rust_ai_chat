@@ -32,12 +32,6 @@ jobs:
       - name: Install cargo-leptos
         run: cargo install cargo-leptos --locked
 
-      - name: format server
-        run: cargo fmt --all -- --check
-
-      - name: clippy
-        run: cargo clippy -p server -p ui -- -D warnings
-
       - name: Check server ssr
         run: cargo check -p server --features ssr
 

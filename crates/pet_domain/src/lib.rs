@@ -86,6 +86,17 @@ impl Default for PetMachine {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OperationState {
+    Previewed,
+    Confirmed,
+    Succeeded,
+    Failed,
+}
+pub fn count_as_cleanup(state: OperationState) -> bool {
+    state == OperationState::Succeeded
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

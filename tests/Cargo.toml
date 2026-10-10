@@ -50,8 +50,8 @@ name = "chat_persist_publish"
 path = "chat/persist_publish.rs"
 
 [[test]]
-name = "desktop_pet_day5_tests"
-path = "desktop_pet/day5_tests.rs"
+name = "server_day5_tests"
+path = "server/day5_tests.rs"
 
 [[test]]
 name = "pet_cleanup_contract"

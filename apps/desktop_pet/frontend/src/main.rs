@@ -129,6 +129,15 @@ fn App() -> impl IntoView {
                 }
             }
         });
+
+        spawn_local(async move {
+            match bridge::scan_file_preview().await {
+                Ok(_) => {}
+                Err(message) => {
+                    error_writer.set(Some(message));
+                }
+            }
+        });
     }
 
     view! {

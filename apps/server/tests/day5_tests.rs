@@ -1,3 +1,7 @@
+use server::hub::RoomHub;
+use shared::ServerEvent;
+use tokio::sync::broadcast::error::TryRecvError;
+
 #[test]
 fn message_stays_inside_room() {
     let hub = RoomHub::new(8);
@@ -27,4 +31,15 @@ fn last_receiver_cleanup_allows_new_subscription() {
     let (_new_sender, mut new_receiver) = hub.subscribe("room".into());
     hub.publish("room".into(), ServerEvent::Pong);
     assert_eq!(new_receiver.try_recv().unwrap(), ServerEvent::Pong);
+}
+
+#[test]
+fn count_tracks_receiver_lifecycle() {
+    let hub = RoomHub::new(8);
+    assert_eq!(hub.subscriber_count("r"), 0);
+    let (sender, receiver) = hub.subscribe("r".into());
+    assert_eq!(hub.subscriber_count("r"), 1);
+    drop(receiver);
+    hub.cleanup("r".into(), &sender);
+    assert_eq!(hub.subscriber_count("r"), 0);
 }

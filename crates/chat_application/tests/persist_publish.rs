@@ -78,8 +78,16 @@ fn send_message_creates_user_message() {
 
 #[tokio::test]
 async fn failed_save_must_never_publish() {
-    // Red：Mock repository 的 save() 回傳錯誤。
-    // Green：persist_then_publish 先 await save，再呼叫 publish。
-    // assert!(result.is_err());
-    // assert_eq!(published_count.load(Ordering::SeqCst), 0);
+    let repo = FakeRepo {
+        fail: true,
+        saved: Mutex::new(Vec::new()),
+    };
+    let published = Mutex::new(Vec::<ChatMessage>::new());
+    let result = persist_then_publish(&repo, message(), |event| {
+        published.lock().unwrap().push(event);
+    })
+    .await;
+    assert!(matches!(result, Err(MessageRepositoryError::Repository(_))));
+    assert!(repo.saved.lock().unwrap().is_empty());
+    assert!(published.lock().unwrap().is_empty());
 }

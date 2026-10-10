@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "ai-core"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "async-trait",
  "thiserror 2.0.21",
@@ -493,7 +493,7 @@ dependencies = [
 
 [[package]]
 name = "chat-application"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "async-trait",
  "chat-domain",
@@ -504,7 +504,7 @@ dependencies = [
 
 [[package]]
 name = "chat-domain"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "serde",
  "uuid",
@@ -938,7 +938,7 @@ dependencies = [
 
 [[package]]
 name = "desktop-pet"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "ai-core",
  "dotenv",
@@ -954,7 +954,7 @@ dependencies = [
 
 [[package]]
 name = "desktop-pet-frontend"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "gloo-timers",
  "js-sys",
@@ -3210,7 +3210,7 @@ checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 
 [[package]]
 name = "persistence"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "async-trait",
  "chat-application",
@@ -3221,7 +3221,7 @@ dependencies = [
 
 [[package]]
 name = "pet-domain"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "serde",
  "serde_json",
@@ -4093,7 +4093,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "any_spawner",
  "axum",
@@ -4232,7 +4232,7 @@ dependencies = [
 
 [[package]]
 name = "shared"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "chat-domain",
  "serde",
@@ -4544,7 +4544,7 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "stats-server"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "axum",
  "serde",
@@ -4974,7 +4974,7 @@ dependencies = [
 
 [[package]]
 name = "telemetry"
-version = "0.2.6"
+version = "0.2.7"
 
 [[package]]
 name = "tendril"
@@ -5405,7 +5405,7 @@ checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 
 [[package]]
 name = "ui"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "chat-domain",
  "leptos",

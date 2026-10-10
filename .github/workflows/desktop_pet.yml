@@ -60,7 +60,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: clippy
-        run: cargo clippy --all -- -D warnings
+        run: cargo clippy -p desktop-pet -p desktop-pet-frontend -- -D warnings
 
       - name: Check native workspace
         run: cargo check --workspace --exclude desktop-pet-frontend

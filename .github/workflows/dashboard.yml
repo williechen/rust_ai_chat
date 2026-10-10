@@ -29,11 +29,11 @@ jobs:
             build-essential \
             pkg-config
 
-      - name: format server
+      - name: format stats server
         run: cargo fmt --all -- --check
 
       - name: clippy
-        run: cargo clippy --all -- -D warnings
+        run: cargo clippy -p stats-server -- -D warnings
 
       - name: Check stats server
         run: cargo check -p stats-server

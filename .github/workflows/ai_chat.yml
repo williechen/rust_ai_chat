@@ -1,0 +1,67 @@
+name: Rust
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check-chat:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y dist-upgrade
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config
+            
+      - name: Install cargo-leptos
+        run: cargo install cargo-leptos --locked
+
+      - name: Check server ssr
+        run: cargo check -p server --features ssr
+
+      - name: Check ui ssr
+        run: cargo check -p ui --features ssr
+
+      - name: Check ui
+        run: cargo check -p ui --features hydrate --target wasm32-unknown-unknown
+
+  build-chat:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y dist-upgrade
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config
+
+      - name: Install cargo-leptos
+        run: cargo install cargo-leptos --locked
+
+      - name: Build server
+        run: cargo leptos build --release

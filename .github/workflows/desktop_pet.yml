@@ -1,0 +1,99 @@
+name: Rust
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check-pet:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y dist-upgrade
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libxdo-dev \
+            librsvg2-dev \
+            libwebkit2gtk-4.1-dev
+
+      - name: Check native dependencies
+        run: |
+          echo "GLib:"
+          pkg-config --modversion glib-2.0
+
+          echo "GTK:"
+          pkg-config --modversion gtk+-3.0
+
+          echo "libsoup:"
+          pkg-config --modversion libsoup-3.0
+
+          echo "JavaScriptCore:"
+          pkg-config --modversion javascriptcoregtk-4.1
+
+          echo "WebKitGTK:"
+          pkg-config --modversion webkit2gtk-4.1
+
+      - name: Install trunk
+        run: cargo install trunk --locked
+
+      - name: Check native workspace
+        run: cargo check --workspace --exclude desktop-pet-frontend
+
+      - name: Check desktop frontend
+        run: cargo check -p desktop-pet-frontend --target wasm32-unknown-unknown
+
+  build-pet:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y dist-upgrade
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libxdo-dev \
+            librsvg2-dev \
+            libwebkit2gtk-4.1-dev
+
+      - name: Check native dependencies
+        run: cargo build --workspace --exclude desktop-pet-frontend --verbose
+
+      - name: Install trunk
+        run: cargo install trunk --locked
+
+      - name: Build desktop
+        working-directory: apps/desktop_pet/frontend
+        run: trunk build --release

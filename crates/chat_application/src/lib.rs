@@ -1,3 +1,5 @@
+pub mod product_event;
+
 use async_trait::async_trait;
 use chat_domain::{ChatMessage, MessageAuthor, Room};
 use thiserror::Error;

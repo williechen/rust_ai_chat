@@ -3,6 +3,7 @@ pub mod hub;
 pub mod ssr;
 pub mod state;
 pub mod ws;
+pub mod ws_policy;
 
 use std::sync::Arc;
 

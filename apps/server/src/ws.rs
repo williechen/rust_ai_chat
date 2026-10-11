@@ -1,4 +1,7 @@
-use crate::state::AppState;
+use crate::{
+    state::AppState,
+    ws_policy::{room_matches_connection, valid_message_content},
+};
 use axum::{
     extract::{
         Path, State,
@@ -8,16 +11,6 @@ use axum::{
 };
 use shared::{ClientEvent, ServerEvent};
 use tokio::sync::broadcast;
-
-// 訊息內容不可僅有空白；保留原始內容，不自動裁切。
-fn valid_message_content(content: &str) -> bool {
-    !content.trim().is_empty()
-}
-
-// 防止跨房間發送；空白識別碼不可視為合法房間。
-fn room_matches_connection(connection: &str, event: &str) -> bool {
-    !connection.trim().is_empty() && !event.trim().is_empty() && connection == event
-}
 
 async fn send_event(
     socket: &mut WebSocket,
@@ -164,37 +157,4 @@ async fn handle_client_event(
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{room_matches_connection, valid_message_content};
-
-    #[test]
-    fn matching_room() {
-        assert!(room_matches_connection("room-a", "room-a"));
-    }
-
-    #[test]
-    fn different_room() {
-        assert!(!room_matches_connection("room-a", "room-b"));
-    }
-
-    #[test]
-    fn blank_room() {
-        assert!(!room_matches_connection("", ""));
-        assert!(!room_matches_connection("room-a", " "));
-    }
-
-    #[test]
-    fn accepts_nonblank_content() {
-        assert!(valid_message_content("你好"));
-        assert!(valid_message_content(" 你好 "));
-    }
-
-    #[test]
-    fn rejects_blank_content() {
-        assert!(!valid_message_content(""));
-        assert!(!valid_message_content(" \n\t "));
-    }
 }

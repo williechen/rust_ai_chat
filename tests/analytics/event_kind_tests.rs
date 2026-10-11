@@ -17,6 +17,7 @@ fn rejects_blank_or_long_kind() {
 
 fn input(source: &str, kind: &str) -> EventInput {
     EventInput {
+        schema_version: 1,
         event_id: Uuid::new_v4(),
         source_app: source.into(),
         event_type: kind.into(),

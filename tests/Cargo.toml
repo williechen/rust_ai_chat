@@ -50,20 +50,20 @@ name = "chat_persist_publish"
 path = "chat/persist_publish.rs"
 
 [[test]]
-name = "server_day5_tests"
-path = "server/day5_tests.rs"
+name = "chat_product_event_contract"
+path = "chat/product_event_contract.rs"
 
 [[test]]
 name = "pet_cleanup_contract"
 path = "pet/cleanup_contract.rs"
 
 [[test]]
-name = "pet_day5_codec_tests"
-path = "pet/day5_codec_tests.rs"
+name = "pet_cleanup_event_contract"
+path = "pet/cleanup_event_contract.rs"
 
 [[test]]
-name = "pet_operation_event_contract"
-path = "pet/operation_event_contract.rs"
+name = "pet_day5_codec_tests"
+path = "pet/day5_codec_tests.rs"
 
 [[test]]
 name = "pet_pet_machine"
@@ -72,3 +72,11 @@ path = "pet/pet_machine.rs"
 [[test]]
 name = "pet_profile_contract"
 path = "pet/profile_contract.rs"
+
+[[test]]
+name = "server_day5_tests"
+path = "server/day5_tests.rs"
+
+[[test]]
+name = "server_ws_policy_contract"
+path = "server/ws_policy_contract.rs"

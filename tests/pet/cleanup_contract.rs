@@ -1,4 +1,5 @@
 use pet_domain::cleanup::{CleanupError, CleanupOperation};
+use pet_domain::{OperationState, count_as_cleanup};
 
 #[test]
 fn preview_cannot_be_counted_or_completed() {
@@ -38,4 +39,13 @@ fn failed_operation_never_counts() {
     // 實際清理失敗時不得發送成功事件。
     operation.complete(false).expect("已確認後可記錄失敗");
     assert!(!operation.may_emit_success_event());
+}
+
+#[test]
+fn four_legacy_operation_states_preserve_counting_rule() {
+    // 將舊 tests/pet/operation_event_contract.rs 的唯一不同斷言合併到此。
+    assert!(!count_as_cleanup(OperationState::Previewed));
+    assert!(!count_as_cleanup(OperationState::Confirmed));
+    assert!(!count_as_cleanup(OperationState::Failed));
+    assert!(count_as_cleanup(OperationState::Succeeded));
 }

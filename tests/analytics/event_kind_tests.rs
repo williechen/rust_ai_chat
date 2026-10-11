@@ -29,6 +29,9 @@ fn validates_event_inputs() {
     assert!(valid_event(&input("desktop_pet", "scan_preview")));
     assert!(!valid_event(&input("unknown", "message_sent")));
     assert!(!valid_event(&input("web_chat", "  ")));
+    let mut unsupported = input("web_chat", "message.persisted");
+    unsupported.schema_version = 2;
+    assert!(!valid_event(&unsupported));
 }
 
 #[tokio::test]

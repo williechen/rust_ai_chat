@@ -1,6 +1,8 @@
 use async_trait::async_trait;
-use chat_application::RoomRepository;
-use chat_application::RoomRepositoryError;
+use chat_application::error::MessageRepositoryError;
+use chat_application::error::RoomRepositoryError;
+use chat_application::repository::MessageRepository;
+use chat_application::repository::RoomRepository;
 use chat_domain::Room;
 use sqlx::FromRow;
 use sqlx::PgPool;
@@ -99,11 +101,11 @@ impl PostgresMessageRepository {
 }
 
 #[async_trait]
-impl chat_application::MessageRepository for PostgresMessageRepository {
+impl MessageRepository for PostgresMessageRepository {
     async fn create(
         &self,
         message: &chat_domain::ChatMessage,
-    ) -> Result<(), chat_application::MessageRepositoryError> {
+    ) -> Result<(), MessageRepositoryError> {
         // 僅在 Infrastructure 映射 domain enum 到既有資料欄位。
         let (kind, author_id): (&str, Option<&str>) = match &message.author {
             chat_domain::MessageAuthor::AnonymousUser => ("anonymous_user", None),
@@ -129,7 +131,7 @@ impl chat_application::MessageRepository for PostgresMessageRepository {
         .execute(&self.pool)
         .await
         .map(|_| ())
-        .map_err(|e| chat_application::MessageRepositoryError::Repository(e.to_string()))
+        .map_err(|e| MessageRepositoryError::Repository(e.to_string()))
     }
 }
 
@@ -211,7 +213,7 @@ mod tests {
 
     #[sqlx::test(migrations = "../../migrations")]
     async fn test_message_repository_all_author_kinds(pool: PgPool) {
-        use chat_application::MessageRepository;
+        use chat_application::repository::MessageRepository;
         use chat_domain::{ChatMessage, MessageAuthor};
 
         insert_test_room(&pool, "message-room").await;
@@ -267,7 +269,7 @@ mod tests {
 
     #[sqlx::test(migrations = "../../migrations")]
     async fn test_message_repository_rejects_missing_room(pool: PgPool) {
-        use chat_application::MessageRepository;
+        use chat_application::repository::MessageRepository;
         let repo = PostgresMessageRepository::new(pool);
         let message = chat_domain::ChatMessage {
             id: "orphan-message".to_string(),

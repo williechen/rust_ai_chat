@@ -1,9 +1,15 @@
+pub mod error;
 pub mod product_event;
+pub mod repository;
 
 use async_trait::async_trait;
 use chat_domain::{ChatMessage, MessageAuthor, Room};
-use thiserror::Error;
 use uuid::Uuid;
+
+use crate::{
+    error::{MessageRepositoryError, RoomRepositoryError},
+    repository::{MessageRepository, RoomRepository},
+};
 
 #[derive(Debug, Clone, Default)]
 pub struct ChatService;
@@ -41,30 +47,6 @@ pub async fn create_room(
     };
     room_repository.create(&room).await?;
     Ok(room)
-}
-
-#[derive(Debug, Error)]
-pub enum RoomRepositoryError {
-    #[error("repository error: {0}")]
-    Repository(String),
-}
-
-#[async_trait]
-pub trait RoomRepository: Send + Sync {
-    async fn find_by_id(&self, room_id: &str) -> Result<Option<Room>, RoomRepositoryError>;
-
-    async fn create(&self, room: &Room) -> Result<(), RoomRepositoryError>;
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum MessageRepositoryError {
-    #[error("message repository failure: {0}")]
-    Repository(String),
-}
-
-#[async_trait]
-pub trait MessageRepository: Send + Sync {
-    async fn create(&self, message: &ChatMessage) -> Result<(), MessageRepositoryError>;
 }
 
 ///成功 create 後才推播；DB 失敗時 closure 不執行。

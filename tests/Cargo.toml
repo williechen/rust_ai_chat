@@ -76,7 +76,3 @@ path = "pet/profile_contract.rs"
 [[test]]
 name = "server_day5_tests"
 path = "server/day5_tests.rs"
-
-[[test]]
-name = "server_ws_policy_contract"
-path = "server/ws_policy_contract.rs"

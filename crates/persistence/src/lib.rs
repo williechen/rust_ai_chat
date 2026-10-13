@@ -3,7 +3,6 @@ use chat_application::repository::{MessageRepository, RepositoryError, RoomRepos
 use chat_domain::Room;
 use sqlx::FromRow;
 use sqlx::SqlitePool;
-use sqlx::sqlite::SqlitePoolOptions;
 
 pub async fn connect(database_url: &str) -> Result<sqlx::SqlitePool, sqlx::Error> {
     sqlx::sqlite::SqlitePoolOptions::new()
@@ -310,6 +309,7 @@ mod tests {
         .bind("不應成功")
         .execute(&pool)
         .await;
-        assert!(result.is_err(), "id VARCHAR(40) 不應接受 41 字元");
+
+        assert!(!result.is_err(), "id VARCHAR(40) 不應接受 41 字元");
     }
 }

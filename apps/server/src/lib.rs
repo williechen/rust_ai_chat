@@ -23,13 +23,13 @@ pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
     let pkg_path = site_pkg_dir_service_route_path(&leptos_options);
     let pkg_service = site_pkg_dir_service(&leptos_options);
 
-    let database_url = std::env::var("DATABASE_URL")?;
-    let db = sqlx::PgPool::connect(&database_url).await?;
+    let database_url = std::env::var("DATABASE_SQLITE_URL")?;
+    let db = sqlx::SqlitePool::connect(&database_url).await?;
 
     persistence::migrate(&db).await?;
 
-    let room_repository = Arc::new(persistence::PostgresRoomRepository::new(db.clone()));
-    let message_repository = Arc::new(persistence::PostgresMessageRepository::new(db.clone()));
+    let room_repository = Arc::new(persistence::SqliteRoomRepository::new(db.clone()));
+    let message_repository = Arc::new(persistence::SqliteMessageRepository::new(db.clone()));
 
     let state = state::AppState::new(leptos_options, room_repository, message_repository);
 

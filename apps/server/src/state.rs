@@ -1,5 +1,8 @@
 use crate::hub::RoomHub;
-use chat_application::{ChatService, MessageRepository, RoomRepository};
+use chat_application::{
+    ChatService,
+    repository::{MessageRepository, RoomRepository},
+};
 use std::sync::Arc;
 
 #[derive(Clone)]

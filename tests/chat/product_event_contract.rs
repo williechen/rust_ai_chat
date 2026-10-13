@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use chat_application::{
-    MessageRepository, MessageRepositoryError, persist_then_publish,
+    persist_then_publish,
     product_event::persisted_message_event,
+    repository::{MessageRepository, RepositoryError},
 };
 use chat_domain::{ChatMessage, MessageAuthor};
 use std::sync::Mutex;
@@ -14,9 +15,9 @@ struct FakeRepository {
 
 #[async_trait]
 impl MessageRepository for FakeRepository {
-    async fn create(&self, message: &ChatMessage) -> Result<(), MessageRepositoryError> {
+    async fn create(&self, message: &ChatMessage) -> Result<(), RepositoryError> {
         if self.fail {
-            return Err(MessageRepositoryError::Repository("模擬儲存失敗".into()));
+            return Err(RepositoryError::MessageAccessError("模擬儲存失敗".into()));
         }
         self.saved.lock().unwrap().push(message.clone());
         Ok(())

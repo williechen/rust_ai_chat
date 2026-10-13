@@ -30,7 +30,7 @@ jobs:
             pkg-config
 
       - name: Check stats server
-        run: cargo check -p stats-server
+        run: cargo check --locked -p stats-server
         
   build-dashboard:
     runs-on: ubuntu-latest
@@ -52,4 +52,4 @@ jobs:
             pkg-config
 
       - name: Build stats server
-        run: cargo build -p stats-server --release
+        run: cargo build --locked -p stats-server --release

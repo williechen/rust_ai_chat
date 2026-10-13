@@ -1,4 +1,3 @@
-pub mod error;
 pub mod product_event;
 pub mod repository;
 
@@ -6,10 +5,7 @@ use async_trait::async_trait;
 use chat_domain::{ChatMessage, MessageAuthor, Room};
 use uuid::Uuid;
 
-use crate::{
-    error::{MessageRepositoryError, RoomRepositoryError},
-    repository::{MessageRepository, RoomRepository},
-};
+use crate::repository::{MessageRepository, RepositoryError, RoomRepository};
 
 #[derive(Debug, Clone, Default)]
 pub struct ChatService;
@@ -39,7 +35,7 @@ pub struct CreateRoom {
 pub async fn create_room(
     room_repository: &dyn RoomRepository,
     input: CreateRoom,
-) -> Result<Room, RoomRepositoryError> {
+) -> Result<Room, RepositoryError> {
     let room = Room {
         id: input.id,
         category_room_id: input.category_room_id,
@@ -54,7 +50,7 @@ pub async fn persist_then_publish(
     repository: &dyn MessageRepository,
     message: ChatMessage,
     publish: impl FnOnce(ChatMessage),
-) -> Result<(), MessageRepositoryError> {
+) -> Result<(), RepositoryError> {
     repository.create(&message).await?;
     publish(message);
     Ok(())
@@ -63,7 +59,7 @@ pub async fn persist_then_publish(
 struct SuccessfulRepository;
 #[async_trait]
 impl MessageRepository for SuccessfulRepository {
-    async fn create(&self, _: &ChatMessage) -> Result<(), MessageRepositoryError> {
+    async fn create(&self, _: &ChatMessage) -> Result<(), RepositoryError> {
         Ok(())
     }
 }
@@ -78,8 +74,8 @@ mod tests {
     struct FailingRepository;
     #[async_trait]
     impl MessageRepository for FailingRepository {
-        async fn create(&self, _: &ChatMessage) -> Result<(), MessageRepositoryError> {
-            Err(MessageRepositoryError::Repository("DB unavailable".into()))
+        async fn create(&self, _: &ChatMessage) -> Result<(), RepositoryError> {
+            Err(RepositoryError::MessageAccessError("DB unavailable".into()))
         }
     }
     #[tokio::test]

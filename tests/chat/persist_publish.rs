@@ -1,7 +1,6 @@
 use async_trait::async_trait;
-use chat_application::{
-    ChatService, MessageRepository, MessageRepositoryError, persist_then_publish,
-};
+use chat_application::repository::{MessageRepository, RepositoryError};
+use chat_application::{ChatService, persist_then_publish};
 use chat_domain::{ChatMessage, MessageAuthor};
 use std::sync::Mutex;
 
@@ -13,9 +12,9 @@ struct FakeRepo {
 
 #[async_trait]
 impl MessageRepository for FakeRepo {
-    async fn create(&self, message: &ChatMessage) -> Result<(), MessageRepositoryError> {
+    async fn create(&self, message: &ChatMessage) -> Result<(), RepositoryError> {
         if self.fail {
-            return Err(MessageRepositoryError::Repository("模擬資料庫失敗".into()));
+            return Err(RepositoryError::MessageAccessError("模擬資料庫失敗".into()));
         }
         self.saved.lock().unwrap().push(message.clone());
         Ok(())
@@ -70,7 +69,7 @@ async fn failed_persistence_never_publishes() {
     // 合併兩個重複測試的驗證條件：錯誤類型、零儲存、零發布。
     assert!(matches!(
         result,
-        Err(MessageRepositoryError::Repository(_))
+        Err(RepositoryError::MessageAccessError(_))
     ));
     assert!(repo.saved.lock().unwrap().is_empty());
     assert!(published.lock().unwrap().is_empty());

@@ -37,7 +37,7 @@ jobs:
             libwebkit2gtk-4.1-dev
 
       - name: Test workspace
-        run: cargo test -p workspace-tests
+        run: cargo test --locked -p workspace-tests
 
   test-desktop-pet:
     runs-on: ubuntu-latest
@@ -66,7 +66,7 @@ jobs:
             libwebkit2gtk-4.1-dev
 
       - name: Test desktop-pet
-        run: cargo test -p desktop-pet
+        run: cargo test --locked -p desktop-pet
 
   test-server:
     runs-on: ubuntu-latest
@@ -88,7 +88,7 @@ jobs:
             pkg-config
 
       - name: Test server
-        run: cargo test -p server
+        run: cargo test --locked -p server
 
   test-stats-server:
     runs-on: ubuntu-latest
@@ -110,7 +110,7 @@ jobs:
             pkg-config 
       
       - name: Test stats server
-        run: cargo test -p stats-server
+        run: cargo test --locked -p stats-server
 
   test-ai-core:
     runs-on: ubuntu-latest
@@ -132,7 +132,7 @@ jobs:
             pkg-config 
 
       - name: Test ai core
-        run: cargo test -p ai-core
+        run: cargo test --locked -p ai-core
 
   test-chat-application:
     runs-on: ubuntu-latest
@@ -154,7 +154,7 @@ jobs:
             pkg-config 
 
       - name: Test chat application
-        run: cargo test -p chat-application
+        run: cargo test --locked -p chat-application
 
   test-chat-domain:
     runs-on: ubuntu-latest
@@ -176,7 +176,7 @@ jobs:
             pkg-config 
 
       - name: Test chat domain
-        run: cargo test -p chat-domain  
+        run: cargo test --locked -p chat-domain  
 
   test-pet-domain:
     runs-on: ubuntu-latest
@@ -198,7 +198,7 @@ jobs:
             pkg-config 
 
       - name: Test pet domain
-        run: cargo test -p pet-domain
+        run: cargo test --locked -p pet-domain
 
   test-shared:
     runs-on: ubuntu-latest
@@ -220,7 +220,7 @@ jobs:
             pkg-config 
 
       - name: Test shared
-        run: cargo test -p shared
+        run: cargo test --locked -p shared
 
   test-ui:
     runs-on: ubuntu-latest
@@ -242,4 +242,4 @@ jobs:
             pkg-config 
 
       - name: Test ui
-        run: cargo test -p ui
+        run: cargo test --locked -p ui

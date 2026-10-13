@@ -1,0 +1,214 @@
+use gloo_timers::callback::{Interval, Timeout};
+use leptos::prelude::*;
+use pet_domain::{PetSnapshot, PetState};
+use wasm_bindgen_futures::spawn_local;
+
+use crate::bridge;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PetPose {
+    Idle,
+    Blink,
+    InteractA,
+    InteractB,
+    SleepA,
+    SleepB,
+}
+
+fn project_pose(state: PetState, blinking: bool, animation_phase: bool) -> PetPose {
+    match state {
+        PetState::Idle => {
+            if blinking {
+                PetPose::Blink
+            } else {
+                PetPose::Idle
+            }
+        }
+        PetState::Interacting => {
+            if animation_phase {
+                PetPose::InteractB
+            } else {
+                PetPose::InteractA
+            }
+        }
+        PetState::Sleeping => {
+            if animation_phase {
+                PetPose::SleepB
+            } else {
+                PetPose::SleepA
+            }
+        }
+    }
+}
+
+// 拖曳桌面小寵物的控制把手組件
+#[component]
+pub fn DragHandle() -> impl IntoView {
+    view! {
+        <header
+            class="drag-handle"
+            data-tauri-drag-region
+            aria-label="拖曳桌面小寵物"
+        >
+            <span
+                class="drag-grip"
+                data-tauri-drag-region
+                aria-hidden="true"
+            >
+                "..."
+            </span>
+        </header>
+    }
+}
+
+#[component]
+pub fn AnimationClock(set_animation_phase: WriteSignal<bool>) -> impl IntoView {
+    let interval = Interval::new(650, move || {
+        set_animation_phase.update(|phase| *phase = !*phase);
+    });
+    let _interval = StoredValue::new_local(interval);
+
+    ().into_any()
+}
+
+// 控制桌面小寵物眨眼的組件
+#[component]
+pub fn BlinkController(
+    snapshot: ReadSignal<Option<PetSnapshot>>,
+    set_blinking: WriteSignal<bool>,
+) -> impl IntoView {
+    let interval = Interval::new(4_000, move || {
+        let is_idle = snapshot
+            .get_untracked()
+            .map(|snapshot| snapshot.state == PetState::Idle)
+            .unwrap_or(false);
+
+        if !is_idle {
+            set_blinking.set(false);
+            return;
+        }
+
+        set_blinking.set(true);
+
+        Timeout::new(180, move || {
+            set_blinking.set(false);
+        })
+        .forget();
+    });
+
+    // gloo_timers::Interval 是 !Send / !Sync。
+    // StoredValue::new_local() 會把它保存在目前 Leptos owner 的 local arena，
+    // owner dispose 時一起 drop，Interval 也會因此取消。
+    let _interval = StoredValue::new_local(interval);
+
+    ().into_any()
+}
+
+// 顯示桌面小寵物狀態的組件
+#[component]
+pub fn PetStatus(
+    snapshot: ReadSignal<Option<PetSnapshot>>,
+    blinking: ReadSignal<bool>,
+    animation_phase: ReadSignal<bool>,
+) -> impl IntoView {
+    let pose = move || {
+        snapshot
+            .get()
+            .map(|snapshot| project_pose(snapshot.state, blinking.get(), animation_phase.get()))
+    };
+
+    let face = Signal::derive(move || match pose() {
+        Some(PetPose::Idle) => "😺",
+        Some(PetPose::Blink) => "😻",
+        Some(PetPose::InteractA) => "😸",
+        Some(PetPose::InteractB) => "😹",
+        Some(PetPose::SleepA) => "😴",
+        Some(PetPose::SleepB) => "😪",
+        None => "🐾",
+    });
+
+    let label = move || match pose() {
+        Some(PetPose::Idle) => "待機",
+        Some(PetPose::Blink) => "眨眼",
+        Some(PetPose::InteractA | PetPose::InteractB) => "互動",
+        Some(PetPose::SleepA | PetPose::SleepB) => "睡覺",
+        None => "載入中",
+    };
+
+    let revision = move || {
+        snapshot
+            .get()
+            .map(|snapshot| snapshot.revision.to_string())
+            .unwrap_or_else(|| "-".into())
+    };
+
+    view! {
+        <section class="pet-status">
+            <div
+                class="pet-face"
+
+                on:contextmenu=move |event| {
+                    event.prevent_default();
+
+                    let x = event.client_x();
+                    let y = event.client_y();
+
+                    spawn_local(async move {
+                        if let Err(error) =
+                            bridge::show_pet_context_menu(x, y).await
+                        {
+                            web_sys::console::warn_1(
+                                &error.into()
+                            );
+                        }
+                    });
+                }
+            >
+                {face}
+            </div>
+
+            <strong>{label}</strong>
+
+            <small>
+                "revision "
+                {revision}
+            </small>
+        </section>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn idle_blink_has_priority() {
+        assert_eq!(project_pose(PetState::Idle, true, true,), PetPose::Blink,);
+    }
+
+    #[test]
+    fn interacting_uses_animation_phase() {
+        assert_eq!(
+            project_pose(PetState::Interacting, false, false,),
+            PetPose::InteractA,
+        );
+
+        assert_eq!(
+            project_pose(PetState::Interacting, false, true,),
+            PetPose::InteractB,
+        );
+    }
+
+    #[test]
+    fn sleeping_uses_animation_phase() {
+        assert_eq!(
+            project_pose(PetState::Sleeping, false, false,),
+            PetPose::SleepA,
+        );
+
+        assert_eq!(
+            project_pose(PetState::Sleeping, false, true,),
+            PetPose::SleepB,
+        );
+    }
+}

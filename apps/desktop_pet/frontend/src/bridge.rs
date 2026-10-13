@@ -42,16 +42,19 @@ extern "C" {
     fn scan_file_preview_js() -> Promise;
 }
 
+// 將 JavaScript 的錯誤轉換為 Rust 的字串
 fn js_error(value: JsValue) -> String {
     value.as_string().unwrap_or_else(|| format!("{value:?}"))
 }
 
+// 獲取寵物的當前狀態
 pub async fn get_pet_state() -> Result<PetSnapshot, String> {
     let value = JsFuture::from(get_pet_state_js()).await.map_err(js_error)?;
 
     serde_wasm_bindgen::from_value(value).map_err(|error| error.to_string())
 }
 
+// 發送指令給寵物並獲取更新後的狀態
 pub async fn send_pet_command(command: PetCommand) -> Result<PetSnapshot, String> {
     let command = serde_wasm_bindgen::to_value(&command).map_err(|error| error.to_string())?;
 
@@ -62,6 +65,7 @@ pub async fn send_pet_command(command: PetCommand) -> Result<PetSnapshot, String
     serde_wasm_bindgen::from_value(value).map_err(|error| error.to_string())
 }
 
+// 監聽寵物狀態的變化
 pub async fn listen_pet_state(
     mut on_snapshot: impl FnMut(PetSnapshot) + 'static,
 ) -> Result<(), String> {
@@ -81,6 +85,7 @@ pub async fn listen_pet_state(
     Ok(())
 }
 
+// 顯示寵物的右鍵選單
 pub async fn show_pet_context_menu(x: i32, y: i32) -> Result<(), String> {
     JsFuture::from(show_pet_context_menu_js(x, y))
         .await
@@ -89,6 +94,7 @@ pub async fn show_pet_context_menu(x: i32, y: i32) -> Result<(), String> {
     Ok(())
 }
 
+// 與寵物進行聊天
 pub async fn chat_with_pet(message: String) -> Result<String, String> {
     let value = JsFuture::from(chat_with_pet_js(&message))
         .await
@@ -99,6 +105,7 @@ pub async fn chat_with_pet(message: String) -> Result<String, String> {
         .ok_or_else(|| "Failed to convert chat_with_pet result to string".to_string())
 }
 
+// 掃描檔案預覽
 pub async fn scan_file_preview() -> Result<JsValue, String> {
     JsFuture::from(scan_file_preview_js())
         .await

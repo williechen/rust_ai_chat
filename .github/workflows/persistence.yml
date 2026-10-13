@@ -29,7 +29,8 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rust_ai_chat_test
+      DATABASE_PG_URL: postgres://postgres:postgres@localhost:5432/rust_ai_chat_test
+      DATABASE_SQLITE_URL: sqlite://:memory:rust_ai_chat_test
 
     steps:
       - uses: actions/checkout@v4
@@ -41,7 +42,7 @@ jobs:
         run: cargo install sqlx-cli --version "^0.9" --no-default-features --features postgres --locked
 
       - name: Run database migrations
-        run: sqlx migrate run
+        run: sqlx migrate run --database-url $DATABASE_SQLITE_URL
 
       - name: Test persistence
-        run: cargo test -p persistence
+        run: cargo test --locked -p persistence

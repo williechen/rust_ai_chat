@@ -33,13 +33,13 @@ jobs:
         run: cargo install cargo-leptos --locked
 
       - name: Check server ssr
-        run: cargo check -p server --features ssr
+        run: cargo check --locked -p server --features ssr
 
       - name: Check ui ssr
-        run: cargo check -p ui --features ssr
+        run: cargo check --locked -p ui --features ssr
 
       - name: Check ui
-        run: cargo check -p ui --features hydrate --target wasm32-unknown-unknown
+        run: cargo check --locked -p ui --features hydrate --target wasm32-unknown-unknown
 
   build-chat:
     runs-on: ubuntu-latest
@@ -64,4 +64,4 @@ jobs:
         run: cargo install cargo-leptos --locked
 
       - name: Build server
-        run: cargo leptos build --release
+        run: cargo leptos build --locked --release

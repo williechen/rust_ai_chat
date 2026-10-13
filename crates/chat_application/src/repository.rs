@@ -1,16 +1,23 @@
 use async_trait::async_trait;
 use chat_domain::{ChatMessage, Room};
+use thiserror::Error;
 
-use crate::error::{MessageRepositoryError, RoomRepositoryError};
+#[derive(Debug, Error)]
+pub enum RepositoryError {
+    #[error("房間存取錯誤: {0}")]
+    RoomAccessError(String),
+    #[error("訊息存取錯誤: {0}")]
+    MessageAccessError(String),
+}
 
 #[async_trait]
 pub trait RoomRepository: Send + Sync {
-    async fn find_by_id(&self, room_id: &str) -> Result<Option<Room>, RoomRepositoryError>;
+    async fn find_by_id(&self, room_id: &str) -> Result<Option<Room>, RepositoryError>;
 
-    async fn create(&self, room: &Room) -> Result<(), RoomRepositoryError>;
+    async fn create(&self, room: &Room) -> Result<(), RepositoryError>;
 }
 
 #[async_trait]
 pub trait MessageRepository: Send + Sync {
-    async fn create(&self, message: &ChatMessage) -> Result<(), MessageRepositoryError>;
+    async fn create(&self, message: &ChatMessage) -> Result<(), RepositoryError>;
 }

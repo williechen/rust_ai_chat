@@ -1,21 +1,18 @@
 use async_trait::async_trait;
-use chat_application::error::MessageRepositoryError;
-use chat_application::error::RoomRepositoryError;
-use chat_application::repository::MessageRepository;
-use chat_application::repository::RoomRepository;
+use chat_application::repository::{MessageRepository, RepositoryError, RoomRepository};
 use chat_domain::Room;
 use sqlx::FromRow;
-use sqlx::PgPool;
-use sqlx::postgres::PgPoolOptions;
+use sqlx::SqlitePool;
+use sqlx::sqlite::SqlitePoolOptions;
 
-pub async fn connect(database_url: &str) -> Result<sqlx::PgPool, sqlx::Error> {
-    PgPoolOptions::new()
+pub async fn connect(database_url: &str) -> Result<sqlx::SqlitePool, sqlx::Error> {
+    sqlx::sqlite::SqlitePoolOptions::new()
         .max_connections(5)
         .connect(database_url)
         .await
 }
 
-pub async fn migrate(pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
+pub async fn migrate(pool: &sqlx::SqlitePool) -> Result<(), sqlx::Error> {
     sqlx::migrate!("../../migrations").run(pool).await?;
     Ok(())
 }
@@ -38,19 +35,19 @@ impl From<RoomRow> for Room {
 }
 
 #[derive(Clone)]
-pub struct PostgresRoomRepository {
-    pool: PgPool,
+pub struct SqliteRoomRepository {
+    pool: SqlitePool,
 }
 
-impl PostgresRoomRepository {
-    pub fn new(pool: sqlx::PgPool) -> Self {
+impl SqliteRoomRepository {
+    pub fn new(pool: sqlx::SqlitePool) -> Self {
         Self { pool }
     }
 }
 
 #[async_trait]
-impl RoomRepository for PostgresRoomRepository {
-    async fn find_by_id(&self, room_id: &str) -> Result<Option<Room>, RoomRepositoryError> {
+impl RoomRepository for SqliteRoomRepository {
+    async fn find_by_id(&self, room_id: &str) -> Result<Option<Room>, RepositoryError> {
         sqlx::query_as::<_, RoomRow>(
             r#"SELECT id
                     , category_room_id
@@ -63,10 +60,10 @@ impl RoomRepository for PostgresRoomRepository {
         .fetch_optional(&self.pool)
         .await
         .map(|row| row.map(Room::from))
-        .map_err(|error| RoomRepositoryError::Repository(error.to_string()))
+        .map_err(|error| RepositoryError::RoomAccessError(error.to_string()))
     }
 
-    async fn create(&self, room: &Room) -> Result<(), RoomRepositoryError> {
+    async fn create(&self, room: &Room) -> Result<(), RepositoryError> {
         sqlx::query(
             r#"
             INSERT INTO rooms (
@@ -85,27 +82,24 @@ impl RoomRepository for PostgresRoomRepository {
         .execute(&self.pool)
         .await
         .map(|_| ())
-        .map_err(|error| RoomRepositoryError::Repository(error.to_string()))
+        .map_err(|error| RepositoryError::RoomAccessError(error.to_string()))
     }
 }
 
 #[derive(Clone)]
-pub struct PostgresMessageRepository {
-    pool: sqlx::PgPool,
+pub struct SqliteMessageRepository {
+    pool: sqlx::SqlitePool,
 }
 
-impl PostgresMessageRepository {
-    pub fn new(pool: sqlx::PgPool) -> Self {
+impl SqliteMessageRepository {
+    pub fn new(pool: sqlx::SqlitePool) -> Self {
         Self { pool }
     }
 }
 
 #[async_trait]
-impl MessageRepository for PostgresMessageRepository {
-    async fn create(
-        &self,
-        message: &chat_domain::ChatMessage,
-    ) -> Result<(), MessageRepositoryError> {
+impl MessageRepository for SqliteMessageRepository {
+    async fn create(&self, message: &chat_domain::ChatMessage) -> Result<(), RepositoryError> {
         // 僅在 Infrastructure 映射 domain enum 到既有資料欄位。
         let (kind, author_id): (&str, Option<&str>) = match &message.author {
             chat_domain::MessageAuthor::AnonymousUser => ("anonymous_user", None),
@@ -131,7 +125,7 @@ impl MessageRepository for PostgresMessageRepository {
         .execute(&self.pool)
         .await
         .map(|_| ())
-        .map_err(|e| MessageRepositoryError::Repository(e.to_string()))
+        .map_err(|e| RepositoryError::MessageAccessError(e.to_string()))
     }
 }
 
@@ -140,7 +134,7 @@ mod tests {
     use super::*;
 
     #[sqlx::test(migrations = "../../migrations")]
-    async fn test_room_repository_find_by_id(pool: PgPool) {
+    async fn test_room_repository_find_by_id(pool: SqlitePool) {
         sqlx::query(
             r#"
             INSERT INTO rooms (
@@ -160,7 +154,7 @@ mod tests {
         .await
         .expect("Failed to seed test room");
 
-        let repo = PostgresRoomRepository::new(pool);
+        let repo = SqliteRoomRepository::new(pool);
 
         let room = repo
             .find_by_id("room-rust")
@@ -174,8 +168,8 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../../migrations")]
-    async fn test_room_repository_create_then_find(pool: PgPool) {
-        let repo = PostgresRoomRepository::new(pool);
+    async fn test_room_repository_create_then_find(pool: SqlitePool) {
+        let repo = SqliteRoomRepository::new(pool);
 
         let room = Room {
             id: "room-create-test".to_string(),
@@ -198,7 +192,7 @@ mod tests {
 
     // 沿用既有 tests 模組的 use super::*，及根目錄的 migrations。
     // 每個 sqlx::test 取得獨立的測試資料庫，先套用 Migration。
-    async fn insert_test_room(pool: &PgPool, id: &str) {
+    async fn insert_test_room(pool: &SqlitePool, id: &str) {
         sqlx::query(
             "INSERT INTO rooms (id, category_room_id, name, created_at, updated_at)
          VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
@@ -212,12 +206,12 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../../migrations")]
-    async fn test_message_repository_all_author_kinds(pool: PgPool) {
+    async fn test_message_repository_all_author_kinds(pool: SqlitePool) {
         use chat_application::repository::MessageRepository;
         use chat_domain::{ChatMessage, MessageAuthor};
 
         insert_test_room(&pool, "message-room").await;
-        let repo = PostgresMessageRepository::new(pool.clone());
+        let repo = SqliteMessageRepository::new(pool.clone());
         let inputs = [
             (
                 "msg-anon",
@@ -268,9 +262,9 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../../migrations")]
-    async fn test_message_repository_rejects_missing_room(pool: PgPool) {
+    async fn test_message_repository_rejects_missing_room(pool: SqlitePool) {
         use chat_application::repository::MessageRepository;
-        let repo = PostgresMessageRepository::new(pool);
+        let repo = SqliteMessageRepository::new(pool);
         let message = chat_domain::ChatMessage {
             id: "orphan-message".to_string(),
             room_id: "missing-room".to_string(),
@@ -284,7 +278,7 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../../migrations")]
-    async fn test_message_schema_rejects_invalid_author_and_length(pool: PgPool) {
+    async fn test_message_schema_rejects_invalid_author_and_length(pool: SqlitePool) {
         insert_test_room(&pool, "constraint-room").await;
         // 直接使用 SQL 測試 DB CHECK / 長度約束；Domain API 不會產生非法 enum。
         for (id, kind, author_id) in [

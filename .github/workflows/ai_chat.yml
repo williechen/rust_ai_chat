@@ -62,4 +62,4 @@ jobs:
         run: cargo install cargo-leptos --locked
 
       - name: Build server
-        run: cargo leptos build --locked --release
+        run: cargo leptos build --release

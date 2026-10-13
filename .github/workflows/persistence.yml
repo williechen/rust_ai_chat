@@ -30,7 +30,7 @@ jobs:
 
     env:
       DATABASE_PG_URL: postgres://postgres:postgres@localhost:5432/rust_ai_chat_test
-      DATABASE_SQLITE_URL: sqlite::memory:
+      DATABASE_SQLITE_URL: "sqlite::memory:"
 
     steps:
       - uses: actions/checkout@v4

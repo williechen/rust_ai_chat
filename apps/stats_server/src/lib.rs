@@ -94,4 +94,23 @@ mod tests {
         };
         assert!(valid_event(&valid));
     }
+
+    #[test]
+    fn rejects_bad_source_version_and_event_type() {
+        let mut input = EventInput {
+            schema_version: 1,
+            event_id: Uuid::new_v4(),
+            source_app: "web_chat".into(),
+            event_type: "chat.message.persisted".into(),
+        };
+        assert!(valid_event(&input));
+        input.source_app = "invalid_source".into();
+        assert!(!valid_event(&input));
+        input.source_app = "desktop_pet".into();
+        input.schema_version = 2;
+        assert!(!valid_event(&input));
+        input.schema_version = 1;
+        input.event_type = "   ".into();
+        assert!(!valid_event(&input));
+    }
 }

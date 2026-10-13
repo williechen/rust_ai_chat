@@ -78,6 +78,14 @@ pub async fn persist_then_publish(
     Ok(())
 }
 
+struct SuccessfulRepository;
+#[async_trait]
+impl MessageRepository for SuccessfulRepository {
+    async fn create(&self, _: &ChatMessage) -> Result<(), MessageRepositoryError> {
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -108,5 +116,26 @@ mod tests {
         .await;
         assert!(result.is_err());
         assert_eq!(calls.load(Ordering::SeqCst), 0);
+    }
+
+    #[tokio::test]
+    async fn successful_write_publishes_exactly_once() {
+        let publishes = Arc::new(AtomicUsize::new(0));
+        let observed = publishes.clone();
+        let message = ChatMessage {
+            id: "m-success".into(),
+            room_id: "r-success".into(),
+            author: MessageAuthor::AnonymousUser,
+            content: "hello".into(),
+        };
+
+        persist_then_publish(&SuccessfulRepository, message, move |published| {
+            assert_eq!(published.id, "m-success");
+            observed.fetch_add(1, Ordering::SeqCst);
+        })
+        .await
+        .expect("successful storage must allow publish");
+
+        assert_eq!(publishes.load(Ordering::SeqCst), 1);
     }
 }

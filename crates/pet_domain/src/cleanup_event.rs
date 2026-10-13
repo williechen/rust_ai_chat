@@ -28,3 +28,29 @@ pub fn succeeded_event(
         event_type: "pet.cleanup.succeeded",
     }))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn successful_operation_has_minimal_event() {
+        let id = "50d3b2d1-512c-4c84-a1da-e8181a10cd11";
+        let mut op = CleanupOperation::new();
+        assert!(succeeded_event(&op, id).unwrap().is_none());
+        op.confirm().unwrap();
+        assert!(succeeded_event(&op, id).unwrap().is_none());
+        op.complete(true).unwrap();
+        let event = succeeded_event(&op, id).unwrap().unwrap();
+        assert_eq!(event.schema_version, 1);
+        assert_eq!(event.event_id, Uuid::parse_str(id).unwrap());
+        assert_eq!(event.source_app, "desktop_pet");
+        assert_eq!(event.event_type, "pet.cleanup.succeeded");
+    }
+    #[test]
+    fn unsuccessful_operation_emits_nothing() {
+        let mut op = CleanupOperation::new();
+        op.confirm().unwrap();
+        op.complete(false).unwrap();
+        assert!(succeeded_event(&op, "bad-uuid").unwrap().is_none());
+    }
+}

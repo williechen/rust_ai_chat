@@ -25,10 +25,7 @@ fn confirmed_success_counts_only_after_completion() {
     assert!(operation.may_emit_success_event());
 
     // 已完成的操作不可再次完成或重複累計。
-    assert_eq!(
-        operation.complete(true),
-        Err(CleanupError::ConfirmationRequired)
-    );
+    assert_eq!(operation.complete(true), Err(CleanupError::AlreadyFinished));
 }
 
 #[test]

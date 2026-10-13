@@ -48,9 +48,10 @@ pub fn valid_event_type(value: &str) -> bool {
     !value.is_empty() && value.len() <= 128
 }
 
-// 純輸入檢查，不代表事件已完成持久化。
+// 只做事件資料驗證；憑證、持久化與 ACK 各由真正 Adapter 負責。
 pub fn valid_event(event: &EventInput) -> bool {
     event.schema_version == 1
+        && !event.event_id.is_nil()
         && matches!(event.source_app.as_str(), "web_chat" | "desktop_pet")
         && valid_event_type(event.event_type.as_str())
 }
@@ -73,4 +74,24 @@ pub fn build_app() -> Router {
         .route("/healthz", get(health))
         .route("/api/v1/events", post(ingest))
         .layer(DefaultBodyLimit::max(4096))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn nil_event_id_is_not_accepted() {
+        let invalid = EventInput {
+            schema_version: 1,
+            event_id: Uuid::nil(),
+            source_app: "web_chat".into(),
+            event_type: "chat.message.persisted".into(),
+        };
+        assert!(!valid_event(&invalid));
+        let valid = EventInput {
+            event_id: Uuid::new_v4(),
+            ..invalid
+        };
+        assert!(valid_event(&valid));
+    }
 }

@@ -145,6 +145,9 @@ pub fn ChatPage(room_id: String) -> impl IntoView {
 
     let (messages, set_messages) = signal(Vec::<ChatMessage>::new());
 
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = set_messages;
+
     #[cfg(target_arch = "wasm32")]
     let socket = {
         let url = format!("ws://localhost:3000/ws/{room_id}");

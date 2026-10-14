@@ -132,5 +132,38 @@ mod tests {
             event_type: " chat.message.persisted".into(),
         };
         assert!(!valid_event(&event));
-    }
+    }#[test]
+fn valid_event_is_accepted_once_per_source_and_id() {
+    let id = Uuid::new_v4();
+    let event = EventInput {
+        schema_version: 1,
+        event_id: id,
+        source_app: "web_chat".into(),
+        event_type: "chat.message.persisted".into(),
+    };
+    let mut dedup = InMemoryDeduplicator::default();
+    assert_eq!(dedup.accept_valid_event(&event), Some(true));
+    assert_eq!(dedup.accept_valid_event(&event), Some(false));
+    let other_source = EventInput {
+        source_app: "desktop_pet".into(),
+        event_type: "pet.cleanup.succeeded".into(),
+        ..event
+    };
+    assert_eq!(dedup.accept_valid_event(&other_source), Some(true));
+}
+
+#[test]
+fn invalid_event_does_not_reserve_dedup_key() {
+    let id = Uuid::new_v4();
+    let mut event = EventInput {
+        schema_version: 2,
+        event_id: id,
+        source_app: "web_chat".into(),
+        event_type: "chat.message.persisted".into(),
+    };
+    let mut dedup = InMemoryDeduplicator::default();
+    assert_eq!(dedup.accept_valid_event(&event), None);
+    event.schema_version = 1;
+    assert_eq!(dedup.accept_valid_event(&event), Some(true));
+}
 }

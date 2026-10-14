@@ -68,7 +68,24 @@ pub async fn persist_in_existing_room(
     persist_then_publish(messages, message, publish).await
 }
 
-struct SuccessfulRepository;
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+    struct FailingRepository;
+    #[async_trait]
+    impl MessageRepository for FailingRepository {
+        async fn create(&self, _: &ChatMessage) -> Result<(), RepositoryError> {
+            Err(RepositoryError::MessageAccessError("DB unavailable".into()))
+        }
+    }
+
+    struct SuccessfulRepository;
 #[async_trait]
 impl MessageRepository for SuccessfulRepository {
     async fn create(&self, _: &ChatMessage) -> Result<(), RepositoryError> {
@@ -102,20 +119,22 @@ impl RoomRepository for MissingRoom {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::{
-        Arc,
-        atomic::{AtomicUsize, Ordering},
-    };
-    struct FailingRepository;
-    #[async_trait]
-    impl MessageRepository for FailingRepository {
-        async fn create(&self, _: &ChatMessage) -> Result<(), RepositoryError> {
-            Err(RepositoryError::MessageAccessError("DB unavailable".into()))
-        }
+        struct WrongRoom;
+#[async_trait]
+impl RoomRepository for WrongRoom {
+    async fn find_by_id(&self, _: &str) -> Result<Option<Room>, RepositoryError> {
+        Ok(Some(Room {
+            id: "another-room".into(),
+            category_room_id: "category".into(),
+            name: "其他房間".into(),
+        }))
     }
+    async fn create(&self, _: &Room) -> Result<(), RepositoryError> {
+        Ok(())
+    }
+}
+
+
     #[tokio::test]
     async fn failed_write_never_publishes() {
         let calls = Arc::new(AtomicUsize::new(0));
@@ -185,4 +204,23 @@ mod tests {
             .unwrap();
         assert_eq!(calls, 1);
     }
+
+#[tokio::test]
+async fn mismatched_room_id_must_not_persist_or_publish() {
+    let mut published = 0;
+    let message = ChatMessage {
+        id: "message-1".into(),
+        room_id: "requested-room".into(),
+        author: MessageAuthor::AnonymousUser,
+        content: "hello".into(),
+    };
+    let result = persist_in_existing_room(
+        &WrongRoom,
+        &SuccessfulRepository,
+        message,
+        |_| published += 1,
+    ).await;
+    assert!(matches!(result, Err(RepositoryError::RoomAccessError(_))));
+    assert_eq!(published, 0);
+}
 }

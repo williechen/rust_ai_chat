@@ -130,3 +130,53 @@ mod appearance_resolution_tests {
         assert_eq!(resolve_appearance(&defaults, None), defaults);
     }
 }
+
+#[cfg(test)]
+mod validated_appearance_tests {
+    use super::*;
+
+    fn profile(appearance: Option<AppearanceOverride>) -> PetProfile {
+        PetProfile {
+            name: "小白".into(),
+            species: "貓".into(),
+            likes: vec!["玩耍".into()],
+            personality: vec!["活潑".into()],
+            interests: vec!["探索".into()],
+            appearance,
+        }
+    }
+
+    #[test]
+    fn invalid_override_never_returns_resolved_appearance() {
+        let pet = profile(Some(AppearanceOverride {
+            color: Some("   ".into()), style: None,
+        }));
+        let defaults = AppearanceOverride {
+            color: Some("藍".into()), style: Some("像素".into()),
+        };
+        assert_eq!(resolve_validated_appearance(&pet, &defaults),
+                   Err(ProfileError::EmptyOverride));
+    }
+
+    #[test]
+    fn valid_override_inherits_unspecified_fields() {
+        let pet = profile(Some(AppearanceOverride {
+            color: Some("紅".into()), style: None,
+        }));
+        let defaults = AppearanceOverride {
+            color: Some("藍".into()), style: Some("像素".into()),
+        };
+        let actual = resolve_validated_appearance(&pet, &defaults).unwrap();
+        assert_eq!(actual.color.as_deref(), Some("紅"));
+        assert_eq!(actual.style.as_deref(), Some("像素"));
+    }
+
+    #[test]
+    fn no_override_uses_defaults() {
+        let pet = profile(None);
+        let defaults = AppearanceOverride {
+            color: Some("藍".into()), style: None,
+        };
+        assert_eq!(resolve_validated_appearance(&pet, &defaults), Ok(defaults));
+    }
+}

@@ -56,19 +56,21 @@ pub async fn persist_then_publish(
     Ok(())
 }
 
+/// 確認查到的房間 ID 與訊息目標一致，才進行寫入及通知。
 pub async fn persist_in_existing_room(
     rooms: &dyn RoomRepository,
     messages: &dyn MessageRepository,
     message: ChatMessage,
     publish: impl FnOnce(ChatMessage),
 ) -> Result<(), RepositoryError> {
-    if rooms.find_by_id(&message.room_id).await?.is_none() {
-        return Err(RepositoryError::RoomAccessError("房間不存在".into()));
+    match rooms.find_by_id(&message.room_id).await? {
+        Some(room) if room.id == message.room_id => {
+            persist_then_publish(messages, message, publish).await
+        }
+        Some(_) => Err(RepositoryError::RoomAccessError("房間 ID 不一致".into())),
+        None => Err(RepositoryError::RoomAccessError("房間不存在".into())),
     }
-    persist_then_publish(messages, message, publish).await
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -86,54 +88,53 @@ mod tests {
     }
 
     struct SuccessfulRepository;
-#[async_trait]
-impl MessageRepository for SuccessfulRepository {
-    async fn create(&self, _: &ChatMessage) -> Result<(), RepositoryError> {
-        Ok(())
+    #[async_trait]
+    impl MessageRepository for SuccessfulRepository {
+        async fn create(&self, _: &ChatMessage) -> Result<(), RepositoryError> {
+            Ok(())
+        }
     }
-}
 
-struct ExistingRoom;
-#[async_trait]
-impl RoomRepository for ExistingRoom {
-    async fn find_by_id(&self, id: &str) -> Result<Option<Room>, RepositoryError> {
-        Ok(Some(Room {
-            id: id.into(),
-            category_room_id: "c1".into(),
-            name: "room".into(),
-        }))
+    struct ExistingRoom;
+    #[async_trait]
+    impl RoomRepository for ExistingRoom {
+        async fn find_by_id(&self, id: &str) -> Result<Option<Room>, RepositoryError> {
+            Ok(Some(Room {
+                id: id.into(),
+                category_room_id: "c1".into(),
+                name: "room".into(),
+            }))
+        }
+        async fn create(&self, _: &Room) -> Result<(), RepositoryError> {
+            Ok(())
+        }
     }
-    async fn create(&self, _: &Room) -> Result<(), RepositoryError> {
-        Ok(())
-    }
-}
 
-struct MissingRoom;
-#[async_trait]
-impl RoomRepository for MissingRoom {
-    async fn find_by_id(&self, _: &str) -> Result<Option<Room>, RepositoryError> {
-        Ok(None)
+    struct MissingRoom;
+    #[async_trait]
+    impl RoomRepository for MissingRoom {
+        async fn find_by_id(&self, _: &str) -> Result<Option<Room>, RepositoryError> {
+            Ok(None)
+        }
+        async fn create(&self, _: &Room) -> Result<(), RepositoryError> {
+            Ok(())
+        }
     }
-    async fn create(&self, _: &Room) -> Result<(), RepositoryError> {
-        Ok(())
-    }
-}
 
-        struct WrongRoom;
-#[async_trait]
-impl RoomRepository for WrongRoom {
-    async fn find_by_id(&self, _: &str) -> Result<Option<Room>, RepositoryError> {
-        Ok(Some(Room {
-            id: "another-room".into(),
-            category_room_id: "category".into(),
-            name: "其他房間".into(),
-        }))
+    struct WrongRoom;
+    #[async_trait]
+    impl RoomRepository for WrongRoom {
+        async fn find_by_id(&self, _: &str) -> Result<Option<Room>, RepositoryError> {
+            Ok(Some(Room {
+                id: "another-room".into(),
+                category_room_id: "category".into(),
+                name: "其他房間".into(),
+            }))
+        }
+        async fn create(&self, _: &Room) -> Result<(), RepositoryError> {
+            Ok(())
+        }
     }
-    async fn create(&self, _: &Room) -> Result<(), RepositoryError> {
-        Ok(())
-    }
-}
-
 
     #[tokio::test]
     async fn failed_write_never_publishes() {
@@ -205,22 +206,20 @@ impl RoomRepository for WrongRoom {
         assert_eq!(calls, 1);
     }
 
-#[tokio::test]
-async fn mismatched_room_id_must_not_persist_or_publish() {
-    let mut published = 0;
-    let message = ChatMessage {
-        id: "message-1".into(),
-        room_id: "requested-room".into(),
-        author: MessageAuthor::AnonymousUser,
-        content: "hello".into(),
-    };
-    let result = persist_in_existing_room(
-        &WrongRoom,
-        &SuccessfulRepository,
-        message,
-        |_| published += 1,
-    ).await;
-    assert!(matches!(result, Err(RepositoryError::RoomAccessError(_))));
-    assert_eq!(published, 0);
-}
+    #[tokio::test]
+    async fn mismatched_room_id_must_not_persist_or_publish() {
+        let mut published = 0;
+        let message = ChatMessage {
+            id: "message-1".into(),
+            room_id: "requested-room".into(),
+            author: MessageAuthor::AnonymousUser,
+            content: "hello".into(),
+        };
+        let result = persist_in_existing_room(&WrongRoom, &SuccessfulRepository, message, |_| {
+            published += 1
+        })
+        .await;
+        assert!(matches!(result, Err(RepositoryError::RoomAccessError(_))));
+        assert_eq!(published, 0);
+    }
 }

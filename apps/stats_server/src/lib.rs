@@ -40,6 +40,17 @@ impl InMemoryDeduplicator {
     pub fn accept_once(&mut self, identity: EventIdentity) -> bool {
         self.seen.insert(identity)
     }
+    /// 無效事件不占用去重鍵；Some(false) 代表本程序已看過。
+    /// 僅用於記憶體契約學習，不是資料庫提交收據。
+    pub fn accept_valid_event(&mut self, event: &EventInput) -> Option<bool> {
+        if !valid_event(event) {
+            return None;
+        }
+        Some(self.accept_once(EventIdentity::new(
+            event.source_app.clone(),
+            event.event_id.to_string(),
+        )))
+    }
 }
 
 // 事件類型長度以 UTF-8 位元組計算，避免儲存層限制不一致。
@@ -132,38 +143,39 @@ mod tests {
             event_type: " chat.message.persisted".into(),
         };
         assert!(!valid_event(&event));
-    }#[test]
-fn valid_event_is_accepted_once_per_source_and_id() {
-    let id = Uuid::new_v4();
-    let event = EventInput {
-        schema_version: 1,
-        event_id: id,
-        source_app: "web_chat".into(),
-        event_type: "chat.message.persisted".into(),
-    };
-    let mut dedup = InMemoryDeduplicator::default();
-    assert_eq!(dedup.accept_valid_event(&event), Some(true));
-    assert_eq!(dedup.accept_valid_event(&event), Some(false));
-    let other_source = EventInput {
-        source_app: "desktop_pet".into(),
-        event_type: "pet.cleanup.succeeded".into(),
-        ..event
-    };
-    assert_eq!(dedup.accept_valid_event(&other_source), Some(true));
-}
+    }
+    #[test]
+    fn valid_event_is_accepted_once_per_source_and_id() {
+        let id = Uuid::new_v4();
+        let event = EventInput {
+            schema_version: 1,
+            event_id: id,
+            source_app: "web_chat".into(),
+            event_type: "chat.message.persisted".into(),
+        };
+        let mut dedup = InMemoryDeduplicator::default();
+        assert_eq!(dedup.accept_valid_event(&event), Some(true));
+        assert_eq!(dedup.accept_valid_event(&event), Some(false));
+        let other_source = EventInput {
+            source_app: "desktop_pet".into(),
+            event_type: "pet.cleanup.succeeded".into(),
+            ..event
+        };
+        assert_eq!(dedup.accept_valid_event(&other_source), Some(true));
+    }
 
-#[test]
-fn invalid_event_does_not_reserve_dedup_key() {
-    let id = Uuid::new_v4();
-    let mut event = EventInput {
-        schema_version: 2,
-        event_id: id,
-        source_app: "web_chat".into(),
-        event_type: "chat.message.persisted".into(),
-    };
-    let mut dedup = InMemoryDeduplicator::default();
-    assert_eq!(dedup.accept_valid_event(&event), None);
-    event.schema_version = 1;
-    assert_eq!(dedup.accept_valid_event(&event), Some(true));
-}
+    #[test]
+    fn invalid_event_does_not_reserve_dedup_key() {
+        let id = Uuid::new_v4();
+        let mut event = EventInput {
+            schema_version: 2,
+            event_id: id,
+            source_app: "web_chat".into(),
+            event_type: "chat.message.persisted".into(),
+        };
+        let mut dedup = InMemoryDeduplicator::default();
+        assert_eq!(dedup.accept_valid_event(&event), None);
+        event.schema_version = 1;
+        assert_eq!(dedup.accept_valid_event(&event), Some(true));
+    }
 }

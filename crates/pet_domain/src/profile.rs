@@ -98,6 +98,15 @@ pub fn resolve_appearance(
     }
 }
 
+/// 先驗證使用者設定，再依使用者覆寫優先規則解析外觀。
+pub fn resolve_validated_appearance(
+    profile: &PetProfile,
+    defaults: &AppearanceOverride,
+) -> Result<AppearanceOverride, ProfileError> {
+    profile.validate()?;
+    Ok(resolve_appearance(defaults, profile.appearance.as_ref()))
+}
+
 #[cfg(test)]
 mod appearance_resolution_tests {
     use super::*;
@@ -149,22 +158,28 @@ mod validated_appearance_tests {
     #[test]
     fn invalid_override_never_returns_resolved_appearance() {
         let pet = profile(Some(AppearanceOverride {
-            color: Some("   ".into()), style: None,
+            color: Some("   ".into()),
+            style: None,
         }));
         let defaults = AppearanceOverride {
-            color: Some("藍".into()), style: Some("像素".into()),
+            color: Some("藍".into()),
+            style: Some("像素".into()),
         };
-        assert_eq!(resolve_validated_appearance(&pet, &defaults),
-                   Err(ProfileError::EmptyOverride));
+        assert_eq!(
+            resolve_validated_appearance(&pet, &defaults),
+            Err(ProfileError::EmptyOverride)
+        );
     }
 
     #[test]
     fn valid_override_inherits_unspecified_fields() {
         let pet = profile(Some(AppearanceOverride {
-            color: Some("紅".into()), style: None,
+            color: Some("紅".into()),
+            style: None,
         }));
         let defaults = AppearanceOverride {
-            color: Some("藍".into()), style: Some("像素".into()),
+            color: Some("藍".into()),
+            style: Some("像素".into()),
         };
         let actual = resolve_validated_appearance(&pet, &defaults).unwrap();
         assert_eq!(actual.color.as_deref(), Some("紅"));
@@ -175,7 +190,8 @@ mod validated_appearance_tests {
     fn no_override_uses_defaults() {
         let pet = profile(None);
         let defaults = AppearanceOverride {
-            color: Some("藍".into()), style: None,
+            color: Some("藍".into()),
+            style: None,
         };
         assert_eq!(resolve_validated_appearance(&pet, &defaults), Ok(defaults));
     }

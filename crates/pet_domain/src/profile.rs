@@ -20,6 +20,7 @@ pub struct AppearanceOverride {
     #[serde(rename = "風格", default, skip_serializing_if = "Option::is_none")]
     pub style: Option<String>,
 }
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PetProfile {
     #[serde(rename = "名字")]
@@ -83,9 +84,24 @@ pub fn encode_profile(profile: &PetProfile) -> Result<String, ProfileCodecError>
     Ok(serde_json::to_string_pretty(profile)?)
 }
 
+pub fn resolve_appearance(
+    defaults: &AppearanceOverride,
+    user: Option<&AppearanceOverride>,
+) -> AppearanceOverride {
+    AppearanceOverride {
+        color: user
+            .and_then(|v| v.color.clone())
+            .or_else(|| defaults.color.clone()),
+        style: user
+            .and_then(|v| v.style.clone())
+            .or_else(|| defaults.style.clone()),
+    }
+}
+
 #[cfg(test)]
 mod appearance_resolution_tests {
     use super::*;
+
     #[test]
     fn user_color_wins_and_style_falls_back() {
         let defaults = AppearanceOverride {

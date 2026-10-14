@@ -44,8 +44,7 @@ impl InMemoryDeduplicator {
 
 // 事件類型長度以 UTF-8 位元組計算，避免儲存層限制不一致。
 pub fn valid_event_type(value: &str) -> bool {
-    let value = value.trim();
-    !value.is_empty() && value.len() <= 128
+    !value.is_empty() && value.len() <= 128 && value.trim() == value
 }
 
 // 只做事件資料驗證；憑證、持久化與 ACK 各由真正 Adapter 負責。

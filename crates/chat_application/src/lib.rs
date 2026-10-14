@@ -56,10 +56,48 @@ pub async fn persist_then_publish(
     Ok(())
 }
 
+pub async fn persist_in_existing_room(
+    rooms: &dyn RoomRepository,
+    messages: &dyn MessageRepository,
+    message: ChatMessage,
+    publish: impl FnOnce(ChatMessage),
+) -> Result<(), RepositoryError> {
+    if rooms.find_by_id(&message.room_id).await?.is_none() {
+        return Err(RepositoryError::RoomAccessError("房間不存在".into()));
+    }
+    persist_then_publish(messages, message, publish).await
+}
+
 struct SuccessfulRepository;
 #[async_trait]
 impl MessageRepository for SuccessfulRepository {
     async fn create(&self, _: &ChatMessage) -> Result<(), RepositoryError> {
+        Ok(())
+    }
+}
+
+struct ExistingRoom;
+#[async_trait]
+impl RoomRepository for ExistingRoom {
+    async fn find_by_id(&self, id: &str) -> Result<Option<Room>, RepositoryError> {
+        Ok(Some(Room {
+            id: id.into(),
+            category_room_id: "c1".into(),
+            name: "room".into(),
+        }))
+    }
+    async fn create(&self, _: &Room) -> Result<(), RepositoryError> {
+        Ok(())
+    }
+}
+
+struct MissingRoom;
+#[async_trait]
+impl RoomRepository for MissingRoom {
+    async fn find_by_id(&self, _: &str) -> Result<Option<Room>, RepositoryError> {
+        Ok(None)
+    }
+    async fn create(&self, _: &Room) -> Result<(), RepositoryError> {
         Ok(())
     }
 }

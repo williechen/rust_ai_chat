@@ -32,6 +32,8 @@ fn App() -> impl IntoView {
     let (chat_response, set_chat_response) = signal::<Option<String>>(None);
     let (chat_error, set_chat_error) = signal::<Option<String>>(None);
 
+    let (duplicate_status, set_duplicate_status) = signal::<Option<String>>(None);
+
     {
         let snapshot_reader = snapshot;
         let snapshot_writer = set_snapshot;
@@ -106,6 +108,23 @@ fn App() -> impl IntoView {
                  chat_error
                  set_chat_error
             />
+
+            <button
+                type="button"
+                on:click=move |_| {
+                    spawn_local(async move {
+                        match bridge::scan_duplicate_preview().await {
+                        Ok((groups, warnings)) => set_duplicate_status.set(Some(
+                            format!("SHA256 重複群組：{groups}；掃描警告：{warnings}")
+                        )),
+                        Err(message) => set_error.set(Some(message)),
+                    }
+                });
+                }
+            >"檢查重複檔案"</button>
+            <Show when=move || duplicate_status.get().is_some() fallback=|| ()>
+                <p>{move || duplicate_status.get().unwrap_or_default()}</p>
+            </Show>
 
             <ErrorMessage error />
         </main>

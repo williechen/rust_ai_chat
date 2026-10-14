@@ -9,6 +9,12 @@ use axum::{
 use shared::{ClientEvent, ServerEvent};
 use tokio::sync::broadcast;
 
+use crate::hub::RoomHub;
+use chat_application::{
+    ChatService,
+    repository::{MessageRepository, RepositoryError, RoomRepository},
+};
+
 async fn send_event(
     socket: &mut WebSocket,
     event: ServerEvent,
@@ -97,6 +103,21 @@ async fn handle_socket(mut socket: WebSocket, state: AppState, room_id: String) 
     state.room_hub.cleanup(room_id.clone(), &room_sender);
 }
 
+async fn persist_ws_message(
+    service: &ChatService,
+    rooms: &dyn RoomRepository,
+    messages: &dyn MessageRepository,
+    hub: &RoomHub,
+    room_id: String,
+    content: String,
+) -> Result<(), RepositoryError> {
+    let message = service.send_message(room_id.clone(), content);
+    chat_application::persist_in_existing_room(rooms, messages, message, move |saved| {
+        hub.publish(room_id, ServerEvent::MessageCreated(saved))
+    })
+    .await
+}
+
 async fn handle_client_event(
     socket: &mut WebSocket,
     state: &AppState,
@@ -134,15 +155,13 @@ async fn handle_client_event(
                 return Ok(());
             }
 
-            let message = state.chat_service.send_message(room_id.clone(), content);
-            if let Err(error) = chat_application::persist_then_publish(
+            if let Err(error) = persist_ws_message(
+                state.chat_service.as_ref(),
+                state.room_repository.as_ref(),
                 state.message_repository.as_ref(),
-                message,
-                |saved| {
-                    state
-                        .room_hub
-                        .publish(room_id.clone(), ServerEvent::MessageCreated(saved))
-                },
+                &state.room_hub,
+                room_id,
+                content,
             )
             .await
             {
@@ -192,5 +211,75 @@ mod test {
     fn rejects_blank_content() {
         assert!(!valid_message_content(""));
         assert!(!valid_message_content(" \n\t "));
+    }
+
+    // 加到 apps/server/src/ws.rs 既有 #[cfg(test)] mod test 內。
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn ws_message_requires_room_at_write_time(pool: sqlx::SqlitePool) {
+        use super::persist_ws_message;
+        use crate::hub::RoomHub;
+        use chat_application::repository::RepositoryError;
+        use chat_application::{ChatService, CreateRoom, create_room};
+        use shared::ServerEvent;
+
+        let rooms = persistence::SqliteRoomRepository::new(pool.clone());
+        let messages = persistence::SqliteMessageRepository::new(pool.clone());
+        let hub = RoomHub::new(8);
+        let (_, mut events) = hub.subscribe("room-day11".into());
+        let service = ChatService::new();
+
+        // 握手後若房間已不存在，寫入時仍須拒絕。
+        let denied = persist_ws_message(
+            &service,
+            &rooms,
+            &messages,
+            &hub,
+            "room-day11".into(),
+            "不應寫入".into(),
+        )
+        .await;
+        assert!(matches!(denied, Err(RepositoryError::RoomAccessError(_))));
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM messages")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count.0, 0);
+        assert!(events.try_recv().is_err());
+
+        create_room(
+            &rooms,
+            CreateRoom {
+                id: "room-day11".into(),
+                category_room_id: "default-category".into(),
+                name: "測試房間".into(),
+            },
+        )
+        .await
+        .unwrap();
+
+        persist_ws_message(
+            &service,
+            &rooms,
+            &messages,
+            &hub,
+            "room-day11".into(),
+            "確實寫入".into(),
+        )
+        .await
+        .unwrap();
+
+        match events.try_recv().expect("應通知訂閱者一次") {
+            ServerEvent::MessageCreated(message) => {
+                assert_eq!(message.room_id, "room-day11");
+                assert_eq!(message.content, "確實寫入");
+            }
+            other => panic!("意外事件: {other:?}"),
+        }
+        assert!(events.try_recv().is_err());
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM messages")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count.0, 1);
     }
 }

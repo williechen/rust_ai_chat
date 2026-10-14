@@ -4550,6 +4550,7 @@ version = "0.2.7"
 dependencies = [
  "axum",
  "serde",
+ "sqlx",
  "tokio",
  "uuid",
 ]

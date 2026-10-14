@@ -143,7 +143,7 @@ fn RoomPage() -> impl IntoView {
 pub fn ChatPage(room_id: String) -> impl IntoView {
     let (draft, set_draft) = signal(String::new());
 
-    let (messages, _set_messages) = signal(Vec::<ChatMessage>::new());
+    let (messages, set_messages) = signal(Vec::<ChatMessage>::new());
 
     #[cfg(target_arch = "wasm32")]
     let socket = {

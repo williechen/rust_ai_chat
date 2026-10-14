@@ -1,7 +1,6 @@
 pub mod product_event;
 pub mod repository;
 
-use async_trait::async_trait;
 use chat_domain::{ChatMessage, MessageAuthor, Room};
 use uuid::Uuid;
 
@@ -75,6 +74,8 @@ pub async fn persist_in_existing_room(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use async_trait::async_trait;
+
     use std::sync::{
         Arc,
         atomic::{AtomicUsize, Ordering},

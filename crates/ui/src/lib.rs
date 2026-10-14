@@ -9,10 +9,17 @@ use chat_domain::{ChatMessage, MessageAuthor};
 use leptos::prelude::*;
 use leptos_router::{
     components::{Route, Router, Routes},
-    hooks::{use_navigate, use_params_map},
+    hooks::use_params_map,
     path,
 };
-use shared::{ClientEvent, ServerEvent};
+
+use shared::ClientEvent;
+
+#[cfg(target_arch = "wasm32")]
+use shared::ServerEvent;
+
+#[cfg(target_arch = "wasm32")]
+use leptos_router::hooks::use_navigate;
 
 use chat_socket::ChatSocket;
 
@@ -67,6 +74,7 @@ pub fn App() -> impl IntoView {
 
 #[component]
 fn HomePage() -> impl IntoView {
+    #[cfg(target_arch = "wasm32")]
     let navigate = use_navigate();
 
     let (creating, set_creating) = signal(false);
@@ -134,7 +142,8 @@ fn RoomPage() -> impl IntoView {
 #[component]
 pub fn ChatPage(room_id: String) -> impl IntoView {
     let (draft, set_draft) = signal(String::new());
-    let (messages, set_messages) = signal(Vec::<ChatMessage>::new());
+
+    let (messages, _set_messages) = signal(Vec::<ChatMessage>::new());
 
     #[cfg(target_arch = "wasm32")]
     let socket = {

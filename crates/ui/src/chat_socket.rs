@@ -1,5 +1,9 @@
-use shared::{ClientEvent, ServerEvent};
+use shared::ClientEvent;
 
+#[cfg(any(target_arch = "wasm32", test))]
+use shared::ServerEvent;
+
+#[cfg(any(target_arch = "wasm32", test))]
 pub fn decode_server_event(text: &str) -> Result<ServerEvent, serde_json::Error> {
     serde_json::from_str::<ServerEvent>(text)
 }

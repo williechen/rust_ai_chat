@@ -46,3 +46,6 @@ jobs:
 
       - name: Test persistence
         run: DATABASE_URL="$DATABASE_SQLITE_URL" cargo test --locked -p persistence
+
+      - name: Test persistence with PostgreSQL
+        run: DATABASE_URL="$DATABASE_PG_URL" cargo test --locked -p stats-server --features postgres-integration --test postgres_event_store

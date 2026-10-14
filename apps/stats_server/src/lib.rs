@@ -113,4 +113,25 @@ mod tests {
         input.event_type = "   ".into();
         assert!(!valid_event(&input));
     }
+
+    #[test]
+    fn event_type_rejects_noncanonical_boundaries() {
+        assert!(valid_event_type("chat.message.persisted"));
+        assert!(!valid_event_type(" chat.message.persisted"));
+        assert!(!valid_event_type("chat.message.persisted "));
+        assert!(!valid_event_type("\n"));
+        assert!(!valid_event_type(""));
+        assert!(!valid_event_type(&"x".repeat(129)));
+    }
+
+    #[test]
+    fn existing_event_validation_rejects_whitespace() {
+        let event = EventInput {
+            schema_version: 1,
+            event_id: Uuid::new_v4(),
+            source_app: "web_chat".into(),
+            event_type: " chat.message.persisted".into(),
+        };
+        assert!(!valid_event(&event));
+    }
 }

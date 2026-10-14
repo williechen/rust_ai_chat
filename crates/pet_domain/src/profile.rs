@@ -82,3 +82,35 @@ pub fn encode_profile(profile: &PetProfile) -> Result<String, ProfileCodecError>
     profile.validate()?;
     Ok(serde_json::to_string_pretty(profile)?)
 }
+
+#[cfg(test)]
+mod appearance_resolution_tests {
+    use super::*;
+    #[test]
+    fn user_color_wins_and_style_falls_back() {
+        let defaults = AppearanceOverride {
+            color: Some("藍".into()),
+            style: Some("像素".into()),
+        };
+        let user = AppearanceOverride {
+            color: Some("紅".into()),
+            style: None,
+        };
+        let result = resolve_appearance(&defaults, Some(&user));
+        assert_eq!(result.color.as_deref(), Some("紅"));
+        assert_eq!(result.style.as_deref(), Some("像素"));
+    }
+    #[test]
+    fn absent_override_keeps_defaults() {
+        let defaults = AppearanceOverride {
+            color: Some("藍".into()),
+            style: None,
+        };
+        assert_eq!(resolve_appearance(&defaults, None), defaults);
+    }
+    #[test]
+    fn no_defaults_stays_empty() {
+        let defaults = AppearanceOverride::default();
+        assert_eq!(resolve_appearance(&defaults, None), defaults);
+    }
+}

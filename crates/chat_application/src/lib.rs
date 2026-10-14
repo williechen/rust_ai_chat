@@ -116,4 +116,35 @@ mod tests {
 
         assert_eq!(publishes.load(Ordering::SeqCst), 1);
     }
+
+    #[tokio::test]
+    async fn missing_room_blocks_message_and_publish() {
+        let mut calls = 0;
+        let msg = ChatMessage {
+            id: "m".into(),
+            room_id: "absent".into(),
+            author: MessageAuthor::AnonymousUser,
+            content: "hi".into(),
+        };
+        let result =
+            persist_in_existing_room(&MissingRoom, &SuccessfulRepository, msg, |_| calls += 1)
+                .await;
+        assert!(matches!(result, Err(RepositoryError::RoomAccessError(_))));
+        assert_eq!(calls, 0);
+    }
+
+    #[tokio::test]
+    async fn existing_room_allows_persist_and_publish() {
+        let mut calls = 0;
+        let msg = ChatMessage {
+            id: "m".into(),
+            room_id: "r1".into(),
+            author: MessageAuthor::AnonymousUser,
+            content: "hi".into(),
+        };
+        persist_in_existing_room(&ExistingRoom, &SuccessfulRepository, msg, |_| calls += 1)
+            .await
+            .unwrap();
+        assert_eq!(calls, 1);
+    }
 }

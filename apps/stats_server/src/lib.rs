@@ -1,4 +1,4 @@
-mod pg_store;
+pub mod pg_store;
 
 use axum::{
     Json, Router,

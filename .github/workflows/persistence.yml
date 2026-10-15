@@ -30,6 +30,8 @@ jobs:
 
     env:
       ANALYTICS_DATABASE_URL: postgres://postgres:postgres@localhost:5432/rust_ai_chat_test
+      ANALYTICS_CHAT_TOKEN: local-ci-chat-token
+      ANALYTICS_PET_TOKEN: local-ci-pet-token
       CHAT_DATABASE_URL: "sqlite::memory:"
       PET_DATABASE_URL: "sqlite::memory:"
 

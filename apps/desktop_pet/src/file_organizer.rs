@@ -306,7 +306,6 @@ fn sha256_file(path: &Path) -> Result<String, Error> {
     Ok(hash)
 }
 
-#[cfg_attr(not(test), expect(dead_code, reason = "重複檔案預覽尚待接入產品入口"))]
 pub fn duplicate_preview(scan: &FileScan) -> DuplicatePreview {
     let mut warnings = Vec::new();
     let mut groups = Vec::new();

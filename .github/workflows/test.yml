@@ -8,13 +8,32 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  ANALYTICS_DATABASE_URL: postgres://postgres:postgres@localhost:5432/rust_ai_chat_test
-  ANALYTICS_CHAT_TOKEN: local-ci-chat-token
-  ANALYTICS_PET_TOKEN: local-ci-pet-token
 
 jobs:
   test-workspace:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rust_ai_chat_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d rust_ai_chat_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      ANALYTICS_DATABASE_URL: postgres://postgres:postgres@localhost:5432/rust_ai_chat_test
+      ANALYTICS_CHAT_TOKEN: local-ci-chat-token
+      ANALYTICS_PET_TOKEN: local-ci-pet-token
+      CHAT_DATABASE_URL: "sqlite::memory:"
+      PET_DATABASE_URL: "sqlite::memory:"
 
     steps:
       - uses: actions/checkout@v4

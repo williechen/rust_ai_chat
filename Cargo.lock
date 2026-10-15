@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "ai-core"
-version = "0.2.11"
+version = "0.2.12"
 dependencies = [
  "async-trait",
  "thiserror 2.0.21",
@@ -493,7 +493,7 @@ dependencies = [
 
 [[package]]
 name = "chat-application"
-version = "0.2.11"
+version = "0.2.12"
 dependencies = [
  "async-trait",
  "chat-domain",
@@ -504,7 +504,7 @@ dependencies = [
 
 [[package]]
 name = "chat-domain"
-version = "0.2.11"
+version = "0.2.12"
 dependencies = [
  "serde",
  "uuid",
@@ -866,9 +866,9 @@ dependencies = [
 
 [[package]]
 name = "defmt"
-version = "1.1.1"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2953bfe4f93bbd20cc71198842756f77d161884c99ebbabc41d80231ded88d1"
+checksum = "e4a0795ac740cb54d7b3775c9c17345f6aaecf884c01733b39d6017738e0e3e1"
 dependencies = [
  "bitflags 1.3.2",
  "defmt-macros",
@@ -876,21 +876,21 @@ dependencies = [
 
 [[package]]
 name = "defmt-macros"
-version = "1.1.1"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bad9c72e7ca2137e0dc3813245a0d282fd6daad32fd800af018306a9169b5fe8"
+checksum = "840bb056bd99c495c9188198a258ab787c79f306d864db3e6e8451442d6d8366"
 dependencies = [
  "defmt-parser",
  "proc-macro2",
  "quote",
- "syn 2.0.119",
+ "syn 3.0.9",
 ]
 
 [[package]]
 name = "defmt-parser"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10d60334b3b2e7c9d91ef8150abfb6fa4c1c39ebbcf4a81c2e346aad939fee3e"
+checksum = "71958f69fb2de856c5dd51ac9377e986ca1aa5919f931bf5395a807277f889a0"
 dependencies = [
  "thiserror 2.0.21",
 ]
@@ -938,7 +938,7 @@ dependencies = [
 
 [[package]]
 name = "desktop-pet"
-version = "0.2.11"
+version = "0.2.12"
 dependencies = [
  "ai-core",
  "dotenv",
@@ -954,7 +954,7 @@ dependencies = [
 
 [[package]]
 name = "desktop-pet-frontend"
-version = "0.2.11"
+version = "0.2.12"
 dependencies = [
  "gloo-timers",
  "js-sys",
@@ -3211,7 +3211,7 @@ checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 
 [[package]]
 name = "persistence"
-version = "0.2.11"
+version = "0.2.12"
 dependencies = [
  "async-trait",
  "chat-application",
@@ -3222,7 +3222,7 @@ dependencies = [
 
 [[package]]
 name = "pet-domain"
-version = "0.2.11"
+version = "0.2.12"
 dependencies = [
  "serde",
  "serde_json",
@@ -4095,7 +4095,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.2.11"
+version = "0.2.12"
 dependencies = [
  "any_spawner",
  "axum",
@@ -4234,7 +4234,7 @@ dependencies = [
 
 [[package]]
 name = "shared"
-version = "0.2.11"
+version = "0.2.12"
 dependencies = [
  "chat-domain",
  "serde",
@@ -4552,7 +4552,7 @@ checksum = "ff7589a1859b09232522bb9edf076ca7fcf14ded96685d3fa629db73023ffbb7"
 
 [[package]]
 name = "stats-server"
-version = "0.2.11"
+version = "0.2.12"
 dependencies = [
  "axum",
  "dotenv",
@@ -4985,7 +4985,7 @@ dependencies = [
 
 [[package]]
 name = "telemetry"
-version = "0.2.11"
+version = "0.2.12"
 
 [[package]]
 name = "tendril"
@@ -5416,7 +5416,7 @@ checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 
 [[package]]
 name = "ui"
-version = "0.2.11"
+version = "0.2.12"
 dependencies = [
  "chat-domain",
  "leptos",
@@ -6072,7 +6072,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "workspace-tests"
-version = "0.2.11"
+version = "0.2.12"
 dependencies = [
  "async-trait",
  "axum",

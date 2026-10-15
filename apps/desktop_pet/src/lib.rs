@@ -60,15 +60,27 @@ async fn chat_with_pet(
     Ok(response.text)
 }
 
-// 後端決定唯一可掃描根目錄，不接受前端自行提供任意 path。
-#[tauri::command]
-fn scan_file_preview() -> Result<file_organizer::ScanPreview, String> {
+// apps/desktop_pet/src/lib.rs
+// 替換原 scan_file_preview 函式，並新增同檔命令；
+// 既有 file_organizer::scan_preview 保留，避免 dead_code。
+fn authorized_root() -> Result<file_organizer::AuthorizedRoot, String> {
     let path =
         std::env::var("PET_AUTHORIZED_ROOT").map_err(|_| "尚未設定授權掃描目錄".to_string())?;
-    let root = file_organizer::AuthorizedRoot::new(path)
-        .map_err(|e| format!("無法使用授權掃描目錄：{e}"))?;
-    // 僅回傳預覽，不執行 move/Trash/delete。
+    file_organizer::AuthorizedRoot::new(path).map_err(|e| format!("無法使用授權掃描目錄：{e}"))
+}
+
+#[tauri::command]
+fn scan_file_preview() -> Result<file_organizer::ScanPreview, String> {
+    let root = authorized_root()?;
     file_organizer::scan_preview(&root).map_err(|e| format!("掃描失敗：{e}"))
+}
+
+#[tauri::command]
+fn scan_duplicate_preview() -> Result<file_organizer::DuplicatePreview, String> {
+    let root = authorized_root()?;
+    let scan = file_organizer::scan(&root).map_err(|e| format!("掃描失敗：{e}"))?;
+    // 僅回傳 SHA256 分組與警告；不提供刪除或 Trash 能力。
+    Ok(file_organizer::duplicate_preview(&scan))
 }
 
 pub fn application() {
@@ -112,7 +124,8 @@ pub fn application() {
             get_pet_state,
             send_pet_command,
             chat_with_pet,
-            scan_file_preview
+            scan_file_preview,
+            scan_duplicate_preview
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Rust AI Desktop Pet");

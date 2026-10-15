@@ -25,6 +25,7 @@ pub enum ServerEvent {
     PresenceChanged { user_id: String, online: bool },
     Error { code: String, message: String },
     Pong,
+    TypingChanged { room_id: String, active: bool },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -98,5 +99,15 @@ mod tests {
             serde_json::from_str(&json).expect("create room response should deserialize");
 
         assert_eq!(decoded, response);
+    }
+
+    #[test]
+    fn typing_changed_roundtrip() {
+        let event = ServerEvent::TypingChanged {
+            room_id: "room-a".into(),
+            active: true,
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert_eq!(serde_json::from_str::<ServerEvent>(&json).unwrap(), event);
     }
 }

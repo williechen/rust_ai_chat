@@ -6,6 +6,8 @@ edition.workspace = true
 [dependencies]
 axum.workspace = true
 
+dotenv.workspace = true
+
 serde.workspace = true
 sqlx.workspace = true
 

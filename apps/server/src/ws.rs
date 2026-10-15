@@ -55,6 +55,17 @@ fn room_matches_connection(connection: &str, event: &str) -> bool {
     !connection.trim().is_empty() && !event.trim().is_empty() && connection == event
 }
 
+fn typing_event_for_room(
+    connection_room: &str,
+    event_room: &str,
+    active: bool,
+) -> Option<ServerEvent> {
+    room_matches_connection(connection_room, event_room).then(|| ServerEvent::TypingChanged {
+        room_id: connection_room.to_owned(),
+        active,
+    })
+}
+
 async fn handle_socket(mut socket: WebSocket, state: AppState, room_id: String) {
     let (room_sender, mut room_events) = state.room_hub.subscribe(room_id.clone());
 
@@ -177,8 +188,23 @@ async fn handle_client_event(
                 return Ok(());
             }
         }
-        ClientEvent::Typing { .. } => {
-            // 後面再做 presence / typing。
+        ClientEvent::Typing { room_id, active } => {
+            match typing_event_for_room(&event_room_id, &room_id, active) {
+                Some(event) => {
+                    // 共用既有 RoomHub，不產生 SQLite 訊息紀錄。
+                    state.room_hub.publish(event_room_id, event);
+                }
+                None => {
+                    send_event(
+                        socket,
+                        ServerEvent::Error {
+                            code: "room_mismatch".into(),
+                            message: "typing room does not match connection room".into(),
+                        },
+                    )
+                    .await?;
+                }
+            }
         }
     }
 
@@ -281,5 +307,19 @@ mod test {
             .await
             .unwrap();
         assert_eq!(count.0, 1);
+    }
+
+    #[test]
+    fn typing_is_only_forwarded_to_connection_room() {
+        use super::typing_event_for_room;
+        assert!(typing_event_for_room("room-a", "room-b", true).is_none());
+        assert!(typing_event_for_room("room-a", " ", true).is_none());
+        assert_eq!(
+            typing_event_for_room("room-a", "room-a", false),
+            Some(shared::ServerEvent::TypingChanged {
+                room_id: "room-a".into(),
+                active: false,
+            })
+        );
     }
 }

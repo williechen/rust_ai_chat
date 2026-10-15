@@ -547,9 +547,9 @@ checksum = "2550f75b8cfac212855f6b1885455df8eaee8fe8e246b647d69146142e016084"
 
 [[package]]
 name = "combine"
-version = "4.6.8"
+version = "4.6.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfc320937d09e6de266b31b9afb480f197d7a861be86be7cb2ea7e5d1bfffc5e"
+checksum = "4356eba6976435498d05a311ee9fc486da3bc81c200d3f0d7dd9703b41913f92"
 dependencies = [
  "bytes",
  "memchr",
@@ -4555,6 +4555,7 @@ name = "stats-server"
 version = "0.2.11"
 dependencies = [
  "axum",
+ "dotenv",
  "serde",
  "sqlx",
  "tokio",
@@ -6078,10 +6079,12 @@ dependencies = [
  "chat-application",
  "chat-domain",
  "desktop-pet",
+ "dotenv",
  "pet-domain",
  "serde_json",
  "server",
  "shared",
+ "sqlx",
  "stats-server",
  "tokio",
  "tower",

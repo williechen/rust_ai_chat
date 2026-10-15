@@ -13,6 +13,7 @@ chat-application = { path = "../crates/chat_application" }
 chat-domain = { path = "../crates/chat_domain" }
 
 desktop-pet = { path = "../apps/desktop_pet" }
+dotenv.workspace = true
 
 pet-domain = { path = "../crates/pet_domain" }
 
@@ -22,6 +23,8 @@ shared = { path = "../crates/shared" }
 
 server = { path = "../apps/server" }
 stats-server = { path = "../apps/stats_server" }
+
+sqlx.workspace = true
 
 tokio.workspace = true
 

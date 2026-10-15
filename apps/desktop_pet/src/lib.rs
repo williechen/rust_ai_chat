@@ -29,6 +29,22 @@ fn dispatch_pet_command(
     Ok(snapshot)
 }
 
+fn authorized_root() -> Result<file_organizer::AuthorizedRoot, String> {
+    let path =
+        std::env::var("PET_AUTHORIZED_ROOT").map_err(|_| "尚未設定授權掃描目錄".to_string())?;
+    file_organizer::AuthorizedRoot::new(path).map_err(|e| format!("無法使用授權掃描目錄：{e}"))
+}
+
+// 只接受明確的 true 或 1；其他值均維持不移動。
+fn roam_enabled_value(value: Option<&str>) -> bool {
+    matches!(value, Some("true" | "1"))
+}
+
+fn roam_enabled() -> bool {
+    let value = std::env::var("PET_ENABLE_ROAM").ok();
+    roam_enabled_value(value.as_deref())
+}
+
 // 取得寵物狀態
 #[tauri::command]
 fn get_pet_state(pet: State<'_, Mutex<PetMachine>>) -> Result<PetSnapshot, String> {
@@ -58,15 +74,6 @@ async fn chat_with_pet(
         .await
         .map_err(|error| error.to_string())?;
     Ok(response.text)
-}
-
-// apps/desktop_pet/src/lib.rs
-// 替換原 scan_file_preview 函式，並新增同檔命令；
-// 既有 file_organizer::scan_preview 保留，避免 dead_code。
-fn authorized_root() -> Result<file_organizer::AuthorizedRoot, String> {
-    let path =
-        std::env::var("PET_AUTHORIZED_ROOT").map_err(|_| "尚未設定授權掃描目錄".to_string())?;
-    file_organizer::AuthorizedRoot::new(path).map_err(|e| format!("無法使用授權掃描目錄：{e}"))
 }
 
 #[tauri::command]
@@ -114,10 +121,12 @@ pub fn application() {
                 }
             });
 
-            let app_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                roam_desktop(app_handle).await;
-            });
+            if roam_enabled() {
+                let app_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    roam_desktop(app_handle).await;
+                });
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -129,4 +138,18 @@ pub fn application() {
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Rust AI Desktop Pet");
+}
+
+#[cfg(test)]
+mod roam_setting_tests {
+    use super::roam_enabled_value;
+    #[test]
+    fn roam_requires_explicit_opt_in() {
+        assert!(!roam_enabled_value(None));
+        assert!(!roam_enabled_value(Some("")));
+        assert!(!roam_enabled_value(Some("false")));
+        assert!(!roam_enabled_value(Some("TRUE")));
+        assert!(roam_enabled_value(Some("true")));
+        assert!(roam_enabled_value(Some("1")));
+    }
 }

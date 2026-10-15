@@ -23,7 +23,7 @@ pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
     let pkg_path = site_pkg_dir_service_route_path(&leptos_options);
     let pkg_service = site_pkg_dir_service(&leptos_options);
 
-    let database_url = std::env::var("DATABASE_SQLITE_URL")?;
+    let database_url = std::env::var("CHAT_DATABASE_URL")?;
     let db = sqlx::SqlitePool::connect(&database_url).await?;
 
     persistence::migrate(&db).await?;

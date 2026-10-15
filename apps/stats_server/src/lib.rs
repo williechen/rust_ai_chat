@@ -3,11 +3,17 @@ pub mod pg_store;
 use axum::{
     Json, Router,
     extract::DefaultBodyLimit,
+    extract::State,
     http::StatusCode,
+    http::{HeaderMap, header::AUTHORIZATION},
     routing::{get, post},
 };
 use serde::Deserialize;
 use uuid::Uuid;
+
+use pg_store::{PersistError, PersistOutcome};
+use sqlx::PgPool;
+use std::sync::Arc;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -68,29 +74,87 @@ pub fn valid_event(event: &EventInput) -> bool {
         && valid_event_type(event.event_type.as_str())
 }
 
-// 有效事件尚未驗證身分／落 DB，不可假裝已處理。
-pub async fn ingest(Json(event): Json<EventInput>) -> StatusCode {
-    if !valid_event(&event) {
-        return StatusCode::BAD_REQUEST;
+#[derive(Clone)]
+pub struct IngestTokens {
+    pub chat: String,
+    pub pet: String,
+}
+
+#[derive(Clone)]
+pub struct IngestState {
+    pub pool: PgPool,
+    pub tokens: Arc<IngestTokens>,
+}
+
+impl IngestTokens {
+    fn authorized(&self, source: &str, header: &str) -> bool {
+        let token = match source {
+            "web_chat" => &self.chat,
+            "desktop_pet" => &self.pet,
+            _ => return false,
+        };
+        // 不接受空憑證；固定長度逐位比較避免提早依內容退出。
+        if token.is_empty() || token.len() > 512 {
+            return false;
+        }
+        let expected = format!("Bearer {token}");
+        let a = expected.as_bytes();
+        let b = header.as_bytes();
+        let mut diff = a.len() ^ b.len();
+        for i in 0..a.len().max(b.len()) {
+            diff |= usize::from(a.get(i).copied().unwrap_or(0) ^ b.get(i).copied().unwrap_or(0));
+        }
+        diff == 0
     }
-    let _ = event.event_id;
-    StatusCode::NOT_IMPLEMENTED
+}
+
+fn outcome_status(value: PersistOutcome) -> StatusCode {
+    match value {
+        PersistOutcome::Stored => StatusCode::CREATED,
+        PersistOutcome::AlreadyExists => StatusCode::OK,
+        PersistOutcome::IdentityConflict => StatusCode::CONFLICT,
+    }
 }
 
 async fn health() -> StatusCode {
     StatusCode::OK
 }
 
-pub fn build_app() -> Router {
+pub async fn ingest(
+    State(state): State<IngestState>,
+    headers: HeaderMap,
+    Json(event): Json<EventInput>,
+) -> StatusCode {
+    if !valid_event(&event) {
+        return StatusCode::BAD_REQUEST;
+    }
+    let authorization = headers
+        .get(AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    if !state.tokens.authorized(&event.source_app, authorization) {
+        return StatusCode::UNAUTHORIZED;
+    }
+    match pg_store::persist_event(&state.pool, &event).await {
+        Ok(outcome) => outcome_status(outcome),
+        Err(PersistError::Invalid) => StatusCode::BAD_REQUEST,
+        Err(PersistError::Database(_)) => StatusCode::SERVICE_UNAVAILABLE,
+    }
+}
+
+pub fn build_app(state: IngestState) -> Router {
     Router::new()
         .route("/healthz", get(health))
         .route("/api/v1/events", post(ingest))
+        .with_state(state)
         .layer(DefaultBodyLimit::max(4096))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pg_store::PersistOutcome::*;
+
     #[test]
     fn nil_event_id_is_not_accepted() {
         let invalid = EventInput {
@@ -146,6 +210,7 @@ mod tests {
         };
         assert!(!valid_event(&event));
     }
+
     #[test]
     fn valid_event_is_accepted_once_per_source_and_id() {
         let id = Uuid::new_v4();
@@ -179,5 +244,25 @@ mod tests {
         assert_eq!(dedup.accept_valid_event(&event), None);
         event.schema_version = 1;
         assert_eq!(dedup.accept_valid_event(&event), Some(true));
+    }
+
+    #[test]
+    fn token_must_match_the_claimed_source() {
+        let tokens = IngestTokens {
+            chat: "chat-secret".into(),
+            pet: "pet-secret".into(),
+        };
+        assert!(tokens.authorized("web_chat", "Bearer chat-secret"));
+        assert!(tokens.authorized("desktop_pet", "Bearer pet-secret"));
+        assert!(!tokens.authorized("desktop_pet", "Bearer chat-secret"));
+        assert!(!tokens.authorized("web_chat", "Bearer "));
+        assert!(!tokens.authorized("web_chat", "chat-secret"));
+    }
+
+    #[test]
+    fn persist_outcomes_have_distinct_http_codes() {
+        assert_eq!(outcome_status(Stored), StatusCode::CREATED);
+        assert_eq!(outcome_status(AlreadyExists), StatusCode::OK);
+        assert_eq!(outcome_status(IdentityConflict), StatusCode::CONFLICT);
     }
 }

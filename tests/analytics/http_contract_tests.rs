@@ -2,7 +2,8 @@ use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
-use stats_server::build_app;
+use stats_server::{IngestState, IngestTokens, build_app};
+use std::sync::Arc;
 use tower::ServiceExt;
 
 const ID: &str = "00000000-0000-4000-8000-000000000001";
@@ -17,7 +18,20 @@ fn post(json: &str) -> Request<Body> {
 }
 
 async fn response_status(req: Request<Body>) -> StatusCode {
-    build_app().oneshot(req).await.unwrap().status()
+    dotenv::dotenv().ok();
+    let database_url = std::env::var("ANALYTICS_DATABASE_URL").unwrap();
+    let chat = std::env::var("ANALYTICS_CHAT_TOKEN").unwrap();
+    let pet = std::env::var("ANALYTICS_PET_TOKEN").unwrap();
+    let pool = sqlx::PgPool::connect(&database_url).await.unwrap();
+
+    build_app(IngestState {
+        pool,
+        tokens: Arc::new(IngestTokens { chat, pet }),
+    })
+    .oneshot(req)
+    .await
+    .unwrap()
+    .status()
 }
 
 #[tokio::test]
@@ -35,10 +49,7 @@ async fn valid_event_still_returns_501() {
         r#"{{"schema_version":1,"event_id":"{ID}","source_app":"web_chat",
                 "event_type":"message_sent"}}"#
     );
-    assert_eq!(
-        response_status(post(&body)).await,
-        StatusCode::NOT_IMPLEMENTED
-    );
+    assert_eq!(response_status(post(&body)).await, StatusCode::UNAUTHORIZED);
 }
 
 #[tokio::test]

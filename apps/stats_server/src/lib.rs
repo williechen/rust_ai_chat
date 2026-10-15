@@ -142,10 +142,33 @@ pub async fn ingest(
     }
 }
 
+async fn source_summary(
+    State(state): State<IngestState>,
+    axum::extract::Path(source): axum::extract::Path<String>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<pg_store::EventSummary>>, StatusCode> {
+    if !matches!(source.as_str(), "web_chat" | "desktop_pet") {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let authorization = headers
+        .get(AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    // URL 來源必須與憑證相符；不接受另一來源的 token。
+    if !state.tokens.authorized(&source, authorization) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    let rows = pg_store::summary_for_source(&state.pool, &source)
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    Ok(Json(rows))
+}
+
 pub fn build_app(state: IngestState) -> Router {
     Router::new()
         .route("/healthz", get(health))
         .route("/api/v1/events", post(ingest))
+        .route("/api/v1/events/{source}/summary", get(source_summary))
         .with_state(state)
         .layer(DefaultBodyLimit::max(4096))
 }
@@ -264,5 +287,151 @@ mod tests {
         assert_eq!(outcome_status(Stored), StatusCode::CREATED);
         assert_eq!(outcome_status(AlreadyExists), StatusCode::OK);
         assert_eq!(outcome_status(IdentityConflict), StatusCode::CONFLICT);
+    }
+}
+
+#[cfg(test)]
+mod source_summary_tests {
+    use super::*;
+    use axum::extract::Path;
+
+    fn fixture_tokens() -> Arc<IngestTokens> {
+        Arc::new(IngestTokens {
+            chat: "fixture-chat-only".into(),
+            pet: "fixture-pet-only".into(),
+        })
+    }
+    fn headers(token: &str) -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        headers.insert(AUTHORIZATION, format!("Bearer {token}").parse().unwrap());
+        headers
+    }
+
+    #[tokio::test]
+    async fn summary_rejects_cross_source_before_database_access() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://fixture:fixture@127.0.0.1:1/unused")
+            .unwrap();
+        pool.close().await;
+        let state = IngestState {
+            pool,
+            tokens: fixture_tokens(),
+        };
+        for (source, headers, expected) in [
+            (
+                "desktop_pet",
+                headers("fixture-chat-only"),
+                StatusCode::UNAUTHORIZED,
+            ),
+            ("web_chat", HeaderMap::new(), StatusCode::UNAUTHORIZED),
+            (
+                "unknown",
+                headers("fixture-chat-only"),
+                StatusCode::BAD_REQUEST,
+            ),
+            (
+                "web_chat",
+                headers("fixture-chat-only"),
+                StatusCode::SERVICE_UNAVAILABLE,
+            ),
+        ] {
+            let result = source_summary(State(state.clone()), Path(source.into()), headers).await;
+            assert_eq!(result.err().unwrap(), expected);
+        }
+    }
+
+    #[cfg(feature = "postgres-integration")]
+    #[sqlx::test(migrations = "./migrations")]
+    async fn summary_counts_committed_rows_per_source_and_kind(pool: PgPool) {
+        let id = Uuid::new_v4();
+        for (source, event_id, kind) in [
+            ("web_chat", id, "chat.message.persisted"),
+            ("web_chat", Uuid::new_v4(), "chat.message.persisted"),
+            ("web_chat", Uuid::new_v4(), "chat.room.created"),
+            ("desktop_pet", id, "pet.cleanup.succeeded"),
+        ] {
+            let event = EventInput {
+                schema_version: 1,
+                event_id,
+                source_app: source.into(),
+                event_type: kind.into(),
+            };
+            assert_eq!(
+                pg_store::persist_event(&pool, &event).await.unwrap(),
+                PersistOutcome::Stored
+            );
+            assert_eq!(
+                pg_store::persist_event(&pool, &event).await.unwrap(),
+                PersistOutcome::AlreadyExists
+            );
+        }
+        let state = IngestState {
+            pool: pool.clone(),
+            tokens: fixture_tokens(),
+        };
+        let Json(chat) = source_summary(
+            State(state.clone()),
+            Path("web_chat".into()),
+            headers("fixture-chat-only"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(chat.len(), 2);
+        assert_eq!(chat[0].event_type, "chat.message.persisted");
+        assert_eq!(chat[0].total, 2);
+        assert_eq!(chat[1].event_type, "chat.room.created");
+        assert_eq!(chat[1].total, 1);
+        assert!(chat.iter().all(|v| v.source_app == "web_chat"));
+        let Json(pet) = source_summary(
+            State(state),
+            Path("desktop_pet".into()),
+            headers("fixture-pet-only"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(pet.len(), 1);
+        assert_eq!(pet[0].source_app, "desktop_pet");
+        assert_eq!(pet[0].total, 1);
+
+        // 查詢不依賴 event_id 儲存型別；既有 migration 保持不變。
+        sqlx::query(
+            "ALTER TABLE product_events ALTER COLUMN event_id TYPE UUID USING event_id::uuid",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            pg_store::summary_for_source(&pool, "web_chat")
+                .await
+                .unwrap(),
+            chat
+        );
+    }
+
+    #[cfg(feature = "postgres-integration")]
+    #[sqlx::test(migrations = "./migrations")]
+    async fn empty_and_rolled_back_events_are_not_counted(pool: PgPool) {
+        assert!(
+            pg_store::summary_for_source(&pool, "web_chat")
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        let mut tx = pool.begin().await.unwrap();
+        sqlx::query(
+            "INSERT INTO product_events(source_app,event_id,schema_version,event_type)
+             VALUES ('web_chat',$1,1,'chat.message.persisted')",
+        )
+        .bind(Uuid::new_v4().to_string())
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+        tx.rollback().await.unwrap();
+        assert!(
+            pg_store::summary_for_source(&pool, "web_chat")
+                .await
+                .unwrap()
+                .is_empty()
+        );
     }
 }

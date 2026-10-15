@@ -115,18 +115,11 @@ pub async fn scan_file_preview() -> Result<JsValue, String> {
         .map_err(js_error)
 }
 
-// 在 extern 區塊外加入：只向 UI 傳群組與警告數量。
-#[derive(serde::Deserialize)]
-struct DuplicatePreviewCounts {
-    groups: Vec<serde::de::IgnoredAny>,
-    warnings: Vec<serde::de::IgnoredAny>,
-}
-
-pub async fn scan_duplicate_preview() -> Result<(usize, usize), String> {
+pub async fn scan_duplicate_preview() -> Result<String, String> {
     let value = JsFuture::from(scan_duplicate_preview_js())
         .await
         .map_err(js_error)?;
-    let result: DuplicatePreviewCounts =
+    let result: crate::duplicate_preview::DuplicatePreviewView =
         serde_wasm_bindgen::from_value(value).map_err(|e| e.to_string())?;
-    Ok((result.groups.len(), result.warnings.len()))
+    Ok(result.summary())
 }

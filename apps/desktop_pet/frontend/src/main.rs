@@ -1,5 +1,6 @@
 mod bridge;
 mod component;
+mod duplicate_preview;
 
 pub use component::*;
 
@@ -33,6 +34,7 @@ fn App() -> impl IntoView {
     let (chat_error, set_chat_error) = signal::<Option<String>>(None);
 
     let (duplicate_status, set_duplicate_status) = signal::<Option<String>>(None);
+    let (duplicate_loading, set_duplicate_loading) = signal(false);
 
     {
         let snapshot_reader = snapshot;
@@ -111,19 +113,29 @@ fn App() -> impl IntoView {
 
             <button
                 type="button"
+                disabled=move || duplicate_loading.get()
                 on:click=move |_| {
+                    // 清除過時預覽；同時只允許一次使用者請求。
+                    if duplicate_loading.get_untracked() { return; }
+                    set_duplicate_loading.set(true);
+                    set_duplicate_status.set(None);
+                    set_error.set(None);
                     spawn_local(async move {
                         match bridge::scan_duplicate_preview().await {
-                        Ok((groups, warnings)) => set_duplicate_status.set(Some(
-                            format!("SHA256 重複群組：{groups}；掃描警告：{warnings}")
-                        )),
-                        Err(message) => set_error.set(Some(message)),
-                    }
-                });
+                            Ok(summary) => set_duplicate_status.set(Some(summary)),
+                            Err(message) => set_error.set(Some(message)),
+                        }
+                        set_duplicate_loading.set(false);
+                    });
                 }
             >"檢查重複檔案"</button>
+            <Show when=move || duplicate_loading.get() fallback=|| ()>
+                <p role="status">"正在檢查重複檔案…"</p>
+            </Show>
             <Show when=move || duplicate_status.get().is_some() fallback=|| ()>
-                <p>{move || duplicate_status.get().unwrap_or_default()}</p>
+                <pre class="duplicate-preview" role="status">
+                    {move || duplicate_status.get().unwrap_or_default()}
+                </pre>
             </Show>
 
             <ErrorMessage error />

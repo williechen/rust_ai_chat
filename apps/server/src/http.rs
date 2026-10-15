@@ -20,19 +20,116 @@ pub async fn health(State(state): State<AppState>) -> Json<HealthResponse> {
 pub async fn create_room(
     State(state): State<AppState>,
     Json(request): Json<CreateRoomRequest>,
-) -> Result<Json<CreateRoomResponse>, StatusCode> {
-    let room_id = uuid::Uuid::new_v4().to_string();
-
+) -> Result<(StatusCode, Json<CreateRoomResponse>), StatusCode> {
+    // 與成品相同：長度採 UTF-8 位元組，拒絕全空白與 NUL。
+    if request.name.trim().is_empty() || request.name.len() > 200 || request.name.contains('\0') {
+        return Err(StatusCode::BAD_REQUEST);
+    }
     let room = chat_application::create_room(
         state.room_repository.as_ref(),
         chat_application::CreateRoom {
-            id: room_id,
+            id: uuid::Uuid::new_v4().to_string(),
             category_room_id: "default-category".to_string(),
             name: request.name,
         },
     )
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    // Repository 成功才回 201；JSON 契約仍只含既有 id。
+    Ok((
+        StatusCode::CREATED,
+        Json(CreateRoomResponse { id: room.id }),
+    ))
+}
 
-    Ok(Json(CreateRoomResponse { id: room.id }))
+#[cfg(test)]
+mod room_http_tests {
+    use super::*;
+    use axum::response::IntoResponse;
+    use std::sync::Arc;
+
+    async fn fixture() -> (AppState, sqlx::SqlitePool) {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        persistence::migrate(&pool).await.unwrap();
+        let state = AppState::new(
+            leptos_config::get_configuration(None)
+                .unwrap()
+                .leptos_options,
+            Arc::new(persistence::SqliteRoomRepository::new(pool.clone())),
+            Arc::new(persistence::SqliteMessageRepository::new(pool.clone())),
+        );
+        (state, pool)
+    }
+
+    #[tokio::test]
+    async fn invalid_room_names_never_write() {
+        let (state, pool) = fixture().await;
+        for name in [
+            "".to_string(),
+            " \n\t".into(),
+            "a\0b".into(),
+            "x".repeat(201),
+            "房".repeat(67),
+        ] {
+            let response = create_room(State(state.clone()), Json(CreateRoomRequest { name }))
+                .await
+                .into_response();
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        }
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM rooms")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 0);
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    async fn valid_room_returns_201_and_saved_id() {
+        let (state, pool) = fixture().await;
+        let name = " 房間 ".to_string();
+        let response = create_room(State(state), Json(CreateRoomRequest { name: name.clone() }))
+            .await
+            .into_response();
+        assert_eq!(response.status(), StatusCode::CREATED);
+        let body = axum::body::to_bytes(response.into_body(), 4096)
+            .await
+            .unwrap();
+        let created: CreateRoomResponse = serde_json::from_slice(&body).unwrap();
+        assert!(uuid::Uuid::parse_str(&created.id).is_ok());
+        let row: (String, String) =
+            sqlx::query_as("SELECT name, category_room_id FROM rooms WHERE id = ?1")
+                .bind(created.id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        // 保留原名稱；trim 只檢查是否全為空白。
+        assert_eq!(row.0, name);
+        assert_eq!(row.1, "default-category");
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    async fn database_failure_is_not_created() {
+        let (state, pool) = fixture().await;
+        pool.close().await;
+        let response = create_room(
+            State(state.clone()),
+            Json(CreateRoomRequest {
+                name: "有效名稱".into(),
+            }),
+        )
+        .await
+        .into_response();
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        // 即使 DB 關閉，無效輸入仍應先被拒絕。
+        let response = create_room(State(state), Json(CreateRoomRequest { name: " ".into() }))
+            .await
+            .into_response();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
 }

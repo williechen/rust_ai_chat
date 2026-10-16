@@ -435,3 +435,174 @@ mod source_summary_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod source_kind_summary_tests {
+    use super::*;
+    use axum::extract::Path;
+
+    fn state(pool: PgPool) -> IngestState {
+        IngestState {
+            pool,
+            tokens: Arc::new(IngestTokens {
+                chat: "fixture-chat-only".into(),
+                pet: "fixture-pet-only".into(),
+            }),
+        }
+    }
+
+    fn headers(token: &str) -> HeaderMap {
+        let mut value = HeaderMap::new();
+        value.insert(AUTHORIZATION, format!("Bearer {token}").parse().unwrap());
+        value
+    }
+
+    #[tokio::test]
+    async fn authorization_and_filter_validation_precede_database_access() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://fixture:fixture@127.0.0.1:1/unused")
+            .unwrap();
+        pool.close().await;
+        let state = state(pool);
+        for (source, kind, token, expected) in [
+            (
+                "desktop_pet",
+                "chat.message.persisted",
+                "fixture-chat-only",
+                StatusCode::UNAUTHORIZED,
+            ),
+            (
+                "web_chat",
+                "chat.message.persisted",
+                "",
+                StatusCode::UNAUTHORIZED,
+            ),
+            (
+                "unknown",
+                "chat.message.persisted",
+                "fixture-chat-only",
+                StatusCode::BAD_REQUEST,
+            ),
+            (
+                "web_chat",
+                " ",
+                "fixture-chat-only",
+                StatusCode::BAD_REQUEST,
+            ),
+            (
+                "web_chat",
+                "a\0b",
+                "fixture-chat-only",
+                StatusCode::BAD_REQUEST,
+            ),
+            (
+                "web_chat",
+                "chat.message.persisted",
+                "fixture-chat-only",
+                StatusCode::SERVICE_UNAVAILABLE,
+            ),
+        ] {
+            assert_eq!(
+                source_kind_summary(
+                    State(state.clone()),
+                    Path((source.into(), kind.into())),
+                    headers(token),
+                )
+                .await
+                .unwrap_err(),
+                expected
+            );
+        }
+    }
+
+    #[cfg(feature = "postgres-integration")]
+    #[sqlx::test(migrations = "./migrations")]
+    async fn filters_committed_deduplicated_rows_by_source_and_kind(pool: PgPool) {
+        let shared_id = Uuid::new_v4();
+        for (source, id, kind) in [
+            ("web_chat", shared_id, "chat.message.persisted"),
+            ("web_chat", Uuid::new_v4(), "chat.message.persisted"),
+            ("web_chat", Uuid::new_v4(), "chat.room.created"),
+            ("desktop_pet", shared_id, "chat.message.persisted"),
+        ] {
+            let event = EventInput {
+                schema_version: 1,
+                event_id: id,
+                source_app: source.into(),
+                event_type: kind.into(),
+            };
+            assert_eq!(
+                pg_store::persist_event(&pool, &event).await.unwrap(),
+                PersistOutcome::Stored
+            );
+            assert_eq!(
+                pg_store::persist_event(&pool, &event).await.unwrap(),
+                PersistOutcome::AlreadyExists
+            );
+        }
+        let state = state(pool.clone());
+        let Json(rows) = source_kind_summary(
+            State(state),
+            Path(("web_chat".into(), "chat.message.persisted".into())),
+            headers("fixture-chat-only"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].source_app, "web_chat");
+        assert_eq!(rows[0].event_type, "chat.message.persisted");
+        assert_eq!(rows[0].total, 2);
+        // SQL 字元視為資料，不變成跨來源的查詢條件。
+        assert!(
+            pg_store::summary_for_source_and_type(&pool, "web_chat", "' OR TRUE --")
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            pg_store::summary_for_source_and_type(&pool, "web_chat", "not.recorded")
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        // 原 Day 13 的未篩選查詢仍可使用。
+        assert_eq!(
+            pg_store::summary_for_source(&pool, "web_chat")
+                .await
+                .unwrap()
+                .len(),
+            2
+        );
+
+        let mut tx = pool.begin().await.unwrap();
+        sqlx::query(
+            "INSERT INTO product_events(source_app,event_id,schema_version,event_type)
+             VALUES ('web_chat',$1,1,'chat.message.persisted')",
+        )
+        .bind(Uuid::new_v4().to_string())
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+        tx.rollback().await.unwrap();
+        assert_eq!(
+            pg_store::summary_for_source_and_type(&pool, "web_chat", "chat.message.persisted")
+                .await
+                .unwrap()[0]
+                .total,
+            2
+        );
+
+        sqlx::query(
+            "ALTER TABLE product_events ALTER COLUMN event_id TYPE UUID USING event_id::uuid",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            pg_store::summary_for_source_and_type(&pool, "web_chat", "chat.message.persisted")
+                .await
+                .unwrap(),
+            rows
+        );
+    }
+}

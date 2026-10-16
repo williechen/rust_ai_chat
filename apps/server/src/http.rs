@@ -133,3 +133,84 @@ mod room_http_tests {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 }
+
+#[cfg(test)]
+mod room_details_tests {
+    use super::*;
+    use axum::{extract::Path, response::IntoResponse};
+    use std::sync::Arc;
+
+    async fn fixture() -> (AppState, sqlx::SqlitePool) {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        persistence::migrate(&pool).await.unwrap();
+        let rooms = Arc::new(persistence::SqliteRoomRepository::new(pool.clone()));
+        chat_application::create_room(
+            rooms.as_ref(),
+            chat_application::CreateRoom {
+                id: "room-14".into(),
+                category_room_id: "category-14".into(),
+                name: "第十四天房間".into(),
+            },
+        )
+        .await
+        .unwrap();
+        let state = AppState::new(
+            leptos_config::get_configuration(None)
+                .unwrap()
+                .leptos_options,
+            rooms,
+            Arc::new(persistence::SqliteMessageRepository::new(pool.clone())),
+        );
+        (state, pool)
+    }
+
+    #[tokio::test]
+    async fn returns_exact_saved_room_without_writing() {
+        let (state, pool) = fixture().await;
+        let response = get_room(State(state.clone()), Path("room-14".into()))
+            .await
+            .into_response();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), 4096)
+            .await
+            .unwrap();
+        let room: RoomDetails = serde_json::from_slice(&body).unwrap();
+        assert_eq!(room.id, "room-14");
+        assert_eq!(room.category_room_id, "category-14");
+        assert_eq!(room.name, "第十四天房間");
+        assert_eq!(
+            get_room(State(state), Path("absent".into()))
+                .await
+                .unwrap_err(),
+            StatusCode::NOT_FOUND
+        );
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM rooms")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 1);
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    async fn invalid_input_and_database_failure_are_distinct() {
+        let (state, pool) = fixture().await;
+        pool.close().await;
+        for id in [" ".to_string(), "x".repeat(41), "a\0b".into()] {
+            assert_eq!(
+                get_room(State(state.clone()), Path(id)).await.unwrap_err(),
+                StatusCode::BAD_REQUEST
+            );
+        }
+        assert_eq!(
+            get_room(State(state), Path("room-14".into()))
+                .await
+                .unwrap_err(),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+    }
+}

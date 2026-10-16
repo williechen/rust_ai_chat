@@ -1,6 +1,7 @@
 mod bridge;
 mod component;
 mod duplicate_preview;
+mod file_scan_view;
 
 pub use component::*;
 

@@ -108,11 +108,13 @@ pub async fn chat_with_pet(message: String) -> Result<String, String> {
         .ok_or_else(|| "Failed to convert chat_with_pet result to string".to_string())
 }
 
-// 掃描檔案預覽
-pub async fn scan_file_preview() -> Result<JsValue, String> {
-    JsFuture::from(scan_file_preview_js())
+pub async fn scan_file_preview() -> Result<String, String> {
+    let value = JsFuture::from(scan_file_preview_js())
         .await
-        .map_err(js_error)
+        .map_err(js_error)?;
+    let view: crate::file_scan_view::FileScanView =
+        serde_wasm_bindgen::from_value(value).map_err(|error| error.to_string())?;
+    Ok(view.summary())
 }
 
 pub async fn scan_duplicate_preview() -> Result<String, String> {

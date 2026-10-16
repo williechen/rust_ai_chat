@@ -37,6 +37,9 @@ fn App() -> impl IntoView {
     let (duplicate_status, set_duplicate_status) = signal::<Option<String>>(None);
     let (duplicate_loading, set_duplicate_loading) = signal(false);
 
+    let (scan_loading, set_scan_loading) = signal(false);
+    let (scan_status, set_scan_status) = signal::<Option<String>>(None);
+
     {
         let snapshot_reader = snapshot;
         let snapshot_writer = set_snapshot;
@@ -59,15 +62,6 @@ fn App() -> impl IntoView {
                     apply_snapshot(incoming, snapshot_reader, snapshot_writer);
                 }
 
-                Err(message) => {
-                    error_writer.set(Some(message));
-                }
-            }
-        });
-
-        spawn_local(async move {
-            match bridge::scan_file_preview().await {
-                Ok(_) => {}
                 Err(message) => {
                     error_writer.set(Some(message));
                 }
@@ -114,10 +108,35 @@ fn App() -> impl IntoView {
 
             <button
                 type="button"
-                disabled=move || duplicate_loading.get()
+                disabled=move || scan_loading.get() || duplicate_loading.get()
+                on:click=move |_| {
+                    if scan_loading.get_untracked() || duplicate_loading.get_untracked() { return; }
+                    set_scan_loading.set(true);
+                    set_scan_status.set(None);
+                    set_error.set(None);
+                    spawn_local(async move {
+                        match bridge::scan_file_preview().await {
+                            Ok(summary) => set_scan_status.set(Some(summary)),
+                            // 不把平台錯誤中的私人路徑顯示於畫面。
+                            Err(_) => set_error.set(Some("掃描失敗，請確認已授權目錄後重試。".into())),
+                        }
+                        set_scan_loading.set(false);
+                    });
+                }
+            >"預覽授權目錄"</button>
+            <Show when=move || scan_loading.get() fallback=|| ()>
+                <p role="status">"正在掃描授權目錄…"</p>
+            </Show>
+            <Show when=move || scan_status.get().is_some() fallback=|| ()>
+                <p role="status">{move || scan_status.get().unwrap_or_default()}</p>
+            </Show>
+
+            <button
+                type="button"
+                disabled=move || duplicate_loading.get() || scan_loading.get()
                 on:click=move |_| {
                     // 清除過時預覽；同時只允許一次使用者請求。
-                    if duplicate_loading.get_untracked() { return; }
+                    if duplicate_loading.get_untracked() || scan_loading.get_untracked()  { return; }
                     set_duplicate_loading.set(true);
                     set_duplicate_status.set(None);
                     set_error.set(None);

@@ -164,11 +164,40 @@ async fn source_summary(
     Ok(Json(rows))
 }
 
+async fn source_kind_summary(
+    State(state): State<IngestState>,
+    axum::extract::Path((source, event_type)): axum::extract::Path<(String, String)>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<pg_store::EventSummary>>, StatusCode> {
+    if !matches!(source.as_str(), "web_chat" | "desktop_pet") {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let authorization = headers
+        .get(AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    // 先授權來源，不能用 Chat 憑證讀取 Pet。
+    if !state.tokens.authorized(&source, authorization) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    if !valid_event_type(&event_type) || event_type.contains('\0') {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let rows = pg_store::summary_for_source_and_type(&state.pool, &source, &event_type)
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    Ok(Json(rows))
+}
+
 pub fn build_app(state: IngestState) -> Router {
     Router::new()
         .route("/healthz", get(health))
         .route("/api/v1/events", post(ingest))
         .route("/api/v1/events/{source}/summary", get(source_summary))
+        .route(
+            "/api/v1/events/{source}/summary/{event_type}",
+            get(source_kind_summary),
+        )
         .with_state(state)
         .layer(DefaultBodyLimit::max(4096))
 }

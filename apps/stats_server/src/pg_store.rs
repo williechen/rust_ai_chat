@@ -91,3 +91,21 @@ pub async fn summary_for_source(
     .fetch_all(pool)
     .await
 }
+
+pub async fn summary_for_source_and_type(
+    pool: &PgPool,
+    source: &str,
+    event_type: &str,
+) -> Result<Vec<EventSummary>, sqlx::Error> {
+    // 兩個值都綁定；不把 URL 內容拼入 SQL。
+    sqlx::query_as::<_, EventSummary>(
+        "SELECT source_app, event_type, COUNT(*)::bigint AS total
+         FROM product_events
+         WHERE source_app = $1 AND event_type = $2
+         GROUP BY source_app, event_type",
+    )
+    .bind(source)
+    .bind(event_type)
+    .fetch_all(pool)
+    .await
+}

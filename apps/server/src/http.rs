@@ -42,6 +42,38 @@ pub async fn create_room(
     ))
 }
 
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct RoomDetails {
+    pub id: String,
+    pub category_room_id: String,
+    pub name: String,
+}
+
+pub async fn get_room(
+    State(state): State<AppState>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> Result<Json<RoomDetails>, StatusCode> {
+    // 沿用既有 ID 契約，不要求歷史 ID 必須是 UUID。
+    if id.trim().is_empty() || id.len() > 40 || id.contains('\0') {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let room = state
+        .room_repository
+        .find_by_id(&id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    // Adapter 回傳錯誤房間時不洩漏該房間資料。
+    if room.id != id {
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+    Ok(Json(RoomDetails {
+        id: room.id,
+        category_room_id: room.category_room_id,
+        name: room.name,
+    }))
+}
+
 #[cfg(test)]
 mod room_http_tests {
     use super::*;

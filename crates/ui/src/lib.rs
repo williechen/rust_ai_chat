@@ -247,3 +247,19 @@ fn RoomList() -> impl IntoView {
         </section>
     }
 }
+
+#[cfg(test)]
+mod day16_room_search_tests {
+    use super::filter_rooms;
+
+    #[test]
+    fn search_matches_chinese_names_and_preserves_ids() {
+        let rooms = vec![
+            ("room_1".to_owned(), "Rust 技術交流".to_owned()),
+            ("room_2".to_owned(), "生活閒聊".to_owned()),
+        ];
+        assert_eq!(filter_rooms(&rooms, " 技術 "), vec![rooms[0].clone()]);
+        assert_eq!(filter_rooms(&rooms, ""), rooms);
+        assert!(filter_rooms(&rooms, "不存在").is_empty());
+    }
+}

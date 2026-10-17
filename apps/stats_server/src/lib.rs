@@ -640,3 +640,26 @@ mod source_kind_summary_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod day16_total_tests {
+    use super::summary_total;
+    use pg_store::EventSummary;
+
+    #[test]
+    fn total_uses_actual_committed_summary_counts() {
+        let rows = vec![
+            EventSummary {
+                source_app: "web_chat".to_owned(),
+                event_type: "chat.message.persisted".to_owned(),
+                total: 2,
+            },
+            EventSummary {
+                source_app: "web_chat".to_owned(),
+                event_type: "chat.room.created".to_owned(),
+                total: 3,
+            },
+        ];
+        assert_eq!(summary_total(&rows), Some(5));
+    }
+}

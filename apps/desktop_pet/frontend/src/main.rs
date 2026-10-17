@@ -208,3 +208,15 @@ fn ErrorMessage(error: ReadSignal<Option<String>>) -> impl IntoView {
         </Show>
     }
 }
+
+#[cfg(test)]
+mod day16_scan_generation_tests {
+    use super::accept_scan_result;
+
+    #[test]
+    fn canceled_or_superseded_scan_cannot_restore_preview() {
+        assert!(accept_scan_result(3, 3));
+        assert!(!accept_scan_result(2, 3));
+        assert!(!accept_scan_result(3, 4));
+    }
+}

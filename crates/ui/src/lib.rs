@@ -222,6 +222,15 @@ fn RoomList() -> impl IntoView {
     let (loading, set_loading) = signal(false);
     let (status, set_status) = signal(String::from("請讀取房間列表"));
 
+    let query_room = move || {
+        if query.get().trim().is_empty() {
+            return;
+        }
+        set_loading.set(true);
+        set_rows.set(Vec::new());
+        set_status.set("查詢中…".into());
+    };
+
     view! {
         <section>
             <h2>"房間列表"</h2>
@@ -232,6 +241,13 @@ fn RoomList() -> impl IntoView {
                 prop:value=move || query.get()
                 on:input=move |event| set_query.set(event_target_value(&event))
             />
+
+            <button
+                type="button"
+                disabled=move || loading.get()
+                on:click=move |_| { query_room() }
+            >"查詢房間"</button>
+
             <button
                 type="button"
                 disabled=move || loading.get()

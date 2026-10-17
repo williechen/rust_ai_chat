@@ -4557,9 +4557,14 @@ version = "0.2.15"
 dependencies = [
  "axum",
  "dotenv",
+ "leptos",
  "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "shared",
  "sqlx",
  "tokio",
+ "tower",
  "uuid",
 ]
 

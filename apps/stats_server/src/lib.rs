@@ -1,12 +1,11 @@
+pub mod admin;
 pub mod pg_store;
 
 use axum::{
     Json, Router,
-    extract::DefaultBodyLimit,
     extract::State,
     http::StatusCode,
     http::{HeaderMap, header::AUTHORIZATION},
-    routing::{get, post},
 };
 use serde::Deserialize;
 use uuid::Uuid;
@@ -142,6 +141,21 @@ pub async fn ingest(
     }
 }
 
+fn summary_total(rows: &[pg_store::EventSummary]) -> Option<i64> {
+    rows.iter().try_fold(0_i64, |sum, row| {
+        if row.total < 0 {
+            None
+        } else {
+            sum.checked_add(row.total)
+        }
+    })
+}
+
+pub fn build_app(state: IngestState) -> Router {
+    admin::build(state, None)
+}
+
+#[cfg(test)]
 async fn source_summary(
     State(state): State<IngestState>,
     axum::extract::Path(source): axum::extract::Path<String>,
@@ -164,6 +178,7 @@ async fn source_summary(
     Ok(Json(rows))
 }
 
+#[cfg(test)]
 async fn source_kind_summary(
     State(state): State<IngestState>,
     axum::extract::Path((source, event_type)): axum::extract::Path<(String, String)>,
@@ -187,24 +202,6 @@ async fn source_kind_summary(
         .await
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     Ok(Json(rows))
-}
-
-async fn dashboard() -> axum::response::Html<&'static str> {
-    axum::response::Html(include_str!("dashboard.html"))
-}
-
-pub fn build_app(state: IngestState) -> Router {
-    Router::new()
-        .route("/healthz", get(health))
-        .route("/dashboard", get(dashboard))
-        .route("/api/v1/events", post(ingest))
-        .route("/api/v1/events/{source}/summary", get(source_summary))
-        .route(
-            "/api/v1/events/{source}/summary/{event_type}",
-            get(source_kind_summary),
-        )
-        .with_state(state)
-        .layer(DefaultBodyLimit::max(4096))
 }
 
 #[cfg(test)]
@@ -643,6 +640,8 @@ mod source_kind_summary_tests {
 
 #[cfg(test)]
 mod day16_total_tests {
+    use crate::pg_store;
+
     use super::summary_total;
     use pg_store::EventSummary;
 

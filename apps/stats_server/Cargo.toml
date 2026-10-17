@@ -3,18 +3,25 @@ name = "stats-server"
 version.workspace = true
 edition.workspace = true
 
+[features]
+postgres-integration = []
+
 [dependencies]
 axum.workspace = true
 
 dotenv.workspace = true
 
+leptos = { workspace = true, features = ["ssr"] }
+
 serde.workspace = true
+sha2.workspace = true
 sqlx.workspace = true
 
 tokio.workspace = true
 
 uuid.workspace = true
 
-
-[features]
-postgres-integration = []
+[dev-dependencies]
+shared = { path = "../../crates/shared" }
+serde_json.workspace = true
+tower = { version = "0.5", features = ["util"] }

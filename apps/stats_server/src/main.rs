@@ -1,4 +1,4 @@
-use stats_server::{IngestState, IngestTokens, admin, build_app};
+use stats_server::{IngestState, IngestTokens, admin};
 use std::sync::Arc;
 
 #[tokio::main]

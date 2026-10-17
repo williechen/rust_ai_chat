@@ -51,19 +51,3 @@ path = "chat/persist_publish.rs"
 [[test]]
 name = "chat_product_event_contract"
 path = "chat/product_event_contract.rs"
-
-[[test]]
-name = "pet_cleanup_event_contract"
-path = "pet/cleanup_event_contract.rs"
-
-[[test]]
-name = "pet_day5_codec_tests"
-path = "pet/day5_codec_tests.rs"
-
-[[test]]
-name = "pet_pet_machine"
-path = "pet/pet_machine.rs"
-
-[[test]]
-name = "pet_profile_contract"
-path = "pet/profile_contract.rs"

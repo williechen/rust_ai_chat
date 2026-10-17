@@ -139,6 +139,8 @@ fn App() -> impl IntoView {
                 disabled=move || scan_loading.get() || duplicate_loading.get()
                 on:click=move |_| {
                     if scan_loading.get_untracked() || duplicate_loading.get_untracked() { return; }
+                    let request = generation.get_untracked().wrapping_add(1);
+                    set_generation.set(request);
                     set_scan_loading.set(true);
                     set_scan_status.set(None);
                     set_error.set(None);
@@ -147,7 +149,12 @@ fn App() -> impl IntoView {
                     set_scan_status.set(None);
                     set_duplicate_status.set(None);
                     spawn_local(async move {
-                        match bridge::scan_file_preview().await {
+                        let result = bridge::scan_file_preview().await;
+                        set_scan_loading.set(false);
+                        if !accept_scan_result(request, generation.get_untracked()) {
+                            return;
+                        }
+                        match result {
                             Ok(summary) => set_scan_status.set(Some(summary)),
                             // 不把平台錯誤中的私人路徑顯示於畫面。
                             Err(_) => set_error.set(Some("掃描失敗，請確認已授權目錄後重試。".into())),
@@ -169,6 +176,8 @@ fn App() -> impl IntoView {
                 on:click=move |_| {
                     // 清除過時預覽；同時只允許一次使用者請求。
                     if duplicate_loading.get_untracked() || scan_loading.get_untracked()  { return; }
+                    let request = generation.get_untracked().wrapping_add(1);
+                    set_generation.set(request);
                     set_duplicate_loading.set(true);
                     set_duplicate_status.set(None);
                     set_error.set(None);
@@ -177,9 +186,14 @@ fn App() -> impl IntoView {
                     set_scan_status.set(None);
                     set_duplicate_status.set(None);
                     spawn_local(async move {
-                        match bridge::scan_duplicate_preview().await {
+                        let result = bridge::scan_duplicate_preview().await;
+                        set_duplicate_loading.set(false);
+                        if !accept_scan_result(request, generation.get_untracked()) {
+                            return;
+                        }
+                        match result {
                             Ok(summary) => set_duplicate_status.set(Some(summary)),
-                            Err(message) => set_error.set(Some(message)),
+                            Err(_) => set_error.set(Some("預覽失敗，請確認授權目錄後重試。".into())),
                         }
                         set_duplicate_loading.set(false);
                     });

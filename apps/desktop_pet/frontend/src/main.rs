@@ -9,6 +9,10 @@ use leptos::mount::mount_to_body;
 use leptos::{prelude::*, task::spawn_local};
 use pet_domain::PetSnapshot;
 
+fn accept_scan_result(request_generation: u64, current_generation: u64) -> bool {
+    request_generation == current_generation
+}
+
 fn main() {
     mount_to_body(|| {
         view! {
@@ -42,6 +46,7 @@ fn App() -> impl IntoView {
 
     // 放在 App 的 signals 區塊；確認只針對目前顯示的掃描結果。
     let (confirmed, set_confirmed) = signal(false);
+    let (generation, set_generation) = signal(0_u64);
 
     {
         let snapshot_reader = snapshot;
@@ -72,17 +77,36 @@ fn App() -> impl IntoView {
         });
     }
 
+    if bridge::is_pet_window() {
+        return view! {
+            <main class="pet-life">
+                <DragHandle />
+                <BlinkController
+                    snapshot
+                    set_blinking
+                />
+                <AnimationClock set_animation_phase />
+                <PetStatus snapshot blinking animation_phase />
+                <button
+                    type="button"
+                    on:click=move |_| spawn_local(async move{
+                        if bridge::open_controls().await.is_err(){
+                            set_error.set(Some("無法開啟控制台".into()));
+                        }
+                    })
+                >"確認"</button>
+            </main>
+        }
+        .into_any();
+    }
+
     view! {
-        <main class="pet-shell">
-            <DragHandle />
+        <main class="control-shell">
+            <h1>"寵物控制台"</h1>
+            <p>"控制台關閉後寵物仍運作；檔案功能目前只提供唯讀預覽"</p>
 
-            <BlinkController
-                snapshot
-                set_blinking
-            />
-            <AnimationClock set_animation_phase />
-
-            <PetStatus snapshot blinking animation_phase />
+            <h2>"互動與聊天"</h2>
+            <p>{move || snapshot.get().map(|s| format!("目前狀態: {:?}, 最近更新: {:?}", s.state, s.revision)).unwrap_or_else(|| "讀取中…".into())}</p>
 
             <PetControls
                 snapshot
@@ -109,6 +133,7 @@ fn App() -> impl IntoView {
                  set_chat_error
             />
 
+            <h2>"檔案管理"</h2>
             <button
                 type="button"
                 disabled=move || scan_loading.get() || duplicate_loading.get()
@@ -187,8 +212,15 @@ fn App() -> impl IntoView {
             </Show>
 
             <ErrorMessage error />
+
+            <button 
+                type="button"
+                on:click=move |_| spawn_local(async move {
+                    let _ = bridge::quit_pet().await;
+                })
+            >"寵物回寵了"</button>
         </main>
-    }
+    }.into_any()
 }
 
 #[component]

@@ -90,8 +90,28 @@ fn scan_duplicate_preview() -> Result<file_organizer::DuplicatePreview, String> 
     Ok(file_organizer::duplicate_preview(&scan))
 }
 
+#[tauri::command]
+fn open_control_window(app: tauri::AppHandle) -> Result<(), String> {
+    let window = app.get_webview_window("main").ok_or("控制視窗不存在")?;
+    window.show().map_err(|_| "無法顯示控制視窗")?;
+    window.set_focus().map_err(|_| "無法聚焦控制視窗".into())
+}
+
+#[tauri::command]
+fn quit_pet(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
 pub fn application() {
     tauri::Builder::default()
+        .on_window_event(|window, event| {
+            if window.label() == "main" {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .manage(Mutex::new(PetMachine::default()))
         .manage(AiState::new(Arc::new(MockChatModel)))
         .setup(|app| {
@@ -103,6 +123,10 @@ pub fn application() {
              * 才能 dispatch PetCommand。
              */
             app.on_menu_event(|app_handle, event| {
+                if event.id().0.as_str() == "open_control" {
+                    let _ = open_control_window(app_handle.clone());
+                    return;
+                }
                 let command = match event.id().0.as_str() {
                     "interact" => Some(PetCommand::Interact),
                     "sleep" => Some(PetCommand::Sleep),
@@ -134,7 +158,9 @@ pub fn application() {
             send_pet_command,
             chat_with_pet,
             scan_file_preview,
-            scan_duplicate_preview
+            scan_duplicate_preview,
+            open_control_window,
+            quit_pet,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Rust AI Desktop Pet");

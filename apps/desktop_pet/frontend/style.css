@@ -9,7 +9,8 @@ html, body {
 body {
   display: grid;
   place-items: center;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: system-ui, 
+  -apple-system, sans-serif;
 }
 
 .pet-shell {
@@ -106,4 +107,96 @@ button {
 
 .chat-trigger {
   cursor: pointer;
+}
+/* ife and controls occupy different native windows. */
+html,body{
+  margin:0;
+  min-height:100%;
+  font-family:system-ui
+}
+
+body{
+  overflow:auto
+}
+
+.control-shell{
+  box-sizing:border-box;
+  max-width:960px;
+  padding:20px;
+  margin:auto;
+  background:#f5f7fb;
+  color:#243247;
+  min-height:100vh;
+}
+
+.control-shell button{
+  margin:6px;
+  padding:10px;
+  max-width:100%;
+  height:auto;
+  white-space:normal;
+}
+
+.control-shell p,
+.control-shell pre{
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  max-width:100%;
+}
+
+.control-shell .chat-bubble{
+  position:static;
+  inset:auto;
+  width:auto;
+  max-width:100%;
+  margin:16px 0;
+  box-sizing:border-box;
+}
+
+.pet-life{
+    box-sizing:border-box;
+    width:200px;
+    height:200px;
+    overflow:hidden;
+    text-align:center;
+    background:transparent;
+    padding:4px;
+}
+
+.pet-life .pet-face{
+  font-size:44px;
+}
+
+.pet-life button{
+  padding:5px;
+}
+
+.pet-life .error{
+  font-size:11px;
+}
+
+body {
+  display:block
+}
+
+.control-shell .chat-bubble{
+  background:white;
+  color:#243247;
+}
+
+.pet-life{
+  color:#26384e;
+}
+
+.pet-life .pet-status{
+  gap:3px;
+  margin:0;
+}
+
+.pet-life .drag-handle{
+  height:18px;
+}
+
+.pet-life .pet-face{
+  line-height:50px;
 }

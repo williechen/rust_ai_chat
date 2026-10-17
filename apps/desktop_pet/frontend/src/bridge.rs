@@ -5,6 +5,25 @@ use wasm_bindgen_futures::JsFuture;
 
 #[wasm_bindgen]
 extern "C" {
+
+    #[wasm_bindgen(
+        js_namespace=window,
+        js_name = isPetWindow
+    )]
+    pub fn is_pet_window() -> bool;
+
+    #[wasm_bindgen(
+        js_namespace=window,
+        js_name = openPetControls
+    )]
+    pub fn open_controls_js() -> Promise;
+
+    #[wasm_bindgen(
+        js_namespace=window,
+        js_name = quitPet
+    )]
+    pub fn quit_pet_js() -> Promise;
+
     #[wasm_bindgen(
         js_namespace = window,
         js_name = getPetState
@@ -124,4 +143,16 @@ pub async fn scan_duplicate_preview() -> Result<String, String> {
     let result: crate::duplicate_preview::DuplicatePreviewView =
         serde_wasm_bindgen::from_value(value).map_err(|e| e.to_string())?;
     Ok(result.summary())
+}
+
+pub async fn open_controls() -> Result<(), String> {
+    JsFuture::from(open_controls_js()).await.map_err(js_error)?;
+
+    Ok(())
+}
+
+pub async fn quit_pet() -> Result<(), String> {
+    JsFuture::from(quit_pet_js()).await.map_err(js_error)?;
+
+    Ok(())
 }

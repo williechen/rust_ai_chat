@@ -36,6 +36,18 @@
       return invoke("chat_with_pet", { message });
     };
 
+    window.isPetWindow = () => {
+      return new URLSearchParams(window.location.search).get("view") === "pet";
+    };
+
+    window.openPetControls = () => {
+      return invoke("open_control_window");
+    };
+
+    window.quitPet = () => {
+      return invoke("quit_pet");
+    };
+
     let petContextMenu = null;
 
     async function getPetContextMenu() {

@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Rust AI Desktop Pet",
-  "version": "0.2.11",
+  "version": "0.2.16",
   "identifier": "dev.rustai.desktop-pet",
   "build": { 
     "devUrl": "http://localhost:1420",
@@ -18,11 +18,21 @@
   "app": {
     "withGlobalTauri": true,
     "windows": [
-      { 
+      {
         "label": "main",
-        "title": "Rust AI Desktop Pet",
-        "width": 320,
-        "height": 360,
+        "title": "Pet 控制台",
+        "width": 800,
+        "height": 680,
+        "minWidth": 360,
+        "minHeight": 420,
+        "resizable": true
+      },
+      {
+        "label": "pet",
+        "title": "Pet 生活",
+        "url": "index.html?view=pet",
+        "width": 200,
+        "height": 200,
         "resizable": false,
         "decorations": false,
         "transparent": true,

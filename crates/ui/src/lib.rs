@@ -32,6 +32,14 @@ fn author_label(author: &MessageAuthor) -> String {
     }
 }
 
+fn filter_rooms(rows: &[(String, String)], query: &str) -> Vec<(String, String)> {
+    let needle = query.trim().to_lowercase();
+    rows.iter()
+        .filter(|(_, name)| name.to_lowercase().contains(&needle))
+        .cloned()
+        .collect()
+}
+
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
         <!DOCTYPE html>
@@ -305,14 +313,6 @@ fn RoomList() -> impl IntoView {
             }).collect_view()}</ul>
         </section>
     }
-}
-
-fn filter_rooms(rows: &[(String, String)], query: &str) -> Vec<(String, String)> {
-    let needle = query.trim().to_lowercase();
-    rows.iter()
-        .filter(|(_, name)| name.to_lowercase().contains(&needle))
-        .cloned()
-        .collect()
 }
 
 #[cfg(test)]

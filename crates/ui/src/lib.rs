@@ -41,6 +41,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
                 <title>"Rust AI Chat"</title>
                 <HydrationScripts options />
+                <style>{include_str!("chat.css")}</style>
             </head>
             <body>
                 <App />
@@ -59,7 +60,7 @@ pub fn hydrate() {
 pub fn App() -> impl IntoView {
     view! {
         <Router>
-            <main>
+            <main class="app">
                 <h1>"Rust AI Chat"</h1>
                 <Routes fallback=|| view!{
                     <p>"404 - Page Not Found"</p>
@@ -134,7 +135,13 @@ fn RoomPage() -> impl IntoView {
         let room_id = params.read().get("room_id");
 
         match room_id {
-            Some(room_id) => view! { <ChatPage room_id /> }.into_any(),
+            Some(room_id) => view! {
+                <div class="chat-layout">
+                    <RoomList />
+                    <ChatPage room_id />
+                </div>
+            }
+            .into_any(),
             None => view! { <p>"Invalid Room Id"</p> }.into_any(),
         }
     }
@@ -144,29 +151,45 @@ fn RoomPage() -> impl IntoView {
 pub fn ChatPage(room_id: String) -> impl IntoView {
     let (draft, set_draft) = signal(String::new());
 
+    let (connection, set_connection) = signal(String::from("尚未連線"));
     let (messages, set_messages) = signal(Vec::<ChatMessage>::new());
+
+    let heading = room_id.clone();
 
     #[cfg(not(target_arch = "wasm32"))]
     let _ = set_messages;
 
     #[cfg(target_arch = "wasm32")]
     let socket = {
-        let url = format!("ws://localhost:3000/ws/{room_id}");
-        Rc::new(
-            ChatSocket::connect(&url, move |event| {
+        let location = web_sys::window().unwrap().location();
+        let protocol = if location.protocol().unwrap() == "https:" {
+            "wss"
+        } else {
+            "ws"
+        };
+        let url = format!("{protocol}://{}/ws/{room_id}", location.host().unwrap());
+        match ChatSocket::connect(
+            &url,
+            move |event| {
                 if let ServerEvent::MessageCreated(message) = event {
                     set_messages.update(|messages| messages.push(message));
                 }
-            })
-            .expect("Failed to connect to WebSocket"),
-        )
+            },
+            move |status| set_connection.set(status.into()),
+        ) {
+            Ok(socket) => Some(Rc::new(socket)),
+            Err(_) => {
+                set_connection.set("連線失敗，請重新進房".into());
+                None
+            }
+        }
     };
 
     #[cfg(not(target_arch = "wasm32"))]
-    let socket = Rc::new(ChatSocket::server_stub());
+    let socket = Some(Rc::new(ChatSocket::server_stub()));
 
     let send = {
-        let socket = Rc::clone(&socket);
+        let socket = socket.clone();
 
         move |_| {
             let room_id = room_id.clone();
@@ -179,16 +202,27 @@ pub fn ChatPage(room_id: String) -> impl IntoView {
 
             let event = ClientEvent::SendMessage { room_id, content };
 
-            if socket.send(&event).is_ok() {
-                set_draft.set(String::new());
+            match socket
+                .as_ref()
+                .ok_or_else(|| "尚未連線".to_string())
+                .and_then(|socket| socket.send(&event).map_err(|_| "發送失敗".to_string()))
+            {
+                Ok(()) => {
+                    set_draft.set(String::new());
+                    set_connection.set("已發送，等待回應...".into());
+                }
+                Err(_) => set_connection.set("發送失敗，請重新進房".into()),
             }
         }
     };
 
     view! {
-        <section>
-            <h2>"Room"</h2>
-            <ul>
+        <section class="conversation">
+            <header>
+                <h2>{format!("房間 {heading}")}</h2>
+                <p role="status">{move || connection.get()}</p>
+            </header>
+            <ul class="messages" aria-live="polite">
                 {move || messages.get().into_iter().map(|message|{
                     view! {
                         <li>
@@ -200,14 +234,17 @@ pub fn ChatPage(room_id: String) -> impl IntoView {
                     }}).collect_view()}
             </ul>
             <div>
-                <input
-                    type="text"
+                <textarea
+                    aria-label="聊天訊息"
                     placeholder="Type a message..."
                     prop:value=move || draft.get()
                     on:input=move |event| set_draft.set(event_target_value(&event))
                 />
 
-                <button type="button" on:click=send>"Send"</button>
+                <button
+                    type="button"
+                    disabled=move || draft.get().trim().is_empty()
+                    on:click=send>"Send"</button>
             </div>
         </section>
     }
@@ -215,30 +252,46 @@ pub fn ChatPage(room_id: String) -> impl IntoView {
 
 #[component]
 fn RoomList() -> impl IntoView {
+    let params = use_params_map();
+    let (query, set_query) = signal(String::new());
     let (rows, set_rows) = signal(Vec::<(String, String)>::new());
     let (loading, set_loading) = signal(false);
     let (status, set_status) = signal(String::from("請讀取房間列表"));
+
     view! {
         <section>
             <h2>"房間列表"</h2>
-            <button type="button" disabled=move || loading.get() on:click=move |_| {
-                if loading.get_untracked() { return; }
-                set_loading.set(true);
-                set_rows.set(Vec::new());
-                set_status.set("載入中…".into());
-                #[cfg(target_arch = "wasm32")]
-                wasm_bindgen_futures::spawn_local(async move {
-                    match room_api::list_rooms().await {
-                        Ok(value) => {
-                            set_status.set(if value.is_empty() { "尚無房間" } else { "請選擇房間" }.into());
-                            set_rows.set(value);
+            <a href="/" rel="external">"首頁"</a>
+            <input
+                type="search"
+                aria-label="搜尋房間"
+                placeholder="房間名稱"
+                prop:value=move || query.get()
+                on:input=move |event| set_query.set(event_target_value(&event))
+            />
+            <button
+                type="button"
+                disabled=move || loading.get()
+                on:click=move |_| {
+                    if loading.get_untracked() { return; }
+                    set_loading.set(true);
+                    set_rows.set(Vec::new());
+                    set_status.set("載入中…".into());
+
+                    #[cfg(target_arch = "wasm32")]
+                    wasm_bindgen_futures::spawn_local(async move {
+                        match room_api::list_rooms().await {
+                            Ok(value) => {
+                                set_status.set(if value.is_empty() { "尚無房間" } else { "請選擇房間" }.into());
+                                set_rows.set(value);
+                            }
+                            Err(message) => set_status.set(message),
                         }
-                        Err(message) => set_status.set(message),
-                    }
-                    set_loading.set(false);
-                });
-                #[cfg(not(target_arch = "wasm32"))]
-                { set_loading.set(false); }
+                        set_loading.set(false);
+                    });
+
+                    #[cfg(not(target_arch = "wasm32"))]
+                    { set_loading.set(false); }
             }>"讀取／重新整理房間"</button>
             <p role="status">{move || status.get()}</p>
             <ul>{move || rows.get().into_iter().map(|(id, name)| view! {
@@ -246,6 +299,14 @@ fn RoomList() -> impl IntoView {
             }).collect_view()}</ul>
         </section>
     }
+}
+
+fn filter_rooms(rows: &[(String, String)], query: &str) -> Vec<(String, String)> {
+    let needle = query.trim().to_lowercase();
+    rows.iter()
+        .filter(|(_, name)| name.to_lowercase().contains(&needle))
+        .cloned()
+        .collect()
 }
 
 #[cfg(test)]
@@ -261,5 +322,21 @@ mod day16_room_search_tests {
         assert_eq!(filter_rooms(&rooms, " 技術 "), vec![rooms[0].clone()]);
         assert_eq!(filter_rooms(&rooms, ""), rooms);
         assert!(filter_rooms(&rooms, "不存在").is_empty());
+    }
+}
+
+#[cfg(all(test, feature = "ssr"))]
+mod day16_layout_tests {
+    use super::*;
+    #[test]
+    fn room_page_has_real_room_identity_and_multiline_composer() {
+        let owner = Owner::new();
+        let html =
+            owner.with(|| view! { <ChatPage room_id="room-fixture".to_owned() /> }.to_html());
+        assert!(html.contains("room-fixture"));
+        assert!(html.contains("<textarea"));
+        assert!(html.contains("尚未連線"));
+        assert!(html.contains("歷史載入尚未接通"));
+        assert!(!html.contains("Online: 100"));
     }
 }

@@ -120,6 +120,7 @@ fn HomePage() -> impl IntoView {
             }
         }}
         </button>
+        <RoomList />
 
         {move || create_error.get().map(|message| view! { <p>{message}</p> })}
     }
@@ -208,6 +209,41 @@ pub fn ChatPage(room_id: String) -> impl IntoView {
 
                 <button type="button" on:click=send>"Send"</button>
             </div>
+        </section>
+    }
+}
+
+#[component]
+fn RoomList() -> impl IntoView {
+    let (rows, set_rows) = signal(Vec::<(String, String)>::new());
+    let (loading, set_loading) = signal(false);
+    let (status, set_status) = signal(String::from("請讀取房間列表"));
+    view! {
+        <section>
+            <h2>"房間列表"</h2>
+            <button type="button" disabled=move || loading.get() on:click=move |_| {
+                if loading.get_untracked() { return; }
+                set_loading.set(true);
+                set_rows.set(Vec::new());
+                set_status.set("載入中…".into());
+                #[cfg(target_arch = "wasm32")]
+                wasm_bindgen_futures::spawn_local(async move {
+                    match room_api::list_rooms().await {
+                        Ok(value) => {
+                            set_status.set(if value.is_empty() { "尚無房間" } else { "請選擇房間" }.into());
+                            set_rows.set(value);
+                        }
+                        Err(message) => set_status.set(message),
+                    }
+                    set_loading.set(false);
+                });
+                #[cfg(not(target_arch = "wasm32"))]
+                { set_loading.set(false); }
+            }>"讀取／重新整理房間"</button>
+            <p role="status">{move || status.get()}</p>
+            <ul>{move || rows.get().into_iter().map(|(id, name)| view! {
+                <li><a href=format!("/room/{id}")>{name}</a></li>
+            }).collect_view()}</ul>
         </section>
     }
 }

@@ -83,6 +83,16 @@ impl RoomRepository for SqliteRoomRepository {
         .map(|_| ())
         .map_err(|error| RepositoryError::RoomAccessError(error.to_string()))
     }
+
+    async fn list(&self) -> Result<Vec<Room>, RepositoryError> {
+        sqlx::query_as::<_, RoomRow>(
+            "SELECT id, category_room_id, name FROM rooms ORDER BY name, id",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map(|rows| rows.into_iter().map(Room::from).collect())
+        .map_err(|e| RepositoryError::RoomAccessError(e.to_string()))
+    }
 }
 
 #[derive(Clone)]

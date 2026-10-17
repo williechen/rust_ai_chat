@@ -74,6 +74,26 @@ pub async fn get_room(
     }))
 }
 
+pub async fn list_rooms(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<RoomDetails>>, StatusCode> {
+    let rooms = state
+        .room_repository
+        .list()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(Json(
+        rooms
+            .into_iter()
+            .map(|room| RoomDetails {
+                id: room.id,
+                category_room_id: room.category_room_id,
+                name: room.name,
+            })
+            .collect(),
+    ))
+}
+
 #[cfg(test)]
 mod room_http_tests {
     use super::*;

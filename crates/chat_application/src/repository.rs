@@ -15,6 +15,8 @@ pub trait RoomRepository: Send + Sync {
     async fn find_by_id(&self, room_id: &str) -> Result<Option<Room>, RepositoryError>;
 
     async fn create(&self, room: &Room) -> Result<(), RepositoryError>;
+
+    async fn list(&self) -> Result<Vec<Room>, RepositoryError>;
 }
 
 #[async_trait]

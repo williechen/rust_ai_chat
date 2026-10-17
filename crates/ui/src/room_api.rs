@@ -52,3 +52,36 @@ pub async fn create_room(name: &str) -> Result<CreateRoomResponse, String> {
     serde_json::from_str::<CreateRoomResponse>(&response_text)
         .map_err(|error| format!("failed to decode create room response: {error}"))
 }
+
+// 接續既有 create_room；不重建另一個 HTTP client。
+pub async fn list_rooms() -> Result<Vec<(String, String)>, String> {
+    let window = web_sys::window().ok_or("無法取得瀏覽器")?;
+    let value = JsFuture::from(window.fetch_with_str("/api/rooms"))
+        .await
+        .map_err(|_| "房間讀取失敗")?;
+    let response: web_sys::Response = value.dyn_into().map_err(|_| "無效回應")?;
+    if !response.ok() {
+        return Err(format!("讀取失敗：{}", response.status()));
+    }
+    let text = JsFuture::from(response.text().map_err(|_| "無法讀取回應")?)
+        .await
+        .map_err(|_| "無法讀取回應")?
+        .as_string()
+        .ok_or("無效文字")?;
+    let rows: Vec<serde_json::Value> = serde_json::from_str(&text).map_err(|_| "房間格式錯誤")?;
+    rows.into_iter()
+        .map(|row| {
+            let id = row["id"].as_str().ok_or("缺少房間 ID")?;
+            let name = row["name"].as_str().ok_or("缺少房間名稱")?;
+            // 此學習入口沿用現有 UUID／fixture ID，不把任意字串當 URL。
+            if id.is_empty()
+                || !id
+                    .bytes()
+                    .all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_')
+            {
+                return Err("房間 ID 不適用目前入口".into());
+            }
+            Ok((id.to_owned(), name.to_owned()))
+        })
+        .collect()
+}

@@ -109,6 +109,9 @@ mod tests {
         async fn create(&self, _: &Room) -> Result<(), RepositoryError> {
             Ok(())
         }
+        async fn list(&self) -> Result<Vec<Room>, RepositoryError> {
+            Ok(Vec::new())
+        }
     }
 
     struct MissingRoom;
@@ -119,6 +122,9 @@ mod tests {
         }
         async fn create(&self, _: &Room) -> Result<(), RepositoryError> {
             Ok(())
+        }
+        async fn list(&self) -> Result<Vec<Room>, RepositoryError> {
+            Ok(Vec::new())
         }
     }
 
@@ -134,6 +140,9 @@ mod tests {
         }
         async fn create(&self, _: &Room) -> Result<(), RepositoryError> {
             Ok(())
+        }
+        async fn list(&self) -> Result<Vec<Room>, RepositoryError> {
+            Ok(Vec::new())
         }
     }
 

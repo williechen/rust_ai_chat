@@ -18,9 +18,6 @@ use shared::ClientEvent;
 #[cfg(target_arch = "wasm32")]
 use shared::ServerEvent;
 
-#[cfg(target_arch = "wasm32")]
-use leptos_router::hooks::use_navigate;
-
 use chat_socket::ChatSocket;
 
 fn author_label(author: &MessageAuthor) -> String {
@@ -69,7 +66,9 @@ pub fn App() -> impl IntoView {
     view! {
         <Router>
             <main class="app">
-                <h1>"Rust AI Chat"</h1>
+                <h1>
+                    <a href="/" rel="external">"Rust AI Chat"</a>
+                </h1>
                 <Routes fallback=|| view!{
                     <p>"404 - Page Not Found"</p>
                 }>
@@ -83,55 +82,12 @@ pub fn App() -> impl IntoView {
 
 #[component]
 fn HomePage() -> impl IntoView {
-    #[cfg(target_arch = "wasm32")]
-    let navigate = use_navigate();
-
-    let (creating, set_creating) = signal(false);
-    let (create_error, set_create_error) = signal(None::<String>);
-
-    let create_room = move |_| {
-        if creating.get_untracked() {
-            return;
-        }
-
-        set_creating.set(true);
-        set_create_error.set(None);
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            let navigate = navigate.clone();
-            wasm_bindgen_futures::spawn_local(async move {
-                match room_api::create_room("New Room").await {
-                    Ok(room) => {
-                        let path = format!("/room/{}", room.id);
-                        navigate(&path, Default::default());
-                    }
-                    Err(error) => {
-                        set_create_error.set(Some(error));
-                        set_creating.set(false);
-                    }
-                }
-            });
-        }
-    };
-
     view! {
         <p>"Welcome to Rust AI Chat!"</p>
-        <button
-            type="button"
-            disabled = move || creating.get()
-            on:click=create_room
-        >{move || {
-            if creating.get() {
-                "Creating..."
-            } else {
-                "Create Room"
-            }
-        }}
-        </button>
+        <p>
+            <a href="/signin" rel="external">"登入"</a>
+        </p>
         <RoomList />
-
-        {move || create_error.get().map(|message| view! { <p>{message}</p> })}
     }
 }
 
@@ -269,7 +225,6 @@ fn RoomList() -> impl IntoView {
     view! {
         <section>
             <h2>"房間列表"</h2>
-            <a href="/" rel="external">"首頁"</a>
             <input
                 type="search"
                 aria-label="搜尋房間"

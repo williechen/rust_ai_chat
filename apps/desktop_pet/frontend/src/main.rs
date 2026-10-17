@@ -94,7 +94,7 @@ fn App() -> impl IntoView {
                             set_error.set(Some("無法開啟控制台".into()));
                         }
                     })
-                >"確認"</button>
+                >"控制台"</button>
             </main>
         }
         .into_any();

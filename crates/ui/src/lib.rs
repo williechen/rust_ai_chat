@@ -294,8 +294,14 @@ fn RoomList() -> impl IntoView {
                     { set_loading.set(false); }
             }>"讀取／重新整理房間"</button>
             <p role="status">{move || status.get()}</p>
-            <ul>{move || rows.get().into_iter().map(|(id, name)| view! {
-                <li><a href=format!("/room/{id}")>{name}</a></li>
+            <ul>{move || filter_rooms(&rows.get(), &query.get()).into_iter().map(|(id, name)| view! {
+                <li>
+                    <a
+                        rel="external"
+                        aria-current=if params.read().get("room_id").as_deref()==Some(id.as_str()) { Some("page") } else { None }
+                        href=format!("/room/{id}")>{name}
+                    </a>
+                </li>
             }).collect_view()}</ul>
         </section>
     }

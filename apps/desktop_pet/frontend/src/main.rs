@@ -40,6 +40,9 @@ fn App() -> impl IntoView {
     let (scan_loading, set_scan_loading) = signal(false);
     let (scan_status, set_scan_status) = signal::<Option<String>>(None);
 
+    // 放在 App 的 signals 區塊；確認只針對目前顯示的掃描結果。
+    let (confirmed, set_confirmed) = signal(false);
+
     {
         let snapshot_reader = snapshot;
         let snapshot_writer = set_snapshot;
@@ -114,6 +117,10 @@ fn App() -> impl IntoView {
                     set_scan_loading.set(true);
                     set_scan_status.set(None);
                     set_error.set(None);
+                    // 新掃描一律使前一份確認失效，也不保留另一類舊摘要。
+                    set_confirmed.set(false);
+                    set_scan_status.set(None);
+                    set_duplicate_status.set(None);
                     spawn_local(async move {
                         match bridge::scan_file_preview().await {
                             Ok(summary) => set_scan_status.set(Some(summary)),
@@ -140,6 +147,10 @@ fn App() -> impl IntoView {
                     set_duplicate_loading.set(true);
                     set_duplicate_status.set(None);
                     set_error.set(None);
+                    // 新掃描一律使前一份確認失效，也不保留另一類舊摘要。
+                    set_confirmed.set(false);
+                    set_scan_status.set(None);
+                    set_duplicate_status.set(None);
                     spawn_local(async move {
                         match bridge::scan_duplicate_preview().await {
                             Ok(summary) => set_duplicate_status.set(Some(summary)),
@@ -156,6 +167,23 @@ fn App() -> impl IntoView {
                 <pre class="duplicate-preview" role="status">
                     {move || duplicate_status.get().unwrap_or_default()}
                 </pre>
+            </Show>
+
+            <button type="button"
+                disabled=move || scan_loading.get() || duplicate_loading.get()
+                    || (scan_status.get().is_none() && duplicate_status.get().is_none())
+                on:click=move |_| set_confirmed.set(true)
+            >"確認本次預覽"</button>
+            <button type="button"
+                disabled=move || scan_loading.get() || duplicate_loading.get()
+                on:click=move |_| {
+                    set_confirmed.set(false);
+                    set_scan_status.set(None);
+                    set_duplicate_status.set(None);
+                }
+            >"取消／清除本次預覽"</button>
+            <Show when=move || confirmed.get() fallback=|| ()>
+                <p role="status">"已確認本次預覽；尚未執行移動、刪除或還原。"</p>
             </Show>
 
             <ErrorMessage error />

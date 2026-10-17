@@ -189,9 +189,14 @@ async fn source_kind_summary(
     Ok(Json(rows))
 }
 
+async fn dashboard() -> axum::response::Html<&'static str> {
+    axum::response::Html(include_str!("dashboard.html"))
+}
+
 pub fn build_app(state: IngestState) -> Router {
     Router::new()
         .route("/healthz", get(health))
+        .route("/dashboard", get(dashboard))
         .route("/api/v1/events", post(ingest))
         .route("/api/v1/events/{source}/summary", get(source_summary))
         .route(

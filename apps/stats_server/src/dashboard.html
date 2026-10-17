@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-Hant"><meta charset="utf-8"><title>事件統計</title>
+<h1>事件統計</h1>
+<form id="query">
+<label>來源 <select id="source"><option value="web_chat">聊天室</option><option value="desktop_pet">桌面寵物</option></select></label>
+<label>事件類型（留空為全部）<input id="kind" maxlength="128"></label>
+<label>本次來源憑證 <input id="token" type="password" autocomplete="off" required maxlength="512"></label>
+<button id="load">查詢／重新整理</button>
+</form>
+<p id="status" role="status">請選來源並查詢</p>
+<table><thead><tr><th>來源</th><th>事件類型</th><th>數量</th></tr></thead><tbody id="rows"></tbody></table>
+<script>
+const form = document.querySelector("#query");
+const rows = document.querySelector("#rows");
+const status = document.querySelector("#status");
+const load = document.querySelector("#load");
+form.addEventListener("submit", async event => {
+  event.preventDefault();
+  rows.replaceChildren();
+  status.textContent = "載入中…";
+  load.disabled = true;
+  const source = document.querySelector("#source").value;
+  const kind = document.querySelector("#kind").value;
+  const tokenInput = document.querySelector("#token");
+  const token = tokenInput.value;
+  tokenInput.value = ""; // 僅保留此次請求，不儲存至 URL／localStorage。
+  try {
+    let url = "/api/v1/events/" + encodeURIComponent(source) + "/summary";
+    if (kind !== "") url += "/" + encodeURIComponent(kind);
+    const response = await fetch(url, {
+      headers: { Authorization: "Bearer " + token }, cache: "no-store"
+    });
+    if (!response.ok) throw new Error("查詢失敗：" + response.status);
+    const data = await response.json();
+    if (!Array.isArray(data)) throw new Error("統計格式錯誤");
+    for (const item of data) {
+      if (item.source_app !== source || typeof item.event_type !== "string"
+          || !Number.isSafeInteger(item.total) || item.total < 0) {
+        throw new Error("統計格式錯誤");
+      }
+    }
+    for (const item of data) {
+      const tr = document.createElement("tr");
+      for (const value of [item.source_app, item.event_type, item.total]) {
+        const td = document.createElement("td");
+        td.textContent = String(value); // 事件文字不當成 HTML。
+        tr.append(td);
+      }
+      rows.append(tr);
+    }
+    status.textContent = data.length ? "查詢完成" : "尚無事件";
+  } catch (error) {
+    rows.replaceChildren();
+    status.textContent = error.message || "查詢失敗，請重試";
+  } finally { load.disabled = false; }
+});
+</script></html>

@@ -245,4 +245,18 @@ mod room_details_tests {
             StatusCode::INTERNAL_SERVER_ERROR
         );
     }
+
+    #[tokio::test]
+    async fn list_rooms_returns_persisted_room() {
+        let (state, pool) = fixture().await;
+        let response = list_rooms(State(state)).await.into_response();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), 8192)
+            .await
+            .unwrap();
+        let rooms: Vec<RoomDetails> = serde_json::from_slice(&body).unwrap();
+        assert_eq!(rooms.len(), 1);
+        assert_eq!(rooms[0].id, "room-14");
+        pool.close().await;
+    }
 }

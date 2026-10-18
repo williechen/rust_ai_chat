@@ -1,6 +1,6 @@
 -- Add migration script here
 CREATE TABLE pet_profile (
-    id TEXT PRIMARY KEY, -- PKNO
+    id TEXT NOT NULL PRIMARY KEY, -- PKNO
     name VARCHAR(255) NOT NULL, -- 寵物名稱
     ai_api_key VARCHAR(255), -- AI API 金鑰
     species VARCHAR(255) NOT NULL, -- 物種
@@ -12,7 +12,7 @@ CREATE TABLE pet_profile (
 );
 
 CREATE TABLE pet_extra (
-    id TEXT PRIMARY KEY, -- PKNO
+    id TEXT NOT NULL PRIMARY KEY, -- PKNO
     pet_id TEXT NOT NULL REFERENCES pet_profile(id), -- 寵物ID
     owner_id TEXT NOT NULL REFERENCES pet_owner(id), -- 主人ID
     category VARCHAR(255), -- 類別(例如: 興趣、個性、喜好、其他)
@@ -22,7 +22,7 @@ CREATE TABLE pet_extra (
 );
 
 CREATE TABLE pet_activity (
-    id TEXT PRIMARY KEY, -- PKNO
+    id TEXT NOT NULL PRIMARY KEY, -- PKNO
     pet_id TEXT NOT NULL REFERENCES pet_profile(id), -- 寵物ID
     owner_id TEXT NOT NULL REFERENCES pet_owner(id), -- 主人ID
     activity_type VARCHAR(255), -- 活動類型(例如: 散步、玩耍、訓練)
@@ -32,7 +32,7 @@ CREATE TABLE pet_activity (
 );
 
 CREATE TABLE pet_study(
-    id TEXT PRIMARY KEY, -- PKNO
+    id TEXT NOT NULL PRIMARY KEY, -- PKNO
     pet_id TEXT NOT NULL REFERENCES pet_profile(id), -- 寵物ID
     owner_id TEXT NOT NULL REFERENCES pet_owner(id), -- 主人ID
     study_item VARCHAR(255), -- 學習項目(例如: 尋找、刪除、整理)
@@ -42,7 +42,7 @@ CREATE TABLE pet_study(
 );
 
 CREATE TABLE pet_life_log (
-    id TEXT PRIMARY KEY, -- PKNO
+    id TEXT NOT NULL PRIMARY KEY, -- PKNO
     pet_id TEXT NOT NULL REFERENCES pet_profile(id), -- 寵物ID
     owner_id TEXT NOT NULL REFERENCES pet_owner(id), -- 主人ID
     do_item VARCHAR(255), -- 執行項目(例如: 散步、玩耍、訓練)
@@ -53,7 +53,7 @@ CREATE TABLE pet_life_log (
 );
 
 CREATE TABLE codemap (
-    id TEXT PRIMARY KEY, -- PKNO
+    id TEXT NOT NULL PRIMARY KEY, -- PKNO
     category VARCHAR(255), -- 類別(例如: 活動類型, 寵物屬性)
     code VARCHAR(255), -- 代碼(例如: WALK, PLAY, TRAIN)
     value VARCHAR(255), -- 值(例如: 散步、玩耍、訓練)

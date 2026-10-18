@@ -1,6 +1,6 @@
 -- Add migration script here
 CREATE TABLE messages (
-    id VARCHAR(40) PRIMARY KEY, -- 訊息Pkno
+    id VARCHAR(40) NOT NULL PRIMARY KEY, -- 訊息Pkno
     room_id VARCHAR(40) NOT NULL, -- 所屬房間Pkno
     author_kind VARCHAR(32) NOT NULL, -- 作者類型
     author_id VARCHAR(255), -- 作者Pkno

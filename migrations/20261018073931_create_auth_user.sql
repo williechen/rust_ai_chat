@@ -1,6 +1,6 @@
 -- Add migration script here
 CREATE TABLE uac_user (
-    id varchar(40) PRIMARY KEY, -- 使用者Pkno
+    id varchar(40) NOT NULL PRIMARY KEY, -- 使用者Pkno
     user_acnt TEXT NOT NULL, -- 使用者名稱
     user_pd TEXT NOT NULL, -- 密碼雜湊
     user_email TEXT NOT NULL, -- 電子郵件
@@ -14,7 +14,7 @@ CREATE TABLE uac_user (
 );
 
 CREATE TABLE uac_role (
-    id varchar(40) PRIMARY KEY, -- 角色Pkno
+    id varchar(40) NOT NULL PRIMARY KEY, -- 角色Pkno
     role_name TEXT NOT NULL, -- 角色名稱
     role_status TEXT NOT NULL, -- 角色狀態
     created_at TIMESTAMP NOT NULL, -- 創建時間
@@ -29,7 +29,7 @@ CREATE TABLE uac_user_role (
 );
 
 CREATE TABLE uac_acl (
-    id varchar(40) PRIMARY KEY, -- 頁面Pkno
+    id varchar(40) NOT NULL PRIMARY KEY, -- 頁面Pkno
     acl_name TEXT NOT NULL, -- 頁面名稱
     acl_path TEXT NOT NULL, -- 頁面路徑
     acl_category TEXT NOT NULL, -- 頁面分類(項目: category，頁面: page，功能:action)
@@ -56,7 +56,7 @@ CREATE TABLE uac_user_acl (
 
 
 CREATE TABLE mbr_user (
-    id varchar(40) PRIMARY KEY, -- 使用者Pkno
+    id varchar(40) NOT NULL PRIMARY KEY, -- 使用者Pkno
     user_acnt TEXT NOT NULL, -- 使用者名稱
     user_pd TEXT NOT NULL, -- 密碼雜湊
     user_email TEXT NOT NULL, -- 電子郵件
@@ -70,7 +70,7 @@ CREATE TABLE mbr_user (
 );
 
 CREATE TABLE mbr_role (
-    id varchar(40) PRIMARY KEY, -- 角色Pkno
+    id varchar(40) NOT NULL PRIMARY KEY, -- 角色Pkno
     role_name TEXT NOT NULL, -- 角色名稱
     role_status TEXT NOT NULL, -- 角色狀態
     created_at TIMESTAMP NOT NULL, -- 創建時間
@@ -85,7 +85,7 @@ CREATE TABLE mbr_user_role (
 );
 
 CREATE TABLE mbr_perm (
-    id varchar(40) PRIMARY KEY, -- 權限Pkno
+    id varchar(40) NOT NULL PRIMARY KEY, -- 權限Pkno
     perm_name TEXT NOT NULL, -- 權限名稱
     perm_status TEXT NOT NULL, -- 權限狀態
     created_at TIMESTAMP NOT NULL, -- 創建時間
@@ -98,7 +98,7 @@ CREATE TABLE mbr_role_perm (
     created_at TIMESTAMP NOT NULL, -- 創建時間
     CONSTRAINT pk_mbr_role_perm PRIMARY KEY (role_id, perm_id)
 );
-
+    
 CREATE TABLE mbr_user_perm (
     user_id varchar(40) NOT NULL, -- 使用者Pkno
     perm_id varchar(40) NOT NULL, -- 權限Pkno

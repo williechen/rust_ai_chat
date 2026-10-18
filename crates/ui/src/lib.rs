@@ -233,14 +233,14 @@ fn RoomList() -> impl IntoView {
             match room_api::filter_room(&query.get()).await {
                 Ok(value) => {
                     set_status.set(
-                        if value.0.is_empty() {
+                        if value.is_empty() {
                             "尚無房間"
                         } else {
                             "查詢完成，請選擇房間"
                         }
                         .into(),
                     );
-                    set_rows.set(vec![value]);
+                    set_rows.set(value);
                 }
                 Err(message) => {
                     set_status.set(format!("查詢失敗：{message}，請重試"));
@@ -284,7 +284,12 @@ fn RoomList() -> impl IntoView {
                     wasm_bindgen_futures::spawn_local(async move {
                         match room_api::list_rooms().await {
                             Ok(value) => {
-                                set_status.set(if value.is_empty() { "尚無房間" } else { "請選擇房間" }.into());
+                                set_status.set(
+                                    if value.is_empty() {
+                                        "尚無房間"
+                                    } else {
+                                        "請選擇房間"
+                                    }.into());
                                 set_rows.set(value);
                             }
                             Err(message) => set_status.set(message),

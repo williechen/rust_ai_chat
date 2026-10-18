@@ -37,6 +37,23 @@ fn filter_rooms(rows: &[(String, String)], query: &str) -> Vec<(String, String)>
         .collect()
 }
 
+fn refreshed_room_list(
+    previous: Vec<(String, String)>,
+    result: Result<Vec<(String, String)>, String>,
+) -> (Vec<(String, String)>, String) {
+    match result {
+        Ok(value) => {
+            let status = if value.is_empty() {
+                "尚無房間"
+            } else {
+                "請選擇房間"
+            };
+            (value, status.to_owned())
+        }
+        Err(message) => (previous, format!("{message}，請重試")),
+    }
+}
+
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
         <!DOCTYPE html>
@@ -282,23 +299,15 @@ fn RoomList() -> impl IntoView {
                 on:click=move |_| {
                     if loading.get_untracked() { return; }
                     set_loading.set(true);
-                    set_rows.set(Vec::new());
                     set_status.set("載入中…".into());
 
                     #[cfg(target_arch = "wasm32")]
                     wasm_bindgen_futures::spawn_local(async move {
-                        match room_api::list_rooms().await {
-                            Ok(value) => {
-                                set_status.set(
-                                    if value.is_empty() {
-                                        "尚無房間"
-                                    } else {
-                                        "請選擇房間"
-                                    }.into());
-                                set_rows.set(value);
-                            }
-                            Err(message) => set_status.set(message),
-                        }
+                        let previous = rows.get_untracked();
+                        let result = room_api::list_rooms().await;
+                        let (next_rows, next_status) = refreshed_room_list(previous, result);
+                        set_rows.set(next_rows);
+                        set_status.set(next_status);
                         set_loading.set(false);
                     });
 
@@ -322,6 +331,36 @@ fn RoomList() -> impl IntoView {
 #[cfg(test)]
 mod day16_room_search_tests {
     use super::filter_rooms;
+    #[test]
+    fn day19_empty_success_replaces_previous_rows() {
+        let (rows, status) =
+            super::refreshed_room_list(vec![("old".into(), "舊房間".into())], Ok(vec![]));
+        assert!(rows.is_empty());
+        assert_eq!(status, "尚無房間");
+    }
+    #[test]
+    fn day19_failure_preserves_complete_rows_and_message() {
+        let old = vec![
+            ("one".into(), "同名房間".into()),
+            ("two".into(), "同名房間".into()),
+        ];
+        let (rows, status) = super::refreshed_room_list(old.clone(), Err("讀取失敗：503".into()));
+        assert_eq!(rows, old);
+        assert_eq!(status, "讀取失敗：503，請重試");
+    }
+
+    #[test]
+    fn day19_refresh_failure_keeps_previous_room_links() {
+        let old = vec![("room_1".into(), "Rust 技術交流".into())];
+        let (rows, status) = super::refreshed_room_list(old.clone(), Err("503".into()));
+        assert_eq!(rows, old);
+        assert!(status.contains("請重試"));
+
+        let (rows, status) =
+            super::refreshed_room_list(old, Ok(vec![("room_2".into(), "生活閒聊".into())]));
+        assert_eq!(rows[0].0, "room_2");
+        assert_eq!(status, "請選擇房間");
+    }
 
     #[test]
     fn search_matches_chinese_names_and_preserves_ids() {

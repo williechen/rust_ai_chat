@@ -6,10 +6,21 @@ const ROAM_INTERVAL: std::time::Duration = std::time::Duration::from_millis(50);
 const ROAM_VERIFY_INTERVAL: std::time::Duration = std::time::Duration::from_millis(200);
 const ROAM_STALL_LIMIT: u8 = 3;
 
+const UNEXPECTED_MOVE_TOLERANCE: i64 = 32;
+
 // 與 tauri.conf.json 的生活窗 label 一致，main 僅供控制台。
 const PET_WINDOW_LABEL: &str = "pet";
 fn roaming_window_label() -> &'static str {
     PET_WINDOW_LABEL
+}
+
+fn unexpected_displacement(
+    requested: PhysicalPosition<i32>,
+    observed: PhysicalPosition<i32>,
+) -> bool {
+    let dx = (i64::from(observed.x) - i64::from(requested.x)).abs();
+    let dy = (i64::from(observed.y) - i64::from(requested.y)).abs();
+    dx > UNEXPECTED_MOVE_TOLERANCE || dy > UNEXPECTED_MOVE_TOLERANCE
 }
 
 // 計算下一個受限位置
@@ -62,6 +73,7 @@ fn bounded_next_position(
     }
 }
 
+// 在桌面上漫遊寵物的主循環
 // 在桌面上漫遊寵物的主循環
 pub async fn roam_desktop(app: tauri::AppHandle) {
     let mut dx = ROAM_INITIAL_DX;
@@ -123,6 +135,11 @@ pub async fn roam_desktop(app: tauri::AppHandle) {
             }
         };
 
+        if unexpected_displacement(requested, after) {
+            eprintln!("desktop roaming stopped: unexpected window displacement");
+            break;
+        }
+
         if after == before {
             stalled_attempts += 1;
 
@@ -145,6 +162,29 @@ pub async fn roam_desktop(app: tauri::AppHandle) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn day19_displacement_threshold_axes_and_extremes() {
+        let p = |x, y| PhysicalPosition { x, y };
+        assert!(!unexpected_displacement(p(-100, -100), p(-68, -132)));
+        assert!(unexpected_displacement(p(-100, -100), p(-67, -100)));
+        assert!(unexpected_displacement(p(-100, -100), p(-100, -133)));
+        assert!(!unexpected_displacement(p(0, 0), p(23, 23)));
+        assert!(unexpected_displacement(p(i32::MIN, 0), p(i32::MAX, 0)));
+        assert!(unexpected_displacement(p(0, i32::MAX), p(0, i32::MIN)));
+    }
+
+    #[test]
+    fn day19_large_external_reposition_stops_roam() {
+        assert!(unexpected_displacement(
+            PhysicalPosition { x: 100, y: 100 },
+            PhysicalPosition { x: 400, y: 100 },
+        ));
+        assert!(!unexpected_displacement(
+            PhysicalPosition { x: 100, y: 100 },
+            PhysicalPosition { x: 102, y: 99 },
+        ));
+    }
 
     fn area(x: i32, y: i32, width: u32, height: u32) -> PhysicalRect<i32, u32> {
         PhysicalRect {

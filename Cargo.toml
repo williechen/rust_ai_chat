@@ -13,7 +13,6 @@ members = [
     "crates/pet_domain",
     "crates/telemetry",
     "crates/ui",
-    "tests",
 ]
 
 [workspace.package]

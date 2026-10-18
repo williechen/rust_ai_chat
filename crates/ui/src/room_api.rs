@@ -88,9 +88,9 @@ pub async fn list_rooms() -> Result<Vec<(String, String)>, String> {
 
 pub async fn filter_room(name: &str) -> Result<Vec<(String, String)>, String> {
     let rooms = list_rooms().await?;
-    for (room_id, room_name) in rooms {
+    for (room_id, room_name) in &rooms {
         if room_name == name {
-            return Ok(vec![(room_id, room_name)]);
+            return Ok(vec![(room_id.to_owned(), room_name.to_owned())]);
         }
     }
     Ok(rooms)

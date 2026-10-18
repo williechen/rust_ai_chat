@@ -14,6 +14,7 @@ pet-domain = { path = "../../crates/pet_domain" }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+sqlx.workspace = true
 
 tauri = { version = "2.12", features = [] }
 thiserror.workspace = true

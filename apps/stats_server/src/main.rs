@@ -6,6 +6,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().ok();
     // 啟動時 fail-closed；不得把密鑰值寫入日誌。
     let database_url = std::env::var("ANALYTICS_DATABASE_URL")?;
+
+    let pool = sqlx::PgPool::connect(&database_url).await?;
+    sqlx::migrate!("./migrations").run(&pool).await?;
+
     let chat = std::env::var("ANALYTICS_CHAT_TOKEN")?;
     let pet = std::env::var("ANALYTICS_PET_TOKEN")?;
 
@@ -13,7 +17,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("來源憑證設定不合法".into());
     }
 
-    let pool = sqlx::PgPool::connect(&database_url).await?;
     // Migration 由既有 DB 管理流程預先套用；不可修改已套用 migration。
     let config = admin::Config::from_env()?;
     let app = admin::build(

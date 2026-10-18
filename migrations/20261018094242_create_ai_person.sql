@@ -12,7 +12,7 @@ CREATE TABLE ai_person (
 
 CREATE TABLE ai_person_extra (
     id TEXT PRIMARY KEY, -- PKNO
-    ai_person_id TEXT REFERENCES ai_person(id), -- AI 人物ID
+    ai_person_id TEXT NOT NULL REFERENCES ai_person(id), -- AI 人物ID
     category VARCHAR(255), -- 類別(例如: 興趣、個性、喜好、其他)
     content VARCHAR(255), -- 內容
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 建立時間
@@ -22,8 +22,8 @@ CREATE TABLE ai_person_extra (
 -- 今天進到某個房間的生活紀錄
 CREATE TABLE ai_person_life_log (
     id TEXT PRIMARY KEY, -- PKNO
-    ai_person_id TEXT REFERENCES ai_person(id), -- AI 人物ID
-    room_id INT, -- 房間ID
+    ai_person_id TEXT NOT NULL REFERENCES ai_person(id), -- AI 人物ID
+    room_id INT NOT NULL, -- 房間ID
     do_item VARCHAR(255), -- 執行項目(例如: 對話、教學)
     do_title TEXT, -- 標題(例如: 今天有對話，教學內容)
     content TEXT, -- 內容(例如: 今天的對話情況，教學過程)

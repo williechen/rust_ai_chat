@@ -55,10 +55,10 @@ pub async fn create_room(name: &str) -> Result<CreateRoomResponse, String> {
 
 // 接續既有 create_room；不重建另一個 HTTP client。
 pub async fn list_rooms() -> Result<Vec<(String, String)>, String> {
-    search_room("").await
+    search_rooms("").await
 }
 
-pub async fn search_room(query: &str) -> Result<Vec<(String, String)>, String> {
+pub async fn search_rooms(query: &str) -> Result<Vec<(String, String)>, String> {
     let params = web_sys::UrlSearchParams::new().map_err(|_| "無法建立查詢")?;
     params.append("q", query);
     let url = format!("/api/rooms?{}", params.to_string());

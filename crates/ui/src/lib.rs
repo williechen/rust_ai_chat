@@ -223,12 +223,35 @@ fn RoomList() -> impl IntoView {
     let (status, set_status) = signal(String::from("請讀取房間列表"));
 
     let query_room = move || {
-        if query.get().trim().is_empty() {
+        if loading.get_untracked() {
             return;
         }
         set_loading.set(true);
-        set_rows.set(Vec::new());
         set_status.set("查詢中…".into());
+        #[cfg(target_arch = "wasm32")]
+        wasm_bindgen_futures::spawn_local(async move {
+            match room_api::filter_room(&query.get()).await {
+                Ok(value) => {
+                    set_status.set(
+                        if value.0.is_empty() {
+                            "尚無房間"
+                        } else {
+                            "查詢完成，請選擇房間"
+                        }
+                        .into(),
+                    );
+                    set_rows.set(vec![value]);
+                }
+                Err(message) => {
+                    set_status.set(format!("查詢失敗：{message}，請重試"));
+                }
+            }
+            set_loading.set(false);
+        });
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            set_loading.set(false);
+        }
     };
 
     view! {
@@ -299,6 +322,16 @@ mod day16_room_search_tests {
         assert_eq!(filter_rooms(&rooms, " 技術 "), vec![rooms[0].clone()]);
         assert_eq!(filter_rooms(&rooms, ""), rooms);
         assert!(filter_rooms(&rooms, "不存在").is_empty());
+    }
+
+    #[test]
+    fn day18_query_filter_preserves_room_ids() {
+        let rows = vec![
+            ("room_1".to_string(), "Rust 技術交流".to_string()),
+            ("room_2".to_string(), "生活閒聊".to_string()),
+        ];
+        assert_eq!(super::filter_rooms(&rows, " 技術 "), vec![rows[0].clone()]);
+        assert_eq!(super::filter_rooms(&rows, " "), rows);
     }
 }
 

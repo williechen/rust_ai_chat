@@ -6,6 +6,12 @@ const ROAM_INTERVAL: std::time::Duration = std::time::Duration::from_millis(50);
 const ROAM_VERIFY_INTERVAL: std::time::Duration = std::time::Duration::from_millis(200);
 const ROAM_STALL_LIMIT: u8 = 3;
 
+// 與 tauri.conf.json 的生活窗 label 一致，main 僅供控制台。
+const PET_WINDOW_LABEL: &str = "pet";
+fn roaming_window_label() -> &'static str {
+    PET_WINDOW_LABEL
+}
+
 // 計算下一個受限位置
 fn bounded_next_position(
     before: PhysicalPosition<i32>,
@@ -63,10 +69,10 @@ pub async fn roam_desktop(app: tauri::AppHandle) {
     let mut stalled_attempts = 0_u8;
 
     loop {
-        let window = match app.get_webview_window("main") {
+        let window = match app.get_webview_window(roaming_window_label()) {
             Some(window) => window,
             None => {
-                println!("desktop roaming unavailable: main window not found");
+                eprintln!("desktop roaming unavailable: pet window not found");
                 break;
             }
         };
@@ -217,5 +223,11 @@ mod tests {
         );
         assert_eq!(next, PhysicalPosition { x: -100, y: -50 });
         assert_eq!((dx, dy), (0, 0));
+    }
+
+    #[test]
+    fn day18_roaming_selects_pet_life_window() {
+        assert_eq!(roaming_window_label(), "pet");
+        assert_ne!(roaming_window_label(), "main");
     }
 }

@@ -19,6 +19,11 @@ use uuid::Uuid;
 const ORIGIN: &str = "http://127.0.0.1:3100";
 const TTL: Duration = Duration::from_secs(1800);
 
+// 僅對仍有效且已通過 cookie 查找的 Session 延長閒置期限。
+fn touch_session(session: &mut Session, now: Instant) {
+    session.expires = now + TTL;
+}
+
 fn hash(value: &str) -> String {
     Sha256::digest(value.as_bytes())
         .iter()
@@ -91,9 +96,13 @@ fn cookie_key(headers: &HeaderMap) -> Option<String> {
 }
 
 fn csrf_for(state: &Admin, headers: &HeaderMap) -> Option<String> {
+    let key = cookie_key(headers)?;
+    let now = Instant::now();
     let mut sessions = state.sessions.lock().ok()?;
-    sessions.retain(|_, s| s.expires > Instant::now());
-    Some(sessions.get(&cookie_key(headers)?)?.csrf.clone())
+    sessions.retain(|_, session| session.expires > now);
+    let session = sessions.get_mut(&key)?;
+    touch_session(session, now);
+    Some(session.csrf.clone())
 }
 
 fn document(body: String) -> Html<String> {
@@ -728,4 +737,15 @@ mod tests {
         owner.close().await;
         
     }
+
+    #[test]
+fn day18_activity_extends_valid_session_only() {
+    let now = Instant::now();
+    let mut session = Session {
+        expires: now + Duration::from_secs(5),
+        csrf: "fixture".into(),
+    };
+    touch_session(&mut session, now + Duration::from_secs(2));
+    assert_eq!(session.expires, now + Duration::from_secs(2) + TTL);
+}
 }

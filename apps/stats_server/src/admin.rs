@@ -236,13 +236,13 @@ async fn login(
     if attempts.1 >= 10 {
         return StatusCode::TOO_MANY_REQUESTS.into_response();
     }
-    attempts.1 += 1;
 
     // Only accept the generated 256-bit login key, not a low-entropy password hashed with SHA256.
     if form.key.len() != 64
         || !form.key.bytes().all(|c| c.is_ascii_hexdigit())
         || !same(&hash(&form.key), &config.key_hash)
     {
+        attempts.1 += 1;
         return (StatusCode::UNAUTHORIZED, "登入失敗，請返回登入頁重試").into_response();
     }
 
@@ -788,5 +788,109 @@ mod tests {
         };
         touch_session(&mut session, now + Duration::from_secs(2));
         assert_eq!(session.expires, now + Duration::from_secs(2) + TTL);
+    }
+
+    #[tokio::test]
+    async fn day19_successful_logins_do_not_consume_failure_budget() {
+        let router = app();
+        for attempt in 1..=11 {
+            let response = router
+                .clone()
+                .oneshot(request(
+                    "POST",
+                    "/login",
+                    &format!("key={}", "a".repeat(64)),
+                ))
+                .await
+                .unwrap();
+            assert_eq!(
+                response.status(),
+                StatusCode::SEE_OTHER,
+                "success {attempt}"
+            );
+            assert_eq!(response.headers()[header::LOCATION], "/dashboard");
+            let cookie = response.headers()[header::SET_COOKIE].to_str().unwrap();
+            for attribute in [
+                "analytics_session=",
+                "HttpOnly",
+                "SameSite=Strict",
+                "Path=/",
+                "Max-Age=1800",
+            ] {
+                assert!(cookie.contains(attribute), "missing {attribute}");
+            }
+        }
+        for attempt in 1..=10 {
+            let response = router
+                .clone()
+                .oneshot(request(
+                    "POST",
+                    "/login",
+                    &format!("key={}", "b".repeat(64)),
+                ))
+                .await
+                .unwrap();
+            assert_eq!(
+                response.status(),
+                StatusCode::UNAUTHORIZED,
+                "failure {attempt}"
+            );
+            assert!(!response.headers().contains_key(header::SET_COOKIE));
+        }
+        for key in ["b".repeat(64), "a".repeat(64)] {
+            let response = router
+                .clone()
+                .oneshot(request("POST", "/login", &format!("key={key}")))
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+            assert!(!response.headers().contains_key(header::SET_COOKIE));
+        }
+    }
+
+    #[tokio::test]
+    async fn day19_success_does_not_reset_previous_failures() {
+        let router = app();
+        for _ in 0..9 {
+            assert_eq!(
+                router
+                    .clone()
+                    .oneshot(request("POST", "/login", "key=wrong"))
+                    .await
+                    .unwrap()
+                    .status(),
+                StatusCode::UNAUTHORIZED
+            );
+        }
+        assert_eq!(
+            router
+                .clone()
+                .oneshot(request(
+                    "POST",
+                    "/login",
+                    &format!("key={}", "a".repeat(64))
+                ))
+                .await
+                .unwrap()
+                .status(),
+            StatusCode::SEE_OTHER
+        );
+        assert_eq!(
+            router
+                .clone()
+                .oneshot(request("POST", "/login", "key=wrong"))
+                .await
+                .unwrap()
+                .status(),
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            router
+                .oneshot(request("POST", "/login", "key=wrong"))
+                .await
+                .unwrap()
+                .status(),
+            StatusCode::TOO_MANY_REQUESTS
+        );
     }
 }

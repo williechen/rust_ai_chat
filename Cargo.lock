@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "ai-core"
-version = "0.2.17"
+version = "0.2.19"
 dependencies = [
  "async-trait",
  "thiserror 2.0.21",
@@ -493,7 +493,7 @@ dependencies = [
 
 [[package]]
 name = "chat-application"
-version = "0.2.17"
+version = "0.2.19"
 dependencies = [
  "async-trait",
  "chat-domain",
@@ -504,7 +504,7 @@ dependencies = [
 
 [[package]]
 name = "chat-domain"
-version = "0.2.17"
+version = "0.2.19"
 dependencies = [
  "serde",
  "uuid",
@@ -938,7 +938,7 @@ dependencies = [
 
 [[package]]
 name = "desktop-pet"
-version = "0.2.17"
+version = "0.2.19"
 dependencies = [
  "ai-core",
  "dotenv",
@@ -957,7 +957,7 @@ dependencies = [
 
 [[package]]
 name = "desktop-pet-frontend"
-version = "0.2.17"
+version = "0.2.19"
 dependencies = [
  "gloo-timers",
  "js-sys",
@@ -3215,7 +3215,7 @@ checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 
 [[package]]
 name = "persistence"
-version = "0.2.17"
+version = "0.2.19"
 dependencies = [
  "async-trait",
  "chat-application",
@@ -3226,7 +3226,7 @@ dependencies = [
 
 [[package]]
 name = "pet-domain"
-version = "0.2.17"
+version = "0.2.19"
 dependencies = [
  "serde",
  "serde_json",
@@ -4099,7 +4099,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.2.17"
+version = "0.2.19"
 dependencies = [
  "any_spawner",
  "axum",
@@ -4238,7 +4238,7 @@ dependencies = [
 
 [[package]]
 name = "shared"
-version = "0.2.17"
+version = "0.2.19"
 dependencies = [
  "chat-domain",
  "serde",
@@ -4556,7 +4556,7 @@ checksum = "ff7589a1859b09232522bb9edf076ca7fcf14ded96685d3fa629db73023ffbb7"
 
 [[package]]
 name = "stats-server"
-version = "0.2.17"
+version = "0.2.19"
 dependencies = [
  "axum",
  "dotenv",
@@ -4994,7 +4994,7 @@ dependencies = [
 
 [[package]]
 name = "telemetry"
-version = "0.2.17"
+version = "0.2.19"
 
 [[package]]
 name = "tendril"
@@ -5425,7 +5425,7 @@ checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 
 [[package]]
 name = "ui"
-version = "0.2.17"
+version = "0.2.19"
 dependencies = [
  "chat-domain",
  "leptos",
@@ -6081,7 +6081,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "workspace-tests"
-version = "0.2.17"
+version = "0.2.19"
 dependencies = [
  "async-trait",
  "axum",

@@ -80,7 +80,7 @@ fn origin_ok(headers: &HeaderMap) -> bool {
     headers.get(header::ORIGIN).and_then(|s| s.to_str().ok()) == Some(ORIGIN)
 }
 
-fn cookie_key(headers: &HeaderMap) -> Option<String> {
+fn cookie_value(headers: &HeaderMap) -> Option<&str> {
     let value = headers
         .get(header::COOKIE)?
         .to_str()
@@ -92,7 +92,11 @@ fn cookie_key(headers: &HeaderMap) -> Option<String> {
     if value.len() != 64 || !value.bytes().all(|b| b.is_ascii_hexdigit()) {
         return None;
     }
-    Some(hash(value))
+    Some(value)
+}
+
+fn cookie_key(headers: &HeaderMap) -> Option<String> {
+    cookie_value(headers).map(hash)
 }
 
 fn csrf_for(state: &Admin, headers: &HeaderMap) -> Option<String> {
@@ -100,9 +104,47 @@ fn csrf_for(state: &Admin, headers: &HeaderMap) -> Option<String> {
     let now = Instant::now();
     let mut sessions = state.sessions.lock().ok()?;
     sessions.retain(|_, session| session.expires > now);
-    let session = sessions.get_mut(&key)?;
-    touch_session(session, now);
+    let session = sessions.get(&key)?;
     Some(session.csrf.clone())
+}
+
+// Refresh both expiry clocks only after a successful protected GET. Logout and
+// login never pass through this layer. Recheck after the handler so a revoked or
+// expired session cannot be resurrected by an in-flight response.
+fn session_cookie(raw: &str) -> axum::http::HeaderValue {
+    format!(
+        "analytics_session={raw}; HttpOnly; SameSite=Strict; Path=/; Max-Age={}",
+        TTL.as_secs()
+    )
+    .parse()
+    .expect("validated hex session cookie")
+}
+
+async fn refresh_session(
+    State(state): State<Admin>,
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> Response {
+    let raw = if request.method() == axum::http::Method::GET {
+        cookie_value(request.headers()).map(str::to_owned)
+    } else {
+        None
+    };
+    let mut response = next.run(request).await;
+    if response.status().is_success()
+        && let Some(raw) = raw
+        && let Ok(mut sessions) = state.sessions.lock()
+    {
+        let now = Instant::now();
+        sessions.retain(|_, session| session.expires > now);
+        if let Some(session) = sessions.get_mut(&hash(&raw)) {
+            touch_session(session, now);
+            response
+                .headers_mut()
+                .insert(header::SET_COOKIE, session_cookie(&raw));
+        }
+    }
+    response
 }
 
 fn document(body: String) -> Html<String> {
@@ -228,12 +270,9 @@ async fn login(
     );
 
     let mut response = Redirect::to("/dashboard").into_response();
-    response.headers_mut().insert(
-        header::SET_COOKIE,
-        format!("analytics_session={raw}; HttpOnly; SameSite=Strict; Path=/; Max-Age=1800")
-            .parse()
-            .unwrap(),
-    );
+    response
+        .headers_mut()
+        .insert(header::SET_COOKIE, session_cookie(&raw));
     response
 }
 
@@ -389,14 +428,18 @@ pub fn build(ingest: IngestState, config: Option<Config>) -> Router {
     };
     let protected = Router::new()
         .route("/", get(dashboard))
-        .route("/login", get(login_page).post(login))
-        .route("/logout", post(logout))
         .route("/dashboard", get(dashboard))
         .route("/api/v1/events/{source}/summary", get(summary))
         .route(
             "/api/v1/events/{source}/summary/{event_type}",
             get(kind_summary),
         )
+        .route_layer(axum::middleware::from_fn_with_state(
+            admin.clone(),
+            refresh_session,
+        ))
+        .route("/login", get(login_page).post(login))
+        .route("/logout", post(logout))
         .with_state(admin);
 
     Router::new()

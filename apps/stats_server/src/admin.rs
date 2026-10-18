@@ -207,7 +207,7 @@ async fn login(
     drop(attempts);
 
     let raw = format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple());
-    
+
     let mut sessions = match state.sessions.lock() {
         Ok(s) => s,
         Err(_) => return StatusCode::SERVICE_UNAVAILABLE.into_response(),
@@ -309,7 +309,7 @@ async fn dashboard(
         Ok(rows) => {
             let total=crate::summary_total(&rows).map(|v| v.to_string()).unwrap_or_else(|| "聚合值異常".into());
             let empty=rows.is_empty();
-            (StatusCode::OK, view! { 
+            (StatusCode::OK, view! {
                 <section>
                     <p>{if empty { "沒有符合條件的已提交事件" } else { "查詢完成" }}</p>
                     <p>{format!("總數：{total}")}</p>
@@ -321,7 +321,7 @@ async fn dashboard(
                                 <th>"數量"</th>
                             </tr>
                         </thead>
-                        <tbody>{rows.into_iter().map(|r| view! { 
+                        <tbody>{rows.into_iter().map(|r| view! {
                             <tr>
                                 <td>{r.source_app}</td>
                                 <td>{r.event_type}</td>
@@ -331,12 +331,12 @@ async fn dashboard(
                     </table>
                 </section> }.to_html())
         }
-        Err(code) => (code, view! { 
+        Err(code) => (code, view! {
             <p role="alert">{if code==StatusCode::BAD_REQUEST { "查詢條件不合法" } else { "資料庫暫時無法查詢，請重試" }}</p> 
         }.to_html())
     };
 
-    let body=view! { 
+    let body = view! {
         <main>
             <h1>"Analytics 管理後台"</h1>
             <form method="get" action="/dashboard">
@@ -356,8 +356,9 @@ async fn dashboard(
                 <input type="hidden" name="csrf" value=csrf />
                 <button>"登出"</button>
             </form>
-        </main> 
-    }.to_html();
+        </main>
+    }
+    .to_html();
     (status, document(body)).into_response()
 }
 
@@ -547,7 +548,6 @@ mod tests {
             app.oneshot(req).await.unwrap().status(),
             StatusCode::UNAUTHORIZED
         );
-
     }
 
     #[tokio::test]
@@ -594,7 +594,6 @@ mod tests {
         );
 
         assert!(csrf_for(&state, &headers).is_none());
-
     }
 
     #[tokio::test]
@@ -735,17 +734,16 @@ mod tests {
             .await
             .unwrap();
         owner.close().await;
-        
     }
 
     #[test]
-fn day18_activity_extends_valid_session_only() {
-    let now = Instant::now();
-    let mut session = Session {
-        expires: now + Duration::from_secs(5),
-        csrf: "fixture".into(),
-    };
-    touch_session(&mut session, now + Duration::from_secs(2));
-    assert_eq!(session.expires, now + Duration::from_secs(2) + TTL);
-}
+    fn day18_activity_extends_valid_session_only() {
+        let now = Instant::now();
+        let mut session = Session {
+            expires: now + Duration::from_secs(5),
+            csrf: "fixture".into(),
+        };
+        touch_session(&mut session, now + Duration::from_secs(2));
+        assert_eq!(session.expires, now + Duration::from_secs(2) + TTL);
+    }
 }

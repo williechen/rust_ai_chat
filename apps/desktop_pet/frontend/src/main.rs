@@ -227,7 +227,7 @@ fn App() -> impl IntoView {
 
             <ErrorMessage error />
 
-            <button 
+            <button
                 type="button"
                 on:click=move |_| spawn_local(async move {
                     let _ = bridge::quit_pet().await;

@@ -17,6 +17,8 @@ pub trait RoomRepository: Send + Sync {
     async fn create(&self, room: &Room) -> Result<(), RepositoryError>;
 
     async fn list(&self) -> Result<Vec<Room>, RepositoryError>;
+
+    async fn search_by_name(&self, query: &str) -> Result<Vec<Room>, RepositoryError>;
 }
 
 #[async_trait]

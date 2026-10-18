@@ -1,5 +1,5 @@
 use crate::state::AppState;
-use axum::extract::State;
+use axum::extract::{Query, State};
 use axum::{Json, http::StatusCode};
 use serde::Serialize;
 use shared::{CreateRoomRequest, CreateRoomResponse};
@@ -49,6 +49,12 @@ pub struct RoomDetails {
     pub name: String,
 }
 
+#[derive(Default, serde::Deserialize)]
+pub struct RoomSearch {
+    #[serde(default)]
+    q: String,
+}
+
 pub async fn get_room(
     State(state): State<AppState>,
     axum::extract::Path(id): axum::extract::Path<String>,
@@ -76,10 +82,14 @@ pub async fn get_room(
 
 pub async fn list_rooms(
     State(state): State<AppState>,
+    Query(search): Query<RoomSearch>,
 ) -> Result<Json<Vec<RoomDetails>>, StatusCode> {
+    if search.q.len() > 200 || search.q.contains('\0') {
+        return Err(StatusCode::BAD_REQUEST);
+    }
     let rooms = state
         .room_repository
-        .list()
+        .search_by_name(&search.q)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(
@@ -269,7 +279,9 @@ mod room_details_tests {
     #[tokio::test]
     async fn list_rooms_returns_persisted_room() {
         let (state, pool) = fixture().await;
-        let response = list_rooms(State(state)).await.into_response();
+        let response = list_rooms(State(state), Query(RoomSearch { q: "".to_string() }))
+            .await
+            .into_response();
         assert_eq!(response.status(), StatusCode::OK);
         let body = axum::body::to_bytes(response.into_body(), 8192)
             .await

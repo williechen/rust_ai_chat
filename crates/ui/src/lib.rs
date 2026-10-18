@@ -230,11 +230,16 @@ fn RoomList() -> impl IntoView {
         set_status.set("查詢中…".into());
         #[cfg(target_arch = "wasm32")]
         wasm_bindgen_futures::spawn_local(async move {
-            match room_api::filter_room(&query.get()).await {
+            let submitted = query.get_untracked();
+            match room_api::search_rooms(&submitted).await {
                 Ok(value) => {
                     set_status.set(
                         if value.is_empty() {
-                            "尚無房間"
+                            if submitted.trim().is_empty() {
+                                "尚無房間"
+                            } else {
+                                "沒有符合條件的房間"
+                            }
                         } else {
                             "查詢完成，請選擇房間"
                         }

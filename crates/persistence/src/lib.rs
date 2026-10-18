@@ -93,6 +93,32 @@ impl RoomRepository for SqliteRoomRepository {
         .map(|rows| rows.into_iter().map(Room::from).collect())
         .map_err(|e| RepositoryError::RoomAccessError(e.to_string()))
     }
+
+    async fn search_by_name(&self, query: &str) -> Result<Vec<Room>, RepositoryError> {
+        // Escape LIKE metacharacters; the user supplies a name, not a SQL pattern.
+        let literal = query
+            .trim()
+            .replace('\\', "\\\\")
+            .replace('%', "\\%")
+            .replace('_', "\\_");
+        let pattern = format!("%{literal}%");
+
+        sqlx::query_as::<_, RoomRow>(
+            r"SELECT id
+               , category_room_id
+               , name 
+            FROM rooms 
+            WHERE name 
+            LIKE ?1 
+            ESCAPE '\' 
+            ORDER BY name, id",
+        )
+        .bind(pattern)
+        .fetch_all(&self.pool)
+        .await
+        .map(|rows| rows.into_iter().map(Room::from).collect())
+        .map_err(|e| RepositoryError::RoomAccessError(e.to_string()))
+    }
 }
 
 #[derive(Clone)]

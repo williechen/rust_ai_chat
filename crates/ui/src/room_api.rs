@@ -55,8 +55,15 @@ pub async fn create_room(name: &str) -> Result<CreateRoomResponse, String> {
 
 // 接續既有 create_room；不重建另一個 HTTP client。
 pub async fn list_rooms() -> Result<Vec<(String, String)>, String> {
+    search_room("").await
+}
+
+pub async fn search_room(query: &str) -> Result<Vec<(String, String)>, String> {
+    let params = web_sys::UrlSearchParams::new().map_err(|_| "無法建立查詢")?;
+    params.append("q", query);
+    let url = format!("/api/rooms?{}", params.to_string());
     let window = web_sys::window().ok_or("無法取得瀏覽器")?;
-    let value = JsFuture::from(window.fetch_with_str("/api/rooms"))
+    let value = JsFuture::from(window.fetch_with_str(&url))
         .await
         .map_err(|_| "房間讀取失敗")?;
     let response: web_sys::Response = value.dyn_into().map_err(|_| "無效回應")?;
@@ -84,21 +91,4 @@ pub async fn list_rooms() -> Result<Vec<(String, String)>, String> {
             Ok((id.to_owned(), name.to_owned()))
         })
         .collect()
-}
-
-pub async fn filter_room(name: &str) -> Result<Vec<(String, String)>, String> {
-    let rooms = list_rooms().await?;
-
-    let mut filtered_rooms = Vec::new();
-    for (room_id, room_name) in &rooms {
-        if room_name == name {
-            filtered_rooms.push((room_id.to_owned(), room_name.to_owned()));
-        }
-    }
-
-    if filtered_rooms.is_empty() {
-        Ok(rooms)
-    } else {
-        Ok(filtered_rooms)
-    }
 }

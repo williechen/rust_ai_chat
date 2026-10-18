@@ -112,6 +112,9 @@ mod tests {
         async fn list(&self) -> Result<Vec<Room>, RepositoryError> {
             Ok(Vec::new())
         }
+        async fn search_by_name(&self, _: &str) -> Result<Vec<Room>, RepositoryError> {
+            Ok(Vec::new())
+        }
     }
 
     struct MissingRoom;
@@ -124,6 +127,9 @@ mod tests {
             Ok(())
         }
         async fn list(&self) -> Result<Vec<Room>, RepositoryError> {
+            Ok(Vec::new())
+        }
+        async fn search_by_name(&self, _: &str) -> Result<Vec<Room>, RepositoryError> {
             Ok(Vec::new())
         }
     }
@@ -142,6 +148,9 @@ mod tests {
             Ok(())
         }
         async fn list(&self) -> Result<Vec<Room>, RepositoryError> {
+            Ok(Vec::new())
+        }
+        async fn search_by_name(&self, _: &str) -> Result<Vec<Room>, RepositoryError> {
             Ok(Vec::new())
         }
     }

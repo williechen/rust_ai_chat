@@ -86,12 +86,12 @@ pub async fn list_rooms() -> Result<Vec<(String, String)>, String> {
         .collect()
 }
 
-pub async fn filter_room(name: &str) -> Result<(String, String), String> {
+pub async fn filter_room(name: &str) -> Result<Vec<(String, String)>, String> {
     let rooms = list_rooms().await?;
     for (room_id, room_name) in rooms {
         if room_name == name {
-            return Ok((room_id, room_name));
+            return Ok(vec![(room_id, room_name)]);
         }
     }
-    Err("房間不存在".into())
+    Ok(rooms)
 }

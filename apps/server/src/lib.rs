@@ -1,5 +1,6 @@
 pub mod http;
 pub mod hub;
+pub mod signup;
 pub mod ssr;
 pub mod state;
 pub mod ws;
@@ -42,7 +43,8 @@ pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
         .route("/room/{room_id}", get(ssr::app_handler))
         .route("/signin", get(ssr::app_handler))
         .route("/", get(ssr::app_handler))
-        .with_state(state);
+        .with_state(state)
+        .merge(signup::routes);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;
 

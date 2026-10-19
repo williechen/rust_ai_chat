@@ -9,6 +9,7 @@ ssr = ["ui/ssr"]
 
 [dependencies]
 any_spawner.workspace = true
+argon2.workspace = true
 axum.workspace = true
 
 chat-application = { path = "../../crates/chat_application" }
@@ -21,6 +22,8 @@ leptos_config.workspace = true
 
 persistence = { path = "../../crates/persistence" }
 
+rand_core.workspace = true
+
 serde.workspace = true
 serde_json.workspace = true
 
@@ -32,3 +35,6 @@ tokio.workspace = true
 
 ui = { path = "../../crates/ui" }
 uuid.workspace = true
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }

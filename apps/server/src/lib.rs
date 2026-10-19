@@ -40,6 +40,7 @@ pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/rooms/{id}", get(http::get_room))
         .route("/ws/{room_id}", any(ws::ws_handler))
         .route("/room/{room_id}", get(ssr::app_handler))
+        .route("/signin", get(ssr::app_handler))
         .route("/", get(ssr::app_handler))
         .with_state(state);
 

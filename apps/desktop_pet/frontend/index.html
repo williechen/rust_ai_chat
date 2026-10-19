@@ -104,6 +104,10 @@
       return invoke("scan_duplicate_preview");
     };
 
+    window.validateNewPetName = (name) => {
+      return invoke("validate_new_pet_name", { name });
+    };
+
   </script>
 
   <link data-trunk rel="rust" />

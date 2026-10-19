@@ -109,6 +109,7 @@ pub fn App() -> impl IntoView {
                 }>
                     <Route path=path!("/") view=HomePage />
                     <Route path=path!("/room/:room_id") view=RoomPage />
+                    <Route path=path!("/signin") view=SignInPage />
                 </Routes>
             </main>
         </Router>
@@ -123,6 +124,17 @@ fn HomePage() -> impl IntoView {
             <a href="/signin" rel="external">"登入"</a>
         </p>
         <RoomList />
+    }
+}
+
+#[component]
+fn SignInPage() -> impl IntoView {
+    view! {
+        <section class="sign-in">
+            <h2>"使用者登入"</h2>
+            <p role="status">"尚未接通帳號驗證；目前不可登入。"</p>
+            <a href="/" rel="external">"回首頁"</a>
+        </section>
     }
 }
 

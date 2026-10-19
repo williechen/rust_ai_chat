@@ -48,6 +48,9 @@ fn App() -> impl IntoView {
     let (confirmed, set_confirmed) = signal(false);
     let (generation, set_generation) = signal(0_u64);
 
+    let (new_pet_name, set_new_pet_name) = signal(String::new());
+    let (new_pet_feedback, set_new_pet_feedback) = signal(String::new());
+
     {
         let snapshot_reader = snapshot;
         let snapshot_writer = set_snapshot;
@@ -104,6 +107,29 @@ fn App() -> impl IntoView {
         <main class="control-shell">
             <h1>"寵物控制台"</h1>
             <p>"控制台關閉後寵物仍運作；檔案功能目前只提供唯讀預覽"</p>
+
+            <section>
+                <h2>"新增寵物"</h2>
+                <label>"寵物名稱"
+                    <input 
+                        prop:value=move || new_pet_name.get()
+                        on:input=move |ev| set_new_pet_name.set(event_target_value(&ev)) />
+                </label>
+                <button 
+                    type="button" 
+                    on:click=move |_| {
+                        let proposed = new_pet_name.get_untracked();
+                        spawn_local(async move {
+                            let response = bridge::validate_new_pet_name(proposed).await;
+                            set_new_pet_feedback.set(match response {
+                                Ok(name) => format!("名稱「{name}」有效；尚未儲存寵物"),
+                                Err(error) => error,
+                            });
+                        });
+                    }
+                >"檢查名稱"</button>
+                <p role="status">{move || new_pet_feedback.get()}</p>
+            </section>
 
             <h2>"互動與聊天"</h2>
             <p>{move || snapshot.get().map(|s| format!("目前狀態: {:?}, 最近更新: {:?}", s.state, s.revision)).unwrap_or_else(|| "讀取中…".into())}</p>

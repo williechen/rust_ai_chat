@@ -45,6 +45,14 @@ fn roam_enabled() -> bool {
     roam_enabled_value(value.as_deref())
 }
 
+fn normalize_new_pet_name(input: &str) -> Result<String, String> {
+    let name = input.trim();
+    if name.is_empty() || name.chars().count() > 32 {
+        return Err("寵物名稱須為 1 到 32 字元".into());
+    }
+    Ok(name.to_owned())
+}
+
 // 取得寵物狀態
 #[tauri::command]
 fn get_pet_state(pet: State<'_, Mutex<PetMachine>>) -> Result<PetSnapshot, String> {
@@ -100,6 +108,11 @@ fn open_control_window(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 fn quit_pet(app: tauri::AppHandle) {
     app.exit(0);
+}
+
+#[tauri::command]
+fn validate_new_pet_name(name: String) -> Result<String, String> {
+    normalize_new_pet_name(&name)
 }
 
 pub fn application() {
@@ -177,5 +190,19 @@ mod roam_setting_tests {
         assert!(!roam_enabled_value(Some("TRUE")));
         assert!(roam_enabled_value(Some("true")));
         assert!(roam_enabled_value(Some("1")));
+    }
+}
+
+#[cfg(test)]
+mod day21_pet_creation_tests {
+    use super::normalize_new_pet_name;
+    #[test]
+    fn day21_accepts_trimmed_chinese_name() {
+        assert_eq!(normalize_new_pet_name("  小橘  "), Ok("小橘".into()));
+    }
+    #[test]
+    fn day21_rejects_blank_and_long_names() {
+        assert!(normalize_new_pet_name("  ").is_err());
+        assert!(normalize_new_pet_name(&"寵".repeat(33)).is_err());
     }
 }

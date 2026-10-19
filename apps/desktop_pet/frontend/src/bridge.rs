@@ -62,6 +62,9 @@ extern "C" {
 
     #[wasm_bindgen(js_namespace = window, js_name = scanDuplicatePreview)]
     fn scan_duplicate_preview_js() -> Promise;
+
+    #[wasm_bindgen(js_namespace = window, js_name = validateNewPetName)]
+    fn validate_new_pet_name_js(name: &str) -> Promise;
 }
 
 // 將 JavaScript 的錯誤轉換為 Rust 的字串
@@ -155,4 +158,11 @@ pub async fn quit_pet() -> Result<(), String> {
     JsFuture::from(quit_pet_js()).await.map_err(js_error)?;
 
     Ok(())
+}
+
+pub async fn validate_new_pet_name(name: String) -> Result<String, String> {
+    let value = JsFuture::from(validate_new_pet_name_js(&name))
+        .await
+        .map_err(js_error)?;
+    value.as_string().ok_or_else(|| "名稱回應格式錯誤".into())
 }

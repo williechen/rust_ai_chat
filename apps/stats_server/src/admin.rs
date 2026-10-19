@@ -196,6 +196,9 @@ async fn login_page() -> Html<String> {
             <h1>"Analytics 管理員登入"</h1>
             <p>"以管理員登入碼建立 30 分鐘工作階段。來源服務 token 不能用來登入。"</p>
             <form method="post" action="/login">
+                <label>"管理員帳號"
+                    <input name="username" type="text" value="admin" required autocomplete="username" />
+                </label>
                 <label>"管理員登入碼"
                     <input name="key" type="password" required autocomplete="current-password" />
                 </label>
@@ -206,8 +209,18 @@ async fn login_page() -> Html<String> {
     )
 }
 
+fn admin_account_name_is_valid(value: &str) -> bool {
+    value == "admin"
+}
+
+fn default_legacy_admin_name() -> String {
+    "admin".into()
+}
+
 #[derive(Deserialize)]
 struct Login {
+    #[serde(default = "default_legacy_admin_name")]
+    username: String,
     key: String,
 }
 
@@ -223,6 +236,10 @@ async fn login(
     let Some(config) = &state.config else {
         return StatusCode::SERVICE_UNAVAILABLE.into_response();
     };
+
+    if !admin_account_name_is_valid(&form.username) {
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
 
     let mut attempts = match state.attempts.lock() {
         Ok(v) => v,
@@ -928,5 +945,12 @@ mod tests {
             .unwrap();
         assert!((1..=60).contains(&seconds));
         assert!(!response.headers().contains_key(header::SET_COOKIE));
+    }
+
+    #[test]
+    fn day21_admin_account_is_explicit() {
+        assert!(super::admin_account_name_is_valid("admin"));
+        assert!(!super::admin_account_name_is_valid("guest"));
+        assert!(!super::admin_account_name_is_valid("ADMIN"));
     }
 }

@@ -111,11 +111,11 @@ fn App() -> impl IntoView {
             <section>
                 <h2>"新增寵物"</h2>
                 <label>"寵物名稱"
-                    <input 
+                    <input
                         prop:value=move || new_pet_name.get()
                         on:input=move |ev| set_new_pet_name.set(event_target_value(&ev)) />
                 </label>
-                <button 
+                <button
                     type="button" 
                     on:click=move |_| {
                         let proposed = new_pet_name.get_untracked();

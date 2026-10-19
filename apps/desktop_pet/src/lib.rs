@@ -174,6 +174,7 @@ pub fn application() {
             scan_duplicate_preview,
             open_control_window,
             quit_pet,
+            validate_new_pet_name,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Rust AI Desktop Pet");

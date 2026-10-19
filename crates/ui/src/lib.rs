@@ -54,6 +54,24 @@ fn refreshed_room_list(
     }
 }
 
+fn refresh_result_view(
+    previous: Vec<(String, String)>,
+    previous_query: String,
+    result: Result<Vec<(String, String)>, String>,
+) -> (Vec<(String, String)>, String, String) {
+    match result {
+        Ok(next) => {
+            let status = if next.is_empty() {
+                "尚無房間"
+            } else {
+                "請選擇房間"
+            };
+            (next, String::new(), status.to_owned())
+        }
+        Err(error) => (previous, previous_query, format!("{error}，請重試")),
+    }
+}
+
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
         <!DOCTYPE html>
@@ -304,9 +322,11 @@ fn RoomList() -> impl IntoView {
                     #[cfg(target_arch = "wasm32")]
                     wasm_bindgen_futures::spawn_local(async move {
                         let previous = rows.get_untracked();
+                        let previous_query = query.get_untracked();
                         let result = room_api::list_rooms().await;
-                        let (next_rows, next_status) = refreshed_room_list(previous, result);
+                        let (next_rows, next_query, next_status) = refresh_result_view(previous, previous_query, result);
                         set_rows.set(next_rows);
+                        set_query.set(next_query);
                         set_status.set(next_status);
                         set_loading.set(false);
                     });
@@ -382,6 +402,28 @@ mod day16_room_search_tests {
         assert_eq!(super::filter_rooms(&rows, " 技術 "), vec![rows[0].clone()]);
         assert_eq!(super::filter_rooms(&rows, " "), rows);
     }
+
+    #[test]
+    fn day20_refresh_success_reveals_full_snapshot() {
+        let old = vec![("a".into(), "Rust".into())];
+        let fresh = vec![("a".into(), "Rust".into()), ("b".into(), "Pet".into())];
+        let (rows, query, status) =
+            super::refresh_result_view(old, "Rust".into(), Ok(fresh.clone()));
+        assert_eq!(rows, fresh);
+        assert_eq!(query, "");
+        assert_eq!(status, "請選擇房間");
+        assert_eq!(super::filter_rooms(&rows, &query).len(), 2);
+    }
+
+    #[test]
+    fn day20_refresh_failure_keeps_query_and_rows() {
+        let old = vec![("a".into(), "Rust".into())];
+        let (rows, query, status) =
+            super::refresh_result_view(old.clone(), "Rust".into(), Err("503".into()));
+        assert_eq!(rows, old);
+        assert_eq!(query, "Rust");
+        assert_eq!(status, "503，請重試");
+    }
 }
 
 #[cfg(all(test, feature = "ssr"))]
@@ -396,6 +438,9 @@ mod day16_layout_tests {
         assert!(html.contains("<textarea"));
         assert!(html.contains("尚未連線"));
         assert!(html.contains("歷史載入尚未接通"));
+        assert!(!html.contains("Online: 100"));
+    }
+}
         assert!(!html.contains("Online: 100"));
     }
 }

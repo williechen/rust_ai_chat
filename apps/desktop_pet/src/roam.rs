@@ -73,6 +73,10 @@ fn bounded_next_position(
     }
 }
 
+fn no_roaming_space(dx: i32, dy: i32) -> bool {
+    dx == 0 && dy == 0
+}
+
 // 在桌面上漫遊寵物的主循環
 // 在桌面上漫遊寵物的主循環
 pub async fn roam_desktop(app: tauri::AppHandle) {
@@ -122,6 +126,13 @@ pub async fn roam_desktop(app: tauri::AppHandle) {
 
         if let Err(error) = window.set_position(requested) {
             eprintln!("desktop roaming unavailable: {error}");
+            break;
+        }
+
+        // 先讓 WM 接受要求的位置，再停止沒有任何可移動軸的漫遊。
+        // 不把普通的單軸邊界反彈誤認為無空間。
+        if no_roaming_space(dx, dy) {
+            eprintln!("desktop roaming stopped: pet window exceeds available work area");
             break;
         }
 
@@ -269,5 +280,52 @@ mod tests {
     fn day18_roaming_selects_pet_life_window() {
         assert_eq!(roaming_window_label(), "pet");
         assert_ne!(roaming_window_label(), "main");
+    }
+
+    #[test]
+    fn day20_stops_only_when_both_axes_are_blocked() {
+        assert!(super::no_roaming_space(0, 0));
+        assert!(!super::no_roaming_space(0, 1));
+        assert!(!super::no_roaming_space(2, 0));
+        assert!(!super::no_roaming_space(-1, 2));
+    }
+
+    #[test]
+    fn day20_oversized_window_is_pinned_and_stops() {
+        let mut dx = 2;
+        let mut dy = 1;
+        let next = super::bounded_next_position(
+            PhysicalPosition { x: 20, y: 50 },
+            PhysicalSize {
+                width: 900,
+                height: 1000,
+            },
+            &area(-100, -50, 800, 600),
+            &mut dx,
+            &mut dy,
+        );
+        assert_eq!(next, PhysicalPosition { x: -100, y: -50 });
+        assert!(super::no_roaming_space(dx, dy));
+    }
+
+    #[test]
+    fn day20_single_axis_can_still_roam() {
+        let mut dx = 2;
+        let mut dy = 1;
+        let next = super::bounded_next_position(
+            PhysicalPosition { x: 10, y: 10 },
+            PhysicalSize {
+                width: 900,
+                height: 100,
+            },
+            &area(0, 0, 800, 600),
+            &mut dx,
+            &mut dy,
+        );
+        assert_eq!(next.x, 0);
+        assert_eq!(next.y, 11);
+        assert_eq!(dx, 0);
+        assert_eq!(dy, 1);
+        assert!(!super::no_roaming_space(dx, dy));
     }
 }

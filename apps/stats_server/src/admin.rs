@@ -234,7 +234,18 @@ async fn login(
     }
 
     if attempts.1 >= 10 {
-        return StatusCode::TOO_MANY_REQUESTS.into_response();
+        // 窗口已在本函式上方檢查是否超過 60 秒並重置。
+        // 將剩餘時間向上取整，避免回傳 0 秒但仍拒絕登入。
+        let remaining = Duration::from_secs(60).saturating_sub(attempts.0.elapsed());
+        let mut seconds = remaining.as_secs();
+        if remaining.subsec_nanos() > 0 {
+            seconds += 1;
+        }
+        return (
+            StatusCode::TOO_MANY_REQUESTS,
+            [(header::RETRY_AFTER, seconds.max(1).to_string())],
+        )
+            .into_response();
     }
 
     // Only accept the generated 256-bit login key, not a low-entropy password hashed with SHA256.
@@ -892,5 +903,30 @@ mod tests {
                 .status(),
             StatusCode::TOO_MANY_REQUESTS
         );
+    }
+
+    #[tokio::test]
+    async fn day20_login_rate_limit_provides_retry_after() {
+        let router = app();
+        for _ in 0..10 {
+            let response = router
+                .clone()
+                .oneshot(request("POST", "/login", "key=wrong"))
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        }
+        let response = router
+            .oneshot(request("POST", "/login", "key=wrong"))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+        let seconds: u64 = response.headers()[header::RETRY_AFTER]
+            .to_str()
+            .unwrap()
+            .parse()
+            .unwrap();
+        assert!((1..=60).contains(&seconds));
+        assert!(!response.headers().contains_key(header::SET_COOKIE));
     }
 }

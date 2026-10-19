@@ -441,6 +441,3 @@ mod day16_layout_tests {
         assert!(!html.contains("Online: 100"));
     }
 }
-        assert!(!html.contains("Online: 100"));
-    }
-}

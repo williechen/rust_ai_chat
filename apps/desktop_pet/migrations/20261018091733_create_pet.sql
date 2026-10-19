@@ -5,6 +5,8 @@ CREATE TABLE pet_profile (
     ai_api_key VARCHAR(255), -- AI API 金鑰
     species VARCHAR(255) NOT NULL, -- 物種
     age INT, -- 年齡
+    sexy VARCHAR(255), -- 性別
+    image_path VARCHAR(255), -- 圖片路徑
     is_default_closure BOOLEAN DEFAULT FALSE, -- 是否預設關籠 
     owner_id TEXT NOT NULL REFERENCES pet_owner(id), -- 主人ID
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 建立時間

@@ -1,4 +1,5 @@
 pub mod admin;
+pub mod bootstrap;
 pub mod pg_store;
 
 use axum::{

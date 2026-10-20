@@ -161,8 +161,8 @@ fn App() -> impl IntoView {
                         set_pets_busy.set(true);
                         spawn_local(async move {
                             match bridge::list_pets().await {
-                                Ok(rows) => { 
-                                    set_saved_pets.set(rows); 
+                                Ok(rows) => {
+                                    set_saved_pets.set(rows);
                                     set_new_pet_feedback.set("已重新載入清單".into()); 
                                 }
                                 Err(error) => set_new_pet_feedback.set(format!("讀取清單失敗：{error}")),

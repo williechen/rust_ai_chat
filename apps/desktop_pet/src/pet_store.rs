@@ -1,3 +1,4 @@
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SavedPet {
     pub id: String,
     pub name: String,

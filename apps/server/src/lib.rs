@@ -1,6 +1,6 @@
 pub mod http;
 pub mod hub;
-mod signin;
+pub mod signin;
 pub mod signup;
 pub mod ssr;
 pub mod state;

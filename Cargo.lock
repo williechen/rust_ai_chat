@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "ai-core"
-version = "0.2.21"
+version = "0.2.22"
 dependencies = [
  "async-trait",
  "thiserror 2.0.21",
@@ -73,6 +73,18 @@ name = "anyhow"
 version = "1.0.104"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
+
+[[package]]
+name = "argon2"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "134c52ddac6d63c576bef8168db10c83c49c26444ecbc68060fef078925a901c"
+dependencies = [
+ "base64ct",
+ "blake2",
+ "cpufeatures 0.3.1",
+ "password-hash",
+]
 
 [[package]]
 name = "async-lock"
@@ -256,6 +268,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
 
 [[package]]
+name = "base64ct"
+version = "1.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
+
+[[package]]
 name = "bit-set"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -283,6 +301,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
 dependencies = [
  "serde_core",
+]
+
+[[package]]
+name = "blake2"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b5d4d889834ee8ecfc0f8426ad30faf7cdcb10f741a8e6d7224d95325479f6f"
+dependencies = [
+ "digest 0.11.3",
 ]
 
 [[package]]
@@ -493,7 +520,7 @@ dependencies = [
 
 [[package]]
 name = "chat-application"
-version = "0.2.21"
+version = "0.2.22"
 dependencies = [
  "async-trait",
  "chat-domain",
@@ -504,7 +531,7 @@ dependencies = [
 
 [[package]]
 name = "chat-domain"
-version = "0.2.21"
+version = "0.2.22"
 dependencies = [
  "serde",
  "uuid",
@@ -938,7 +965,7 @@ dependencies = [
 
 [[package]]
 name = "desktop-pet"
-version = "0.2.21"
+version = "0.2.22"
 dependencies = [
  "ai-core",
  "dotenv",
@@ -957,7 +984,7 @@ dependencies = [
 
 [[package]]
 name = "desktop-pet-frontend"
-version = "0.2.21"
+version = "0.2.22"
 dependencies = [
  "gloo-timers",
  "js-sys",
@@ -3196,6 +3223,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "password-hash"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aab41826031698d6ffcd9cff78ef56ef998e39dc7e5067cdfebe373842d4723b"
+dependencies = [
+ "getrandom 0.4.3",
+ "phc",
+ "rand_core 0.10.1",
+]
+
+[[package]]
 name = "paste"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3215,7 +3253,7 @@ checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 
 [[package]]
 name = "persistence"
-version = "0.2.21"
+version = "0.2.22"
 dependencies = [
  "async-trait",
  "chat-application",
@@ -3226,12 +3264,24 @@ dependencies = [
 
 [[package]]
 name = "pet-domain"
-version = "0.2.21"
+version = "0.2.22"
 dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.21",
  "uuid",
+]
+
+[[package]]
+name = "phc"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44dc769b75f93afdddd8c7fa12d685292ddeff1e66f7f0f3a234cf1818afe892"
+dependencies = [
+ "base64ct",
+ "ctutils",
+ "getrandom 0.4.3",
+ "rand_core 0.10.1",
 ]
 
 [[package]]
@@ -4099,9 +4149,10 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.2.21"
+version = "0.2.22"
 dependencies = [
  "any_spawner",
+ "argon2",
  "axum",
  "chat-application",
  "dotenv",
@@ -4109,11 +4160,13 @@ dependencies = [
  "leptos_axum",
  "leptos_config",
  "persistence",
+ "rand_core 0.10.1",
  "serde",
  "serde_json",
  "shared",
  "sqlx",
  "tokio",
+ "tower",
  "ui",
  "uuid",
 ]
@@ -4238,7 +4291,7 @@ dependencies = [
 
 [[package]]
 name = "shared"
-version = "0.2.21"
+version = "0.2.22"
 dependencies = [
  "chat-domain",
  "serde",
@@ -4556,7 +4609,7 @@ checksum = "ff7589a1859b09232522bb9edf076ca7fcf14ded96685d3fa629db73023ffbb7"
 
 [[package]]
 name = "stats-server"
-version = "0.2.21"
+version = "0.2.22"
 dependencies = [
  "axum",
  "dotenv",
@@ -4994,7 +5047,7 @@ dependencies = [
 
 [[package]]
 name = "telemetry"
-version = "0.2.21"
+version = "0.2.22"
 
 [[package]]
 name = "tendril"
@@ -5425,7 +5478,7 @@ checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 
 [[package]]
 name = "ui"
-version = "0.2.21"
+version = "0.2.22"
 dependencies = [
  "chat-domain",
  "leptos",

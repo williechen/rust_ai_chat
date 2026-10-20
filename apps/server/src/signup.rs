@@ -1,7 +1,4 @@
-use argon2::{
-    Argon2, PasswordHasher,
-    password_hash::{SaltString, rand_core::OsRng},
-};
+use argon2::{Argon2, PasswordHasher};
 use axum::{
     Form, Router,
     extract::{DefaultBodyLimit, State},
@@ -77,7 +74,7 @@ async fn signup(
 
     let password_hash = tokio::task::spawn_blocking(move || {
         Argon2::default()
-            .hash_password(form.password.as_bytes(), &SaltString::generate(&mut OsRng))
+            .hash_password(form.password.as_bytes())
             .map(|hash| hash.to_string())
             .map_err(|_| ())
     })
@@ -133,7 +130,7 @@ mod day22_tests {
         .await
         .unwrap();
         sqlx::raw_sql(include_str!(
-            "../../../migrations/20261020060000_member_identity.sql"
+            "../../../migrations/20261019221857_member_identity.sql"
         ))
         .execute(&pool)
         .await

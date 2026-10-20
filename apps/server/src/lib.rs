@@ -1,5 +1,6 @@
 pub mod http;
 pub mod hub;
+mod signin;
 pub mod signup;
 pub mod ssr;
 pub mod state;
@@ -33,6 +34,7 @@ pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
     let message_repository = Arc::new(persistence::SqliteMessageRepository::new(db.clone()));
 
     let signup_routes = signup::routes(db.clone());
+    let signin_routes = signin::routes(db.clone());
 
     let state = state::AppState::new(leptos_options, room_repository, message_repository);
 
@@ -46,7 +48,8 @@ pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
         .route("/signin", get(ssr::app_handler))
         .route("/", get(ssr::app_handler))
         .with_state(state)
-        .merge(signup_routes);
+        .merge(signup_routes)
+        .merge(signin_routes);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;
 

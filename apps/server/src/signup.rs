@@ -71,8 +71,26 @@ async fn signup(
     let username = form.username.trim().to_owned();
     let email = form.email.trim().to_ascii_lowercase();
     let display = form.display_name.trim().to_owned();
-    // 本切片 Email 為基本格式檢查；驗證信另列後續。
-    if username.is_empty() || email.is_empty() || display.is_empty() || form.password.is_empty() {
+    // 保留新版畫面的 8-byte 密碼政策；所有限制都必須在伺服器重驗。
+    // Email 僅做基本格式檢查，驗證信仍屬後續功能。
+    let email_parts: Vec<_> = email.split('@').collect();
+    if !(3..=32).contains(&username.len())
+        || !username
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_')
+        || !(1..=32).contains(&display.chars().count())
+        || !email.is_ascii()
+        || email.len() > 254
+        || email_parts.len() != 2
+        || email_parts[0].is_empty()
+        || !email_parts[1].contains('.')
+        || email_parts[1].starts_with('.')
+        || email_parts[1].ends_with('.')
+        || email
+            .bytes()
+            .any(|b| b.is_ascii_whitespace() || b.is_ascii_control())
+        || !(8..=128).contains(&form.password.len())
+    {
         return Err(StatusCode::UNPROCESSABLE_ENTITY);
     }
 
@@ -189,5 +207,83 @@ mod day22_tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+}
+
+#[cfg(test)]
+mod day23_correction_tests {
+    use super::*;
+    use axum::{body::Body, http::Request};
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn day23_invalid_signup_is_rejected_before_db_write() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::raw_sql(include_str!(
+            "../../../migrations/20261018073931_create_auth_user.sql"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::raw_sql(include_str!(
+            "../../../migrations/20261019221857_member_identity.sql"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+        let app = routes(pool.clone());
+        let good =
+            "username=learner&email=learner%40example.test&display_name=Learner&password=12345678";
+        // DB 沒有既存帳號，422 不能靠重複 Email 的 409 掩蓋。
+        for bad in [
+            good.replace("username=learner", "username=x"),
+            good.replace("username=learner", "username=bad-name"),
+            good.replace("learner%40example.test", "not-an-email"),
+            good.replace("display_name=Learner", "display_name=%20%20"),
+            good.replace("password=12345678", "password=1234567"),
+            good.replace("username=learner", &format!("username={}", "x".repeat(33))),
+            good.replace(
+                "display_name=Learner",
+                &format!("display_name={}", "x".repeat(33)),
+            ),
+            good.replace(
+                "password=12345678",
+                &format!("password={}", "x".repeat(129)),
+            ),
+        ] {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::post("/signup")
+                        .header("origin", "http://127.0.0.1:3000")
+                        .header("content-type", "application/x-www-form-urlencoded")
+                        .body(Body::from(bad))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        }
+        let (count,): (i64,) = sqlx::query_as("SELECT count(*) FROM mbr_user")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 0);
+        // 下界與新版表單一致；保持 0.6 的自動隨機鹽 API。
+        let response = app
+            .oneshot(
+                Request::post("/signup")
+                    .header("origin", "http://127.0.0.1:3000")
+                    .header("content-type", "application/x-www-form-urlencoded")
+                    .body(Body::from(good))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
     }
 }

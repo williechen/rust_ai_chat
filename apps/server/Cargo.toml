@@ -22,8 +22,6 @@ leptos_config.workspace = true
 
 persistence = { path = "../../crates/persistence" }
 
-rand_core.workspace = true
-
 serde.workspace = true
 serde_json.workspace = true
 

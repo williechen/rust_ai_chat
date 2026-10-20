@@ -34,18 +34,22 @@ async fn page() -> Html<&'static str> {
             <body>
                 <h1>會員註冊</h1>
                 <form method="post" action="/signup">
-                    <label>帳號
+                    <div>
+                        <label>帳號</label>
                         <input name="username" required minlength="3" maxlength="32" autocomplete="username">
-                    </label>
-                    <label>Email
+                    </div>
+                    <div>
+                        <label>Email</label>
                         <input name="email" type="email" required maxlength="254" autocomplete="email">
-                    </label>
-                    <label>顯示名稱
+                    </div>
+                    <div>
+                        <label>顯示名稱</label>
                         <input name="display_name" required maxlength="32">
-                    </label>
-                    <label>密碼
-                        <input name="password" type="password" required minlength="12" maxlength="128" autocomplete="new-password">
-                    </label>
+                    </div>
+                    <div>
+                        <label>密碼</label>
+                        <input name="password" type="password" required minlength="8" maxlength="128" autocomplete="new-password">
+                    </div>
                     <button type="submit">建立會員</button>
                 </form>
                 <a href="/signin">回登入頁</a>

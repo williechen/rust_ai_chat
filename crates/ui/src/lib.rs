@@ -132,8 +132,12 @@ fn SignInPage() -> impl IntoView {
     view! {
         <section class="sign-in">
             <h2>"使用者登入"</h2>
-            <a href="/signup" rel="external">"建立會員"</a>
-            <a href="/" rel="external">"回首頁"</a>
+            <p>
+                <a href="/signup" rel="external">"建立會員"</a>
+            </p>
+            <p>
+                <a href="/" rel="external">"回首頁"</a>
+            </p>
         </section>
     }
 }

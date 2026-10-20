@@ -4,15 +4,14 @@ CREATE TABLE uac_ai_persion(
     uac_user_id TEXT NOT NULL,
     ai_person_id TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)
+);
 
 CREATE TABLE mbr_ai_persion(
     id TEXT NOT NULL PRIMARY KEY,
     mbr_user_id TEXT NOT NULL,
     ai_person_id TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)
-
+);
 
 CREATE TABLE ai_person (
     id TEXT NOT NULL PRIMARY KEY, -- PKNO

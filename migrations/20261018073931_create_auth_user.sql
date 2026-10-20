@@ -63,8 +63,8 @@ CREATE TABLE mbr_user (
     user_email TEXT NOT NULL, -- 電子郵件
     user_name TEXT NOT NULL, -- 使用者名稱
     user_status TEXT NOT NULL, -- 使用者狀態
-    user_sexy TEXT NOT NULL, -- 使用者性別
-    user_birthday TIMESTAMP NOT NULL, -- 使用者生日
+    user_sexy TEXT , -- 使用者性別
+    user_birthday TIMESTAMP , -- 使用者生日
     is_init_pd BOOLEAN NOT NULL, -- 是否初始化密碼
     expired_pd_at TIMESTAMP, -- 密碼過期時間
     last_login_at TIMESTAMP, -- 最後登入時間

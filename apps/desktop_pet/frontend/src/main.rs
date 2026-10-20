@@ -122,12 +122,12 @@ fn App() -> impl IntoView {
                         spawn_local(async move {
                             let response = bridge::validate_new_pet_name(proposed).await;
                             set_new_pet_feedback.set(match response {
-                                Ok(name) => format!("名稱「{name}」有效；尚未儲存寵物"),
+                                Ok(name) => format!("已儲存名稱：{name}"),
                                 Err(error) => error,
                             });
                         });
                     }
-                >"檢查名稱"</button>
+                >"建立寵物"</button>
                 <p role="status">{move || new_pet_feedback.get()}</p>
             </section>
 

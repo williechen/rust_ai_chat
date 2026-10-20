@@ -1,5 +1,6 @@
 mod chat;
 mod file_organizer;
+pub mod pet_store;
 mod roam;
 
 use ai_core::{ChatRequest, MockChatModel};
@@ -115,7 +116,12 @@ fn validate_new_pet_name(name: String) -> Result<String, String> {
     normalize_new_pet_name(&name)
 }
 
-pub fn application() {
+#[tauri::command]
+async fn create_pet(name: String, store: State<'_, pet_store::PetStore>) -> Result<String, String> {
+    store.create(&name).await
+}
+
+pub fn application(db: sqlx::SqlitePool) {
     tauri::Builder::default()
         .on_window_event(|window, event| {
             if window.label() == "main" {
@@ -127,6 +133,7 @@ pub fn application() {
         })
         .manage(Mutex::new(PetMachine::default()))
         .manage(AiState::new(Arc::new(MockChatModel)))
+        .manage(pet_store::PetStore { pool: db })
         .setup(|app| {
             /*
              * JS Menu.new() 建立的 native menu item
@@ -175,6 +182,7 @@ pub fn application() {
             open_control_window,
             quit_pet,
             validate_new_pet_name,
+            create_pet,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Rust AI Desktop Pet");

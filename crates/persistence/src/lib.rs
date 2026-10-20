@@ -69,10 +69,11 @@ impl RoomRepository for SqliteRoomRepository {
                 id
                 , category_room_id
                 , name
+                , desc
                 , created_at
                 , updated_at
             )
-            VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            VALUES ($1, $2, $3, '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             "#,
         )
         .bind(&room.id)
@@ -176,10 +177,11 @@ mod tests {
                 id,
                 category_room_id,
                 name,
+                desc,
                 created_at,
                 updated_at
             )
-            VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            VALUES ($1, $2, $3, '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             "#,
         )
         .bind("room-rust")
@@ -229,8 +231,8 @@ mod tests {
     // 每個 sqlx::test 取得獨立的測試資料庫，先套用 Migration。
     async fn insert_test_room(pool: &SqlitePool, id: &str) {
         sqlx::query(
-            "INSERT INTO rooms (id, category_room_id, name, created_at, updated_at)
-         VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+            "INSERT INTO rooms (id, category_room_id, name, desc, created_at, updated_at)
+         VALUES ($1, $2, $3, '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
         )
         .bind(id)
         .bind("category-programming")

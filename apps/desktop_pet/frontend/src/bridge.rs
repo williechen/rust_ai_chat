@@ -65,6 +65,12 @@ extern "C" {
 
     #[wasm_bindgen(js_namespace = window, js_name = validateNewPetName)]
     fn validate_new_pet_name_js(name: &str) -> Promise;
+
+    #[wasm_bindgen(js_namespace = window, js_name = listPets)]
+    fn list_pets_js() -> Promise;
+
+    #[wasm_bindgen(js_namespace = window, js_name = createPet)]
+    fn create_pet_js(name: &str) -> Promise;
 }
 
 // 將 JavaScript 的錯誤轉換為 Rust 的字串
@@ -160,9 +166,21 @@ pub async fn quit_pet() -> Result<(), String> {
     Ok(())
 }
 
-pub async fn validate_new_pet_name(name: String) -> Result<String, String> {
-    let value = JsFuture::from(validate_new_pet_name_js(&name))
+pub async fn create_pet(name: String) -> Result<String, String> {
+    let value = JsFuture::from(create_pet_js(&name))
         .await
         .map_err(js_error)?;
     value.as_string().ok_or_else(|| "名稱回應格式錯誤".into())
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Deserialize)]
+pub struct SavedPet {
+    pub id: String,
+    pub name: String,
+    pub species: String,
+}
+
+pub async fn list_pets() -> Result<Vec<SavedPet>, String> {
+    let value = JsFuture::from(list_pets_js()).await.map_err(js_error)?;
+    serde_wasm_bindgen::from_value(value).map_err(|_| "寵物清單格式錯誤".into())
 }

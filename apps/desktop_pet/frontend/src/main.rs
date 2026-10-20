@@ -51,6 +51,23 @@ fn App() -> impl IntoView {
     let (new_pet_name, set_new_pet_name) = signal(String::new());
     let (new_pet_feedback, set_new_pet_feedback) = signal(String::new());
 
+    let (saved_pets, set_saved_pets) = signal(Vec::<bridge::SavedPet>::new());
+    let (pets_busy, set_pets_busy) = signal(false);
+
+    if !bridge::is_pet_window() {
+        set_pets_busy.set(true);
+        spawn_local(async move {
+            match bridge::list_pets().await {
+                Ok(rows) => {
+                    set_saved_pets.set(rows);
+                    set_new_pet_feedback.set("已載入儲存清單".into());
+                }
+                Err(error) => set_new_pet_feedback.set(error),
+            }
+            set_pets_busy.set(false);
+        });
+    }
+
     {
         let snapshot_reader = snapshot;
         let snapshot_writer = set_snapshot;
@@ -117,18 +134,47 @@ fn App() -> impl IntoView {
                 </label>
                 <button
                     type="button" 
+                    disabled=move || pets_busy.get()
                     on:click=move |_| {
+                        if pets_busy.get_untracked() { return; }
+                        set_pets_busy.set(true);
                         let proposed = new_pet_name.get_untracked();
                         spawn_local(async move {
-                            let response = bridge::validate_new_pet_name(proposed).await;
-                            set_new_pet_feedback.set(match response {
-                                Ok(name) => format!("已儲存名稱：{name}"),
-                                Err(error) => error,
-                            });
+                            match bridge::create_pet(proposed).await {
+                                Ok(saved) => match bridge::list_pets().await {
+                                    Ok(row) => {set_saved_pets.set(row);
+                                    set_new_pet_feedback.set(format!("已建立寵物：{saved}"));
+                                    },
+                                    Err(_) => set_new_pet_feedback.set(format!("已建立：{saved}；清單讀回失敗，請重新載入，勿重送建立。")),
+                                },
+                                Err(error) => set_new_pet_feedback.set(format!("建立寵物失敗：{error}")),
+                            }
+                            set_pets_busy.set(false);
                         });
                     }
                 >"建立寵物"</button>
                 <p role="status">{move || new_pet_feedback.get()}</p>
+                 <h3>"已儲存寵物"</h3>
+                <button type="button" disabled=move || pets_busy.get()
+                    on:click=move |_| {
+                        if pets_busy.get_untracked() { return; }
+                        set_pets_busy.set(true);
+                        spawn_local(async move {
+                            match bridge::list_pets().await {
+                                Ok(rows) => { 
+                                    set_saved_pets.set(rows); 
+                                    set_new_pet_feedback.set("已重新載入清單".into()); 
+                                }
+                                Err(error) => set_new_pet_feedback.set(format!("讀取清單失敗：{error}")),
+                            }
+                            set_pets_busy.set(false);
+                        });
+                    }>"重新載入清單"</button>
+                <Show when=move || pets_busy.get() fallback=|| ()><p>"處理中…"</p></Show>
+                <ul>
+                    <For each=move || saved_pets.get() key=|pet| pet.id.clone()
+                        children=|pet| view! { <li>{format!("{}／{}（{}）", pet.name, pet.species, pet.id)}</li> } />
+                </ul>
             </section>
 
             <h2>"互動與聊天"</h2>

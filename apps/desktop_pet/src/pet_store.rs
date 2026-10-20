@@ -1,9 +1,28 @@
+pub struct SavedPet {
+    pub id: String,
+    pub name: String,
+    pub species: String,
+}
+
 #[derive(Clone)]
 pub struct PetStore {
     pub pool: sqlx::SqlitePool,
 }
 
 impl PetStore {
+    pub async fn list(&self) -> Result<Vec<SavedPet>, String> {
+        let rows: Vec<(String, String, String)> = sqlx::query_as(
+            "SELECT id,name,species FROM pet_profile WHERE owner_id='local-owner' ORDER BY name,id",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|_| "無法讀取已儲存寵物".to_owned())?;
+        Ok(rows
+            .into_iter()
+            .map(|(id, name, species)| SavedPet { id, name, species })
+            .collect())
+    }
+
     pub async fn create(&self, input: &str) -> Result<String, String> {
         let name = crate::normalize_new_pet_name(input)?;
         let id = uuid::Uuid::new_v4().to_string();

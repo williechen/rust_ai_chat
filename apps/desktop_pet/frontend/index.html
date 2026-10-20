@@ -104,7 +104,11 @@
       return invoke("scan_duplicate_preview");
     };
 
-    window.validateNewPetName = (name) => {
+    window.listPets = () => {
+      return invoke("list_pets");
+    };
+
+    window.createPet = (name) => {
       return invoke("create_pet", { name });
     };
 

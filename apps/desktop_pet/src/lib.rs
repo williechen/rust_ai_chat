@@ -121,6 +121,13 @@ async fn create_pet(name: String, store: State<'_, pet_store::PetStore>) -> Resu
     store.create(&name).await
 }
 
+#[tauri::command]
+async fn list_pets(
+    store: State<'_, pet_store::PetStore>,
+) -> Result<Vec<pet_store::SavedPet>, String> {
+    store.list().await
+}
+
 pub fn application(db: sqlx::SqlitePool) {
     tauri::Builder::default()
         .on_window_event(|window, event| {
@@ -183,6 +190,7 @@ pub fn application(db: sqlx::SqlitePool) {
             quit_pet,
             validate_new_pet_name,
             create_pet,
+            list_pets,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Rust AI Desktop Pet");

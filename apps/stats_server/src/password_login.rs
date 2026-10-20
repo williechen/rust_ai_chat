@@ -9,16 +9,20 @@ use axum::{
 };
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
+
 const ORIGIN: &str = "http://127.0.0.1:3100";
+
 fn digest(value: &str) -> String {
     Sha256::digest(value.as_bytes())
         .iter()
         .map(|b| format!("{b:02x}"))
         .collect()
 }
+
 fn cookie(raw: &str) -> String {
     format!("analytics_session={raw}; HttpOnly; SameSite=Strict; Path=/; Max-Age=1800")
 }
+
 fn raw_cookie(headers: &HeaderMap) -> Option<String> {
     let raw = headers
         .get(header::COOKIE)?
@@ -30,6 +34,7 @@ fn raw_cookie(headers: &HeaderMap) -> Option<String> {
         .1;
     (raw.len() == 64 && raw.bytes().all(|c| c.is_ascii_hexdigit())).then(|| raw.to_owned())
 }
+
 fn renewed(response: impl IntoResponse, raw: &str) -> Response {
     let mut response = response.into_response();
     response.headers_mut().insert(
@@ -38,16 +43,40 @@ fn renewed(response: impl IntoResponse, raw: &str) -> Response {
     );
     response
 }
+
 #[derive(Deserialize)]
 struct Login {
     username: String,
     password: String,
 }
+
 async fn login_page() -> Html<&'static str> {
     Html(
-        r#"<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><h1>Analytics 帳密登入</h1><form method="post" action="/login"><label>帳號<input name="username" autocomplete="username" required></label><label>密碼<input type="password" name="password" autocomplete="current-password" required></label><button>登入</button></form></html>"#,
+        r#"<!doctype html>
+        <!doctype html>
+        <html lang="zh-Hant">
+            <head>
+                <meta charset="utf-8">
+                <title>Analytics 帳密登入</title>
+            </head>
+            <body>
+                <h1>Analytics 帳密登入</h1>
+            <form method="post" action="/login">
+                <div style="margin-bottom: 1em;">
+                    <label>帳號</label>
+                    <input name="username" autocomplete="username" required>
+                </div>
+                <div style="margin-bottom: 1em;">
+                    <label>密碼</label>
+                    <input type="password" name="password" autocomplete="current-password" required>
+                </div>
+                <button>登入</button>
+            </form>
+        </body>
+        </html>"#,
     )
 }
+
 async fn login(
     State(state): State<IngestState>,
     headers: HeaderMap,
@@ -56,21 +85,35 @@ async fn login(
     if headers.get(header::ORIGIN).and_then(|h| h.to_str().ok()) != Some(ORIGIN) {
         return Err(StatusCode::FORBIDDEN);
     }
+
     if !form.username.trim().eq_ignore_ascii_case("admin")
         || !(8..=128).contains(&form.password.len())
     {
         return Err(StatusCode::UNAUTHORIZED);
     }
+
     // Existing bootstrap only provisions admin. Reject duplicate case-folded identities rather than guessing one.
-    let found: Vec<(String,String,bool,String)> = sqlx::query_as("SELECT id,user_pd,is_init_pd,user_status FROM uac_user WHERE lower(user_acnt)='admin' LIMIT 2")
-        .fetch_all(&state.pool).await.map_err(|_|StatusCode::SERVICE_UNAVAILABLE)?;
+    let found: Vec<(String, String, bool, String)> = sqlx::query_as(
+        r#"SELECT id
+            ,user_pd
+            ,is_init_pd
+            ,user_status 
+        FROM uac_user 
+        WHERE lower(user_acnt)='admin' 
+        LIMIT 2"#,
+    )
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     if found.len() != 1 {
         return Err(StatusCode::UNAUTHORIZED);
     }
+
     let (id, encoded, restricted, status) = found.into_iter().next().unwrap();
     if status != "active" {
         return Err(StatusCode::UNAUTHORIZED);
     }
+
     let fingerprint = digest(&encoded);
     let verified = tokio::task::spawn_blocking(move || {
         let parsed = PasswordHash::new(&encoded).map_err(|_| ())?;
@@ -81,6 +124,7 @@ async fn login(
     .await
     .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     verified.map_err(|_| StatusCode::UNAUTHORIZED)?;
+
     let raw = format!(
         "{}{}",
         uuid::Uuid::new_v4().simple(),
@@ -91,12 +135,32 @@ async fn login(
         .begin()
         .await
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
-    sqlx::query("DELETE FROM uac_login_session WHERE expires_at <= floor(extract(epoch from now()))::bigint").execute(&mut *tx).await.map_err(|_|StatusCode::SERVICE_UNAVAILABLE)?;
-    sqlx::query("INSERT INTO uac_login_session(token_hash,user_id,credential_fingerprint,restricted,expires_at) VALUES ($1,$2,$3,$4,floor(extract(epoch from now()))::bigint+1800)")
-        .bind(digest(&raw)).bind(id).bind(fingerprint).bind(restricted).execute(&mut *tx).await.map_err(|_|StatusCode::SERVICE_UNAVAILABLE)?;
+    sqlx::query(
+        r#"DELETE FROM uac_login_session 
+        WHERE expires_at <= floor(extract(epoch from now()))::bigint"#,
+    )
+    .execute(&mut *tx)
+    .await
+    .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    sqlx::query(
+        r#"INSERT INTO uac_login_session(token_hash
+            ,user_id
+            ,credential_fingerprint
+            ,restricted
+            ,expires_at
+        ) VALUES ($1,$2,$3,$4,floor(extract(epoch from now()))::bigint+1800)"#,
+    )
+    .bind(digest(&raw))
+    .bind(id)
+    .bind(fingerprint)
+    .bind(restricted)
+    .execute(&mut *tx)
+    .await
+    .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     tx.commit()
         .await
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+
     Ok(renewed(
         Redirect::to(if restricted {
             "/change-password"
@@ -109,20 +173,53 @@ async fn login(
 // Recheck account status, mandatory-change state and password fingerprint on each protected request.
 async fn session(state: &IngestState, headers: &HeaderMap) -> Result<(bool, String), StatusCode> {
     let raw = raw_cookie(headers).ok_or(StatusCode::UNAUTHORIZED)?;
-    let found:Option<(bool,bool,String,String,String)> = sqlx::query_as("SELECT s.restricted,u.is_init_pd,u.user_pd,s.credential_fingerprint,u.id FROM uac_login_session s JOIN uac_user u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>floor(extract(epoch from now()))::bigint AND u.user_status='active' AND lower(u.user_acnt)='admin'")
-        .bind(digest(&raw)).fetch_optional(&state.pool).await.map_err(|_|StatusCode::SERVICE_UNAVAILABLE)?;
+    let found: Option<(bool, bool, String, String, String)> = sqlx::query_as(
+        r#"SELECT s.restricted
+            ,u.is_init_pd
+            ,u.user_pd
+            ,s.credential_fingerprint
+            ,u.id 
+        FROM uac_login_session s 
+        JOIN uac_user u 
+        ON u.id=s.user_id 
+        WHERE s.token_hash=$1 
+        AND s.expires_at>floor(extract(epoch from now()))::bigint 
+        AND u.user_status='active' 
+        AND lower(u.user_acnt)='admin'"#,
+    )
+    .bind(digest(&raw))
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     let (restricted, must_change, current, fingerprint, id) =
         found.ok_or(StatusCode::UNAUTHORIZED)?;
     if digest(&current) != fingerprint {
         return Err(StatusCode::UNAUTHORIZED);
     }
-    let refreshed=sqlx::query("UPDATE uac_login_session SET expires_at=floor(extract(epoch from now()))::bigint+1800 WHERE token_hash=$1 AND expires_at>floor(extract(epoch from now()))::bigint AND EXISTS (SELECT 1 FROM uac_user WHERE id=$2 AND user_pd=$3 AND user_status='active')")
-        .bind(digest(&raw)).bind(id).bind(current).execute(&state.pool).await.map_err(|_|StatusCode::SERVICE_UNAVAILABLE)?;
+    let refreshed = sqlx::query(
+        r#"UPDATE uac_login_session 
+            SET expires_at=floor(extract(epoch from now()))::bigint+1800 
+        WHERE token_hash=$1 
+        AND expires_at>floor(extract(epoch from now()))::bigint 
+        AND EXISTS (
+            SELECT 1 
+            FROM uac_user 
+            WHERE id=$2 
+            AND user_pd=$3 
+            AND user_status='active')"#,
+    )
+    .bind(digest(&raw))
+    .bind(id)
+    .bind(current)
+    .execute(&state.pool)
+    .await
+    .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     if refreshed.rows_affected() != 1 {
         return Err(StatusCode::UNAUTHORIZED);
     }
     Ok((restricted || must_change, raw))
 }
+
 async fn change_page(
     State(state): State<IngestState>,
     headers: HeaderMap,
@@ -133,11 +230,24 @@ async fn change_page(
     }
     Ok(renewed(
         Html(
-            "<!doctype html><html lang=\"zh-Hant\"><meta charset=\"utf-8\"><h1>首次登入須更換密碼與Email</h1><p>帳密已驗證，後台查詢仍被拒絕。本切片尚未提供改密碼提交，請勿清除資料庫標記繞過限制。</p><form method=\"post\" action=\"/logout\"><button>登出</button></form></html>",
+            r#"<!doctype html>
+            <html lang="zh-Hant">
+                <head>
+                    <meta charset="utf-8">
+                </head>
+                <body>
+                    <h1>首次登入須更換密碼與Email</h1>
+                    <p>帳密已驗證，後台查詢仍被拒絕。本切片尚未提供改密碼提交，請勿清除資料庫標記繞過限制。</p>
+                    <form method="post" action="/logout">
+                        <button>登出</button>
+                    </form>
+                </body>
+            </html>"#,
         ),
         &raw,
     ))
 }
+
 async fn dashboard(State(state): State<IngestState>, headers: HeaderMap) -> Response {
     let (restricted, raw) = match session(&state, &headers).await {
         Ok(v) => v,
@@ -156,11 +266,25 @@ async fn dashboard(State(state): State<IngestState>, headers: HeaderMap) -> Resp
     };
     renewed(
         Html(format!(
-            "<!doctype html><html lang=\"zh-Hant\"><meta charset=\"utf-8\"><h1>Analytics 管理後台</h1><p>已完成密碼初始化的管理員：Chat 已提交事件總數 {total}</p><p>詳細查詢畫面與管理操作將於後續切片接回。</p><form method=\"post\" action=\"/logout\"><button>登出</button></form></html>"
+            r#"<!doctype html>
+            <html lang="zh-Hant">
+                <head>
+                    <meta charset="utf-8">
+                </head>
+                <body>
+                    <h1>Analytics 管理後台</h1>
+                    <p>已完成密碼初始化的管理員：Chat 已提交事件總數 {total}</p>
+                    <p>詳細查詢畫面與管理操作將於後續切片接回。</p>
+                    <form method="post" action="/logout">
+                        <button>登出</button>
+                    </form>
+                </body>
+            </html>"#
         )),
         &raw,
     )
 }
+
 async fn summary(
     State(state): State<IngestState>,
     Path(source): Path<String>,
@@ -178,6 +302,7 @@ async fn summary(
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     Ok(renewed(Json(rows), &raw))
 }
+
 async fn logout(
     State(state): State<IngestState>,
     headers: HeaderMap,

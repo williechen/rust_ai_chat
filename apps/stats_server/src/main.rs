@@ -1,4 +1,4 @@
-use stats_server::{IngestState, IngestTokens, admin};
+use stats_server::{IngestState, IngestTokens, password_login};
 use std::sync::Arc;
 
 #[tokio::main]
@@ -17,19 +17,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("來源憑證設定不合法".into());
     }
 
-    // Migration 由既有 DB 管理流程預先套用；不可修改已套用 migration。
-    let config = admin::Config::from_env()?;
-    let app = admin::build(
-        IngestState {
-            pool,
-            tokens: Arc::new(IngestTokens { chat, pet }),
-        },
-        Some(config),
-    );
+    let app = password_login::build(IngestState {
+        pool,
+        tokens: Arc::new(IngestTokens { chat, pet }),
+    });
 
     println!("Stats server running on http://127.0.0.1:3100");
 
-    // 尚無 auth 和儲存，不可綁定公開地址。
+    // 本地教學切片；首次改密碼提交與完整管理尚未接通。
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3100").await?;
     axum::serve(listener, app).await?;
 

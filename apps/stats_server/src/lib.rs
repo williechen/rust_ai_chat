@@ -1,5 +1,6 @@
 pub mod admin;
 pub mod bootstrap;
+pub mod password_login;
 pub mod pg_store;
 
 use axum::{
@@ -153,7 +154,7 @@ fn summary_total(rows: &[pg_store::EventSummary]) -> Option<i64> {
 }
 
 pub fn build_app(state: IngestState) -> Router {
-    admin::build(state, None)
+    password_login::build(state)
 }
 
 #[cfg(test)]

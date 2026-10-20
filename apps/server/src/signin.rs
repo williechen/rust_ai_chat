@@ -33,12 +33,22 @@ pub fn routes(pool: SqlitePool) -> Router {
 
 async fn login_page() -> Html<&'static str> {
     Html(
-        r#"<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
-    <title>帳密登入</title></head><body><h1>帳密登入</h1>
-    <form action="/login" method="post">
-    <label>帳號<input name="username" autocomplete="username" required></label>
-    <label>密碼<input name="password" type="password" autocomplete="current-password" required></label>
-    <button type="submit">登入</button></form><a href="/">回首頁</a></body></html>"#,
+        r#"<!doctype html>
+        <html lang="zh-Hant">
+            <head>
+                <meta charset="utf-8">
+                <title>帳密登入</title>
+            </head>
+            <body>
+                <h1>帳密登入</h1>
+                <form action="/login" method="post">
+                    <div style="margin-bottom: 1em;"><label>帳號</label><input name="username" autocomplete="username" required></div>
+                    <div style="margin-bottom: 1em;"><label>密碼</label><input name="password" type="password" autocomplete="current-password" required></div>
+                    <button type="submit">登入</button>
+                </form>
+                <a href="/signin">回登入頁</a>
+            </body>
+        </html>"#,
     )
 }
 
@@ -50,11 +60,13 @@ async fn login(
     if headers.get(header::ORIGIN).and_then(|v| v.to_str().ok()) != Some("http://127.0.0.1:3000") {
         return Err(StatusCode::FORBIDDEN);
     }
+
     let name = input.username.trim();
     if name.is_empty() || name.len() > 32 || input.password.is_empty() || input.password.len() > 128
     {
         return Err(StatusCode::UNAUTHORIZED);
     }
+
     let found: Option<(String, String, bool)> = sqlx::query_as(
         "SELECT id,user_pd,(user_status='active') FROM mbr_user WHERE lower(user_acnt)=lower(?1)",
     )
@@ -62,6 +74,7 @@ async fn login(
     .fetch_optional(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     let (user_id, hash, active) = found.ok_or(StatusCode::UNAUTHORIZED)?;
     if !active {
         return Err(StatusCode::UNAUTHORIZED);
@@ -122,12 +135,31 @@ async fn account(
     }
     let hashed = token_digest(&token);
     let member: Option<String> = sqlx::query_scalar(
-        "SELECT u.id FROM mbr_session s JOIN mbr_user u ON u.id=s.mbr_user_id WHERE s.token_hash=?1 AND s.expires_at > unixepoch() AND u.user_status='active'"
-    ).bind(hashed).fetch_optional(&pool).await
-        .map_err(|_|StatusCode::INTERNAL_SERVER_ERROR)?;
+        r#"SELECT u.id 
+            FROM mbr_session s 
+            JOIN mbr_user u 
+            ON u.id=s.mbr_user_id 
+            WHERE s.token_hash=?1 
+            AND s.expires_at > unixepoch() 
+            AND u.user_status='active'"#,
+    )
+    .bind(hashed)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     member.ok_or(StatusCode::UNAUTHORIZED)?;
     Ok(Html(
-        "<!doctype html><html lang=\"zh-Hant\"><meta charset=\"utf-8\"><h1>已登入</h1><a href=\"/\">回首頁</a></html>",
+        r#"<!doctype html>
+        <html lang="zh-Hant">
+            <head>
+                <meta charset="utf-8">
+                <title>已登入</title>
+            </head>
+            <body>
+                <h1>已登入</h1>
+                <a href="/">回首頁</a>
+            </body>
+        </html>"#,
     ))
 }
 

@@ -34,15 +34,15 @@ async fn page() -> Html<&'static str> {
             <body>
                 <h1>會員註冊</h1>
                 <form method="post" action="/signup">
-                    <div>
+                    <div style="margin-bottom: 1em;">
                         <label>帳號</label>
                         <input name="username" required minlength="3" maxlength="32" autocomplete="username">
                     </div>
-                    <div>
+                    <div style="margin-bottom: 1em;">
                         <label>Email</label>
                         <input name="email" type="email" required maxlength="254" autocomplete="email">
                     </div>
-                    <div>
+                    <div style="margin-bottom: 1em;"    >
                         <label>顯示名稱</label>
                         <input name="display_name" required maxlength="32">
                     </div>

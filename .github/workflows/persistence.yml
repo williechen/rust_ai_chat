@@ -51,4 +51,4 @@ jobs:
         run: DATABASE_URL="$CHAT_DATABASE_URL" cargo test --locked -p persistence
 
       - name: Test stats server with PostgreSQL
-        run: DATABASE_URL="$ANALYTICS_DATABASE_URL" cargo test --locked -p stats-server --features postgres-integration --test postgres_event_store
+        run: DATABASE_URL="$ANALYTICS_DATABASE_URL" cargo test --locked -p stats-server --features postgres-integration

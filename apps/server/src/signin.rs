@@ -42,8 +42,14 @@ async fn login_page() -> Html<&'static str> {
             <body>
                 <h1>帳密登入</h1>
                 <form action="/login" method="post">
-                    <div style="margin-bottom: 1em;"><label>帳號</label><input name="username" autocomplete="username" required></div>
-                    <div style="margin-bottom: 1em;"><label>密碼</label><input name="password" type="password" autocomplete="current-password" required></div>
+                    <div style="margin-bottom: 1em;">
+                        <label>帳號</label>
+                        <input name="username" autocomplete="username" required>
+                    </div>
+                    <div style="margin-bottom: 1em;">
+                        <label>密碼</label>
+                        <input name="password" type="password" autocomplete="current-password" required>
+                    </div>
                     <button type="submit">登入</button>
                 </form>
                 <a href="/signin">回登入頁</a>
@@ -68,7 +74,11 @@ async fn login(
     }
 
     let found: Option<(String, String, bool)> = sqlx::query_as(
-        "SELECT id,user_pd,(user_status='active') FROM mbr_user WHERE lower(user_acnt)=lower(?1)",
+        r#"SELECT id
+                ,user_pd
+                ,(user_status='active') 
+            FROM mbr_user 
+            WHERE lower(user_acnt)=lower(?1)"#,
     )
     .bind(name)
     .fetch_optional(&pool)

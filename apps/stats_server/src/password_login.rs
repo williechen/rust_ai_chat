@@ -224,11 +224,9 @@ async fn change_page(
     State(state): State<IngestState>,
     headers: HeaderMap,
 ) -> Result<Response, StatusCode> {
+    // 首次登入和後續主動修改均須是有效登入者，
+    // Session 再驗仍由 session() 完成。
     let (restricted, raw) = session(&state, &headers).await?;
-    if !restricted {
-        return Ok(renewed(Redirect::to("/dashboard"), &raw));
-    }
-
     let csrf = digest(&format!("change-password:{raw}"));
     let heading = if restricted {
         "首次登入須更換密碼與Email"

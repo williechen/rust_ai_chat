@@ -1,5 +1,6 @@
 pub mod http;
 pub mod hub;
+pub mod room_auth;
 pub mod signin;
 pub mod signup;
 pub mod ssr;
@@ -38,15 +39,22 @@ pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
 
     let state = state::AppState::new(leptos_options, room_repository, message_repository);
 
+    let guarded_room = Router::new()
+        .route("/room/{room_id}", get(ssr::app_handler))
+        .route_layer(axum::middleware::from_fn_with_state(
+            db.clone(),
+            room_auth::require_member,
+        ));
+
     let app = Router::new()
         .route_service(&pkg_path, pkg_service)
         .route("/health", get(http::health))
         .route("/api/rooms", get(http::list_rooms).post(http::create_room))
         .route("/api/rooms/{id}", get(http::get_room))
         .route("/ws/{room_id}", any(ws::ws_handler))
-        .route("/room/{room_id}", get(ssr::app_handler))
         .route("/signin", get(ssr::app_handler))
         .route("/", get(ssr::app_handler))
+        .merge(guarded_room)
         .with_state(state)
         .merge(signup_routes)
         .merge(signin_routes);

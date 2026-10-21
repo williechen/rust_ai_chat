@@ -285,3 +285,22 @@ mod day21_pet_creation_tests {
         assert!(normalize_new_pet_name(&"寵".repeat(33)).is_err());
     }
 }
+
+#[cfg(test)]
+mod day25_capability_tests {
+    #[test]
+    fn dynamic_pet_windows_can_listen_without_global_window_wildcard() {
+        let capability: serde_json::Value =
+            serde_json::from_str(include_str!("../capabilities/default.json")).unwrap();
+        let windows = capability["windows"].as_array().unwrap();
+        assert!(windows.iter().any(|v| v.as_str() == Some("main")));
+        assert!(windows.iter().any(|v| v.as_str() == Some("pet-*")));
+        assert!(!windows.iter().any(|v| v.as_str() == Some("*")));
+        let permissions = capability["permissions"].as_array().unwrap();
+        assert!(
+            permissions
+                .iter()
+                .any(|v| v.as_str() == Some("core:event:default"))
+        );
+    }
+}

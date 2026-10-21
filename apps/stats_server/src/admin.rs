@@ -668,11 +668,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires dedicated ANALYTICS_TEST_DATABASE_URL with CREATE SCHEMA permission"]
     async fn login_query_postgres_and_logout_flow() {
         // The test creates and drops only its unique schema, never application tables.
-        let url =
-            std::env::var("ANALYTICS_TEST_DATABASE_URL").expect("dedicated test database required");
+        let url = std::env::var("DATABASE_URL").expect("dedicated test database required");
 
         let owner = sqlx::PgPool::connect(&url).await.unwrap();
 

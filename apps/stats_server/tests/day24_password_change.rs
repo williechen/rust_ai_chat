@@ -68,7 +68,8 @@ async fn day24_password_change_is_atomic_revokes_all_sessions_and_requires_relog
     .await;
     let c = cookie(&login);
     // Before Green this is 405: POST is not implemented.
-    let denied=send(app(pool.clone()),"/change-password",Some("current_password=lesson-only-password&new_password=new-lesson-password&confirm_password=new-lesson-password&mail=learner%40example.test&csrf=wrong"),Some(&c)).await;
+    let denied=send(app(pool.clone()),"/change-password",Some("current_password=lesson-only-password&new_password=new-lesson-password&confirm_password=new-lesson-password&email=learner%40example.test&csrf=wrong"),Some(&c)).await;
+    println!("Denied response: {:?}", denied);
     assert_eq!(denied.status(), StatusCode::FORBIDDEN);
     let page = send(app(pool.clone()), "/change-password", None, Some(&c)).await;
     let html = String::from_utf8(
@@ -131,7 +132,7 @@ async fn day24_password_change_is_atomic_revokes_all_sessions_and_requires_relog
         .await
         .unwrap();
     assert_eq!(foreign.status(), StatusCode::FORBIDDEN);
-    sqlx::query("INSERT INTO uac_user(id,user_acnt,user_pd,user_email,user_name,user_status,is_init_pd,created_at,updated_at) VALUES('other','other','unused','learner@example.test','Other',active',FALSE,now(),now())").execute(&pool).await.unwrap();
+    sqlx::query("INSERT INTO uac_user(id,user_acnt,user_pd,user_email,user_name,user_status,is_init_pd,created_at,updated_at) VALUES('other','other','unused','learner@example.test','Other','active',FALSE,now(),now())").execute(&pool).await.unwrap();
     assert_eq!(
         send(app(pool.clone()), "/change-password", Some(&body), Some(&c))
             .await
@@ -239,7 +240,7 @@ async fn day24_duplicate_migration_stops_and_revocation_failure_rolls_back(pool:
         .execute(&pool)
         .await
         .unwrap();
-    sqlx::query("INSERT INTO uac_user(id,user_acnt,user_pd,user_email,user_name,user_status,is_init_pd,created_at,updated_at) VALUES('duplicate','other','unused',' ADMIN@LOCALHOST.INVALID ',Other','active',FALSE,now(),now())").execute(&pool).await.unwrap();
+    sqlx::query("INSERT INTO uac_user(id,user_acnt,user_pd,user_email,user_name,user_status,is_init_pd,created_at,updated_at) VALUES('duplicate','other','unused',' ADMIN@LOCALHOST.INVALID ','Other','active',FALSE,now(),now())").execute(&pool).await.unwrap();
     assert!(
         sqlx::raw_sql(include_str!(
             "../migrations/20261021071000_unique_account_email.sql"

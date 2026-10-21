@@ -27,7 +27,6 @@ serde_json.workspace = true
 
 sha2.workspace = true
 shared = { path = "../../crates/shared" }
-sha2.workspace = true
 
 sqlx.workspace = true
 

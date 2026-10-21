@@ -1,9 +1,10 @@
 use argon2::{Argon2, PasswordHasher};
+use axum::response::Response;
 use axum::{
     Form, Router,
     extract::{DefaultBodyLimit, State},
     http::{HeaderMap, StatusCode},
-    response::{Html, Redirect},
+    response::{Html, IntoResponse, Redirect},
     routing::get,
 };
 use sqlx::SqlitePool;

@@ -100,7 +100,7 @@ async fn day23_bootstrapped_password_is_restricted_before_first_change(pool: sql
     let body = axum::body::to_bytes(pending.into_body(), 100000)
         .await
         .unwrap();
-    assert!(String::from_utf8_lossy(&body).contains("尚未提供改密碼提交"));
+    assert!(String::from_utf8_lossy(&body).contains("儲存並重新登入"));
     assert!(
         stats_server::bootstrap::initialize(&pool, "different-password".into())
             .await

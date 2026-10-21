@@ -14,6 +14,8 @@ CREATE TABLE uac_user (
     updated_at TIMESTAMP NOT NULL -- 更新時間
 );
 
+CREATE UNIQUE INDEX uq_uac_user_email ON uac_user(lower(trim(user_email)));
+
 CREATE TABLE uac_role (
     id varchar(40) PRIMARY KEY, -- 角色Pkno
     role_name TEXT NOT NULL, -- 角色名稱

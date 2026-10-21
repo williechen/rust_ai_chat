@@ -14,6 +14,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let id = stats_server::bootstrap::initialize(&pool, password)
         .await
         .map_err(std::io::Error::other)?;
-    println!("管理員已建立：{id}；首次改密碼提交仍待接通；初始Session不開放後台");
+    println!("管理員已建立：{id}；首次登入請修改密碼與Email；完成前不開放後台");
     Ok(())
 }

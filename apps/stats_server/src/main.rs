@@ -24,7 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Stats server running on http://127.0.0.1:3100");
 
-    // 本地教學切片；首次改密碼提交與完整管理尚未接通。
+    // 本地教學切片；首次改密碼已接通，完整管理與角色授權另行完成
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3100").await?;
     axum::serve(listener, app).await?;
 

@@ -19,8 +19,29 @@ struct Signup {
 pub fn routes(pool: SqlitePool) -> Router {
     Router::new()
         .route("/signup", get(page).post(signup))
+        .route("/signup/complete", get(complete))
         .layer(DefaultBodyLimit::max(4096))
         .with_state(pool)
+}
+
+async fn complete() -> impl IntoResponse {
+    (
+        [("cache-control", "no-store")],
+        Html(
+            r#"<!doctype html>
+            <html lang="zh-Hant">
+                <head>
+                    <meta charset="utf-8">
+                    <title>註冊完成</title>
+                </head>
+                <body>
+                    <h1>註冊完成</h1>
+                    <p>目前保持登出，請回首頁重新選擇聊天室，再登入。</p>
+                    <a href="/">回首頁</a>
+                </body>
+            </html>"#,
+        ),
+    )
 }
 
 async fn page() -> Html<&'static str> {
@@ -62,7 +83,7 @@ async fn signup(
     State(pool): State<SqlitePool>,
     headers: HeaderMap,
     Form(form): Form<Signup>,
-) -> Result<Redirect, StatusCode> {
+) -> Result<Response, StatusCode> {
     // 檢查請求來源，僅允許來自 http://127.0.0.1:3000 的請求
     if headers.get("origin").and_then(|v| v.to_str().ok()) != Some("http://127.0.0.1:3000") {
         return Err(StatusCode::FORBIDDEN);
@@ -104,6 +125,10 @@ async fn signup(
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     sqlx::query(
         r#"INSERT INTO mbr_user (id
             ,user_acnt
@@ -121,14 +146,50 @@ async fn signup(
     .bind(password_hash)
     .bind(email)
     .bind(display)
-    .execute(&pool)
+    .execute(&mut *tx)
     .await
     .map_err(|e| match e {
         sqlx::Error::Database(ref db) if db.is_unique_violation() => StatusCode::CONFLICT,
         _ => StatusCode::INTERNAL_SERVER_ERROR,
     })?;
 
-    Ok(Redirect::to("/signin"))
+    // 成功註冊不沿用目前瀏覽器的帳號或選房；資料與撤銷同交易提交。
+    if let Some(token) = headers
+        .get("cookie")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|h| {
+            h.split(';')
+                .filter_map(|v| v.trim().split_once('='))
+                .find(|(k, _)| *k == "chat_session")
+                .map(|(_, v)| v)
+        })
+        .filter(|v| v.len() == 64 && v.bytes().all(|b| b.is_ascii_hexdigit()))
+    {
+        use sha2::{Digest, Sha256};
+        let hashed: String = Sha256::digest(token.as_bytes())
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+        sqlx::query("DELETE FROM mbr_session WHERE token_hash=?1")
+            .bind(hashed)
+            .execute(&mut *tx)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    }
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok((
+        [
+            (
+                "set-cookie",
+                "chat_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0",
+            ),
+            ("cache-control", "no-store"),
+        ],
+        Redirect::to("/signup/complete"),
+    )
+        .into_response())
 }
 
 #[cfg(test)]
@@ -180,7 +241,7 @@ mod day22_tests {
                 .unwrap();
             assert_eq!(response.status(), expected);
             if expected == StatusCode::SEE_OTHER {
-                assert_eq!(response.headers()["location"], "/signin");
+                assert_eq!(response.headers()["location"], "/signin/complete");
             }
         }
         let (count,): (i64,) = sqlx::query_as("SELECT count(*) FROM mbr_user")

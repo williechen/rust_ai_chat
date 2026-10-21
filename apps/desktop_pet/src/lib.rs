@@ -1,6 +1,7 @@
 mod chat;
 mod file_organizer;
 pub mod pet_store;
+pub mod pet_windows;
 mod roam;
 
 use ai_core::{ChatRequest, MockChatModel};
@@ -128,20 +129,58 @@ async fn list_pets(
     store.list().await
 }
 
+#[tauri::command]
+async fn active_pet(
+    store: State<'_, pet_store::PetStore>,
+) -> Result<Option<pet_store::SavedPet>, String> {
+    store.active().await
+}
+
+#[tauri::command]
+async fn select_pet(
+    id: String,
+    app: tauri::AppHandle,
+    store: State<'_, pet_store::PetStore>,
+) -> Result<pet_store::SavedPet, String> {
+    let saved = store.select(&id).await?;
+    pet_windows::open(&app, &saved)?;
+    app.emit("pet-profile-changed", &saved)
+        .map_err(|_| "選取已儲存，通知失敗，請重新載入生活窗".to_owned())?;
+    Ok(saved)
+}
+
 pub fn application(db: sqlx::SqlitePool) {
     tauri::Builder::default()
         .on_window_event(|window, event| {
-            if window.label() == "main" {
-                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                    api.prevent_close();
-                    let _ = window.hide();
+            if window.label().starts_with("pet-") {
+                if let tauri::WindowEvent::Destroyed = event {
+                    if let Some(id) = window
+                        .label()
+                        .strip_prefix("pet-")
+                        .and_then(|s| uuid::Uuid::parse_str(s).ok())
+                    {
+                        window
+                            .app_handle()
+                            .state::<pet_windows::Runtime>()
+                            .remove(&id.to_string());
+                    }
                 }
             }
         })
         .manage(Mutex::new(PetMachine::default()))
+        .manage(pet_windows::Runtime::default())
         .manage(AiState::new(Arc::new(MockChatModel)))
         .manage(pet_store::PetStore { pool: db })
         .setup(|app| {
+            let handle = app.handle().clone();
+            let store = app.state::<pet_store::PetStore>().inner().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Ok(Some(pet)) = store.active().await {
+                    if let Err(e) = pet_windows::open(&handle, &pet) {
+                        eprintln!("載入預設寵物失敗：{e}");
+                    }
+                }
+            });
             /*
              * JS Menu.new() 建立的 native menu item
              * 仍會產生 native menu event。
@@ -154,6 +193,22 @@ pub fn application(db: sqlx::SqlitePool) {
                     let _ = open_control_window(app_handle.clone());
                     return;
                 }
+
+                if let Some(scoped) = event.id().0.strip_prefix("pet:") {
+                    if let Some((id, action)) = scoped.split_once(':') {
+                        let command = match action {
+                            "sleep" => Some(PetCommand::Sleep),
+                            "wake" => Some(PetCommand::Wake),
+                            "interact" => Some(PetCommand::Interact),
+                            _ => None,
+                        };
+                        if let Some(command) = command {
+                            let _ = pet_windows::dispatch_and_emit(app_handle, id, command);
+                        }
+                    }
+                    return;
+                }
+
                 let command = match event.id().0.as_str() {
                     "interact" => Some(PetCommand::Interact),
                     "sleep" => Some(PetCommand::Sleep),
@@ -191,6 +246,13 @@ pub fn application(db: sqlx::SqlitePool) {
             validate_new_pet_name,
             create_pet,
             list_pets,
+            active_pet,
+            select_pet,
+            pet_windows::saved_pet_profile,
+            pet_windows::open_saved_pet,
+            pet_windows::get_saved_pet_state,
+            pet_windows::send_saved_pet_command,
+            pet_windows::cage_saved_pet,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Rust AI Desktop Pet");

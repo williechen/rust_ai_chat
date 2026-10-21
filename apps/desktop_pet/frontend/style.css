@@ -200,3 +200,15 @@ body {
 .pet-life .pet-face{
   line-height:50px;
 }
+/* Each dynamic life window remains usable within the existing 200x200 shell. */
+.pet-life > p { margin:2px 0; font-size:12px; line-height:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.pet-life > p:empty { display:none; }
+
+.pet-life .pet-status strong { font-size:12px; line-height:14px; }
+
+.pet-life .pet-status small { font-size:10px; line-height:12px; }
+
+.pet-life > button { display:inline-block; padding:2px 6px; margin:2px; }
+
+.pet-life > p, .pet-life strong, .pet-life small { color:white; text-shadow:0 1px 3px #000; }

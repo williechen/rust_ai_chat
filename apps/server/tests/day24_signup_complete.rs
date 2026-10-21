@@ -10,9 +10,11 @@ async fn day24_signup_completes_without_automatic_login_or_navigation() {
         .connect("sqlite::memory:")
         .await
         .unwrap();
-    for sql in [include_str!("../../../migrations/20261018073931_create_auth_user.sql"),
-                include_str!("../../../migrations/20261019221857_member_identity.sql"),
-                include_str!("../../../migrations/20261020152737_mbr_sessions.sql")] {
+    for sql in [
+        include_str!("../../../migrations/20261018073931_create_auth_user.sql"),
+        include_str!("../../../migrations/20261019221857_member_identity.sql"),
+        include_str!("../../../migrations/20261020152737_mbr_sessions.sql"),
+    ] {
         sqlx::raw_sql(sql).execute(&pool).await.unwrap();
     }
     let app = server::signup::routes(pool.clone());
@@ -60,9 +62,11 @@ async fn day24_existing_browser_session_revocation_is_atomic() {
         .connect("sqlite::memory:")
         .await
         .unwrap();
-    for sql in [include_str!("../../../migrations/20261018073931_create_auth_user.sql"),
-                include_str!("../../../migrations/20261019221857_member_identity.sql"),
-                include_str!("../../../migrations/20261020152737_mbr_sessions.sql")] {
+    for sql in [
+        include_str!("../../../migrations/20261018073931_create_auth_user.sql"),
+        include_str!("../../../migrations/20261019221857_member_identity.sql"),
+        include_str!("../../../migrations/20261020152737_mbr_sessions.sql"),
+    ] {
         sqlx::raw_sql(sql).execute(&pool).await.unwrap();
     }
     let app = server::signup::routes(pool.clone());

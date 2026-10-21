@@ -118,12 +118,12 @@ pub fn PetStatus(
     };
 
     let face = Signal::derive(move || match pose() {
-        Some(PetPose::Idle) => "😺",
-        Some(PetPose::Blink) => "😻",
-        Some(PetPose::InteractA) => "😸",
-        Some(PetPose::InteractB) => "😹",
-        Some(PetPose::SleepA) => "😴",
-        Some(PetPose::SleepB) => "😪",
+        Some(PetPose::Idle) => "🐢",
+        Some(PetPose::Blink) => "🐢·",
+        Some(PetPose::InteractA) => "🐢♪",
+        Some(PetPose::InteractB) => "🐢♫",
+        Some(PetPose::SleepA) => "🐢💤",
+        Some(PetPose::SleepB) => "🐢z",
         None => "🐾",
     });
 

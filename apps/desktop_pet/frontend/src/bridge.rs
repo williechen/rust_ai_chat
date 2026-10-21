@@ -71,6 +71,21 @@ extern "C" {
 
     #[wasm_bindgen(js_namespace = window, js_name = createPet)]
     fn create_pet_js(name: &str) -> Promise;
+
+    #[wasm_bindgen(js_namespace=window, js_name=openSavedPet)]
+    fn open_saved_pet_js(id: &str) -> Promise;
+
+    #[wasm_bindgen(js_namespace=window, js_name=cageSavedPet)]
+    fn cage_saved_pet_js() -> Promise;
+
+    #[wasm_bindgen(js_namespace=window, js_name=activePet)]
+    fn active_pet_js() -> Promise;
+
+    #[wasm_bindgen(js_namespace=window, js_name=selectPet)]
+    fn select_pet_js(id: &str) -> Promise;
+
+    #[wasm_bindgen(js_namespace=window, js_name=listenPetProfile)]
+    fn listen_pet_profile_js(callback: &Function) -> Promise;
 }
 
 // 將 JavaScript 的錯誤轉換為 Rust 的字串
@@ -183,4 +198,43 @@ pub struct SavedPet {
 pub async fn list_pets() -> Result<Vec<SavedPet>, String> {
     let value = JsFuture::from(list_pets_js()).await.map_err(js_error)?;
     serde_wasm_bindgen::from_value(value).map_err(|_| "寵物清單格式錯誤".into())
+}
+
+pub async fn active_pet() -> Result<Option<SavedPet>, String> {
+    let value = JsFuture::from(active_pet_js()).await.map_err(js_error)?;
+    serde_wasm_bindgen::from_value(value).map_err(|_| "生活窗資料格式錯誤".into())
+}
+
+pub async fn select_pet(id: &str) -> Result<SavedPet, String> {
+    let value = JsFuture::from(select_pet_js(id)).await.map_err(js_error)?;
+    serde_wasm_bindgen::from_value(value).map_err(|_| "選取資料格式錯誤".into())
+}
+
+pub async fn listen_pet_profile(
+    mut callback: impl FnMut(SavedPet) + 'static,
+) -> Result<(), String> {
+    let closure = Closure::<dyn FnMut(JsValue)>::new(move |v| {
+        if let Ok(pet) = serde_wasm_bindgen::from_value(v) {
+            callback(pet);
+        }
+    });
+    JsFuture::from(listen_pet_profile_js(closure.as_ref().unchecked_ref()))
+        .await
+        .map_err(js_error)?;
+    closure.forget(); // 與此單一 App 視窗同壽命。
+    Ok(())
+}
+
+pub async fn open_saved_pet(id: &str) -> Result<(), String> {
+    JsFuture::from(open_saved_pet_js(id))
+        .await
+        .map_err(js_error)?;
+    Ok(())
+}
+
+pub async fn cage_saved_pet() -> Result<(), String> {
+    JsFuture::from(cage_saved_pet_js())
+        .await
+        .map_err(js_error)?;
+    Ok(())
 }

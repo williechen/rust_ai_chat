@@ -11,6 +11,48 @@ pub struct PetStore {
 }
 
 impl PetStore {
+    pub async fn profile(&self, id: &str) -> Result<SavedPet, String> {
+        let row: Option<(String, String, String)> = sqlx::query_as(
+            "SELECT id,name,species FROM pet_profile WHERE id=?1 AND owner_id='local-owner'",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|_| "無法讀取寵物")?;
+        row.map(|(id, name, species)| SavedPet { id, name, species })
+            .ok_or_else(|| "找不到寵物".into())
+    }
+
+    pub async fn active(&self) -> Result<Option<SavedPet>, String> {
+        let row: Option<(String,String,String)> = sqlx::query_as(
+            "SELECT p.id,p.name,p.species FROM local_pet_selection s JOIN pet_profile p ON p.id=s.pet_id WHERE s.slot=1 AND p.owner_id='local-owner'")
+            .fetch_optional(&self.pool).await.map_err(|_| "無法讀取生活窗寵物".to_owned())?;
+        Ok(row.map(|(id, name, species)| SavedPet { id, name, species }))
+    }
+    pub async fn select(&self, id: &str) -> Result<SavedPet, String> {
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|_| "無法開始選取".to_owned())?;
+        let row: (String, String, String) = sqlx::query_as(
+            "SELECT id,name,species FROM pet_profile WHERE id=?1 AND owner_id='local-owner'",
+        )
+        .bind(id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|_| "無法查詢寵物".to_owned())?
+        .ok_or_else(|| "找不到可選的寵物".to_owned())?;
+        sqlx::query("INSERT INTO local_pet_selection(slot,pet_id) VALUES(1,?1) ON CONFLICT(slot) DO UPDATE SET pet_id=excluded.pet_id")
+            .bind(id).execute(&mut *tx).await.map_err(|_| "無法儲存選取".to_owned())?;
+        tx.commit().await.map_err(|_| "選取提交失敗".to_owned())?;
+        Ok(SavedPet {
+            id: row.0,
+            name: row.1,
+            species: row.2,
+        })
+    }
+
     pub async fn list(&self) -> Result<Vec<SavedPet>, String> {
         let rows: Vec<(String, String, String)> = sqlx::query_as(
             "SELECT id,name,species FROM pet_profile WHERE owner_id='local-owner' ORDER BY name,id",

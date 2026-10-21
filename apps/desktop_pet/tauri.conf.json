@@ -26,18 +26,6 @@
         "minWidth": 360,
         "minHeight": 420,
         "resizable": true
-      },
-      {
-        "label": "pet",
-        "title": "Pet 生活",
-        "url": "index.html?view=pet",
-        "width": 200,
-        "height": 200,
-        "resizable": false,
-        "decorations": false,
-        "transparent": true,
-        "alwaysOnTop": true,
-        "shadow": false
       }
     ]
   },

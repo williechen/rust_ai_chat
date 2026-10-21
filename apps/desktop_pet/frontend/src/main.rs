@@ -54,6 +54,32 @@ fn App() -> impl IntoView {
     let (saved_pets, set_saved_pets) = signal(Vec::<bridge::SavedPet>::new());
     let (pets_busy, set_pets_busy) = signal(false);
 
+    let (active_pet, set_active_pet) = signal::<Option<bridge::SavedPet>>(None);
+    let profile_events = RwSignal::new(0_u64);
+    spawn_local(async move {
+        if let Err(message) = bridge::listen_pet_profile(move |pet| {
+            profile_events.update(|n| *n += 1);
+            set_active_pet.set(Some(pet));
+            set_snapshot.set(None);
+            set_error.set(None);
+            spawn_local(async move {
+                if let Ok(incoming) = bridge::get_pet_state().await {
+                    set_snapshot.set(Some(incoming));
+                }
+            });
+        })
+        .await
+        {
+            set_error.set(Some(message));
+        }
+        let generation = profile_events.get_untracked();
+        match bridge::active_pet().await {
+            Ok(pet) if profile_events.get_untracked() == generation => set_active_pet.set(pet),
+            Ok(_) => (), // 載入期間已收到較新的選取事件，不覆寫。
+            Err(message) => set_error.set(Some(message)),
+        }
+    });
+
     if !bridge::is_pet_window() {
         set_pets_busy.set(true);
         spawn_local(async move {
@@ -107,6 +133,16 @@ fn App() -> impl IntoView {
                 />
                 <AnimationClock set_animation_phase />
                 <PetStatus snapshot blinking animation_phase />
+                <p title=move || active_pet.get().map(|p|p.id).unwrap_or_default()>
+                    {move || active_pet.get().map(|p|p.name).unwrap_or_else(|| "請在控制台選擇生活窗寵物".into())}
+                </p>
+                <Show when=move || active_pet.get().is_some() fallback=|| ()>
+                    <PetStatus snapshot blinking animation_phase />
+                </Show>
+                <button type="button" on:click=move |_| spawn_local(async move {
+                    if let Err(e)=bridge::cage_saved_pet().await {set_error.set(Some(e));}
+               })>"回籠子"</button>
+                <p role="alert">{move || error.get().unwrap_or_default()}</p>
                 <button
                     type="button"
                     on:click=move |_| spawn_local(async move{
@@ -173,7 +209,32 @@ fn App() -> impl IntoView {
                 <Show when=move || pets_busy.get() fallback=|| ()><p>"處理中…"</p></Show>
                 <ul>
                     <For each=move || saved_pets.get() key=|pet| pet.id.clone()
-                        children=|pet| view! { <li>{format!("{}／{}（{}）", pet.name, pet.species, pet.id)}</li> } />
+                        children=move |pet| {
+                            let id=pet.id.clone(); let open_id=id.clone();
+                            view! { <li>{format!("{}／{}（{}）", pet.name, pet.species, pet.id)}
+                                <button type="button" disabled=move || pets_busy.get()
+                                    on:click=move |_| {
+                                        if pets_busy.get_untracked() { return; }
+                                        set_pets_busy.set(true); let id=id.clone();
+                                        spawn_local(async move {
+                                            match bridge::select_pet(&id).await {
+                                                Ok(pet) => { set_active_pet.set(Some(pet)); set_new_pet_feedback.set("生活窗選取已儲存".into()); },
+                                                Err(message) => set_new_pet_feedback.set(message),
+                                            }
+                                            set_pets_busy.set(false);
+                                        });
+                                    }>"選為生活窗寵物"</button>
+                                <button type="button" disabled=move || pets_busy.get()
+                                    on:click=move |_| {
+                                        if pets_busy.get_untracked() {return;}
+                                        set_pets_busy.set(true);let id=open_id.clone();
+                                        spawn_local(async move {
+                                            match bridge::open_saved_pet(&id).await {Ok(())=>set_new_pet_feedback.set("已出籠；重複操作只聚焦既有生活窗".into()),Err(e)=>set_new_pet_feedback.set(e)}
+                                            set_pets_busy.set(false);
+                                        });
+                                    }>"出籠"</button>
+                            </li> }
+                        } />
                 </ul>
             </section>
 

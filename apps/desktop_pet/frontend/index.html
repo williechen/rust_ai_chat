@@ -17,20 +17,25 @@
     const { invoke } = window.__TAURI__.core;
     const { listen } = window.__TAURI__.event;
 
-    window.getPetState = () => {
-      return invoke("get_pet_state");
-    };
+    const windowPetId = new URLSearchParams(location.search).get("pet_id");
 
-    window.sendPetCommand = (command) => {
-      return invoke("send_pet_command", { command });
-    };
+    const currentPetId = async () => {
+      const id = windowPetId || (await invoke("active_pet"))?.id;
+      if (!id) throw "請先選擇並出籠寵物";
+      return id;
+     };
 
-    window.listenPetState = (callback) => {
-      return listen(
-        "pet://state-changed",
-        (event) => callback(event.payload),
-      );
-    };
+    window.getPetState = async () => invoke("get_saved_pet_state", { id: await currentPetId() });
+    
+    window.sendPetCommand = async (command) => invoke("send_saved_pet_command", { id: await currentPetId(), command });
+    
+    window.listenPetState = (callback) => listen("saved-pet-state", async (event) => {
+      try { if (event.payload.id === await currentPetId()) callback(event.payload.snapshot); } catch (_) {}
+    });
+    
+    window.openSavedPet = (id) => invoke("open_saved_pet", { id });
+    
+    window.cageSavedPet = async () => invoke("cage_saved_pet", { id: await currentPetId() });
 
     window.chatWithPet = (message) => {
       return invoke("chat_with_pet", { message });
@@ -60,15 +65,15 @@
       petContextMenu = await Menu.new({
         items: [
           {
-            id: "interact",
+            id: `pet:${await currentPetId()}:interact`,
             text: "互動",
           },
           {
-            id: "sleep",
+            id: `pet:${await currentPetId()}:sleep`,
             text: "睡覺",
           },
           {
-            id: "wake",
+            id: `pet:${await currentPetId()}:wake`,
             text: "醒來",
           },
         ],
@@ -103,6 +108,14 @@
     window.scanDuplicatePreview = () => {
       return invoke("scan_duplicate_preview");
     };
+
+    window.activePet = () => windowPetId ? invoke("saved_pet_profile", { id: windowPetId }) : invoke("active_pet");
+
+    window.selectPet = (id) => invoke("select_pet", { id });
+    
+    window.listenPetProfile = (callback) => window.__TAURI__.event.listen(
+      "pet-profile-changed", (event) => { if (!windowPetId || event.payload.id === windowPetId) callback(event.payload); });
+
 
     window.listPets = () => {
       return invoke("list_pets");

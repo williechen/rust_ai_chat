@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX uq_uac_user_email ON uac_user(lower(trim(user_email)));

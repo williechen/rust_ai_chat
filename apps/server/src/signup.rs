@@ -242,7 +242,7 @@ mod day22_tests {
                 .unwrap();
             assert_eq!(response.status(), expected);
             if expected == StatusCode::SEE_OTHER {
-                assert_eq!(response.headers()["location"], "/signin/complete");
+                assert_eq!(response.headers()["location"], "/signup/complete");
             }
         }
         let (count,): (i64,) = sqlx::query_as("SELECT count(*) FROM mbr_user")

@@ -1,6 +1,6 @@
 pub mod http;
 pub mod hub;
-mod logout;
+pub mod logout;
 pub mod room_auth;
 pub mod signin;
 pub mod signup;

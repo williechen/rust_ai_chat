@@ -10,8 +10,8 @@ use shared::auth::{cookie_token, token_digest};
 use sqlx::SqlitePool;
 
 #[derive(Deserialize)]
-struct LogoutForm {
-    csrf: String,
+pub struct LogoutForm {
+    pub csrf: String,
 }
 
 pub fn routes(pool: SqlitePool) -> Router {
@@ -20,7 +20,7 @@ pub fn routes(pool: SqlitePool) -> Router {
         .with_state(pool)
 }
 
-async fn logout(
+pub async fn logout(
     State(pool): State<SqlitePool>,
     headers: HeaderMap,
     Form(form): Form<LogoutForm>,

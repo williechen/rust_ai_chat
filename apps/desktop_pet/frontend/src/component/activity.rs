@@ -15,6 +15,19 @@ pub enum PetPose {
     SleepB,
 }
 
+impl PetPose {
+    fn css_class(self) -> &'static str {
+        match self {
+            Self::Idle => "pose-idle",
+            Self::Blink => "pose-blink",
+            Self::InteractA => "pose-interact-a",
+            Self::InteractB => "pose-interact-b",
+            Self::SleepA => "pose-sleep-a",
+            Self::SleepB => "pose-sleep-b",
+        }
+    }
+}
+
 fn project_pose(state: PetState, blinking: bool, animation_phase: bool) -> PetPose {
     match state {
         PetState::Idle => {
@@ -114,19 +127,8 @@ pub fn PetStatus(
     let pose = move || {
         snapshot
             .get()
-            .map(|snapshot| project_pose(snapshot.state, blinking.get(), animation_phase.get()))
+            .map(|s| project_pose(s.state, blinking.get(), animation_phase.get()))
     };
-
-    let face = Signal::derive(move || match pose() {
-        Some(PetPose::Idle) => "🐢",
-        Some(PetPose::Blink) => "🐢·",
-        Some(PetPose::InteractA) => "🐢♪",
-        Some(PetPose::InteractB) => "🐢♫",
-        Some(PetPose::SleepA) => "🐢💤",
-        Some(PetPose::SleepB) => "🐢z",
-        None => "🐾",
-    });
-
     let label = move || match pose() {
         Some(PetPose::Idle) => "待機",
         Some(PetPose::Blink) => "眨眼",
@@ -134,45 +136,32 @@ pub fn PetStatus(
         Some(PetPose::SleepA | PetPose::SleepB) => "睡覺",
         None => "載入中",
     };
-
     let revision = move || {
         snapshot
             .get()
-            .map(|snapshot| snapshot.revision.to_string())
+            .map(|s| s.revision.to_string())
             .unwrap_or_else(|| "-".into())
     };
-
     view! {
         <section class="pet-status">
-            <div
-                class="pet-face"
-
+            <div class="pet-face"
                 on:contextmenu=move |event| {
                     event.prevent_default();
-
-                    let x = event.client_x();
-                    let y = event.client_y();
-
+                    let (x,y) = (event.client_x(),event.client_y());
                     spawn_local(async move {
-                        if let Err(error) =
-                            bridge::show_pet_context_menu(x, y).await
-                        {
-                            web_sys::console::warn_1(
-                                &error.into()
-                            );
+                        if let Err(error) = bridge::show_pet_context_menu(x,y).await {
+                            web_sys::console::warn_1(&error.into());
                         }
                     });
-                }
-            >
-                {face}
+                }>
+                <img class=move || pose().map(PetPose::css_class)
+                          .unwrap_or("pose-idle")
+                    alt="寵物動畫"
+                    src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Cellipse cx='45' cy='55' rx='32' ry='23' fill='%235c984c'/%3E%3Ccircle cx='71' cy='50' r='15' fill='%239dcc70'/%3E%3Ccircle cx='76' cy='45' r='3' fill='%23252f27'/%3E%3Cpath d='M25 48 Q45 18 65 48 M44 34 L44 75 M28 52 L60 52' fill='none' stroke='%232d5838' stroke-width='4'/%3E%3C/svg%3E"
+                />
             </div>
-
             <strong>{label}</strong>
-
-            <small>
-                "revision "
-                {revision}
-            </small>
+            <small>"revision "{revision}</small>
         </section>
     }
 }
@@ -210,5 +199,21 @@ mod tests {
             project_pose(PetState::Sleeping, false, true,),
             PetPose::SleepB,
         );
+    }
+
+    #[test]
+    fn day26_each_pose_selects_single_image_class() {
+        use std::collections::HashSet;
+        let all = [
+            PetPose::Idle,
+            PetPose::Blink,
+            PetPose::InteractA,
+            PetPose::InteractB,
+            PetPose::SleepA,
+            PetPose::SleepB,
+        ];
+        let classes: HashSet<&'static str> = all.iter().map(|p| p.css_class()).collect();
+        assert_eq!(classes.len(), 6);
+        assert!(classes.iter().all(|s| s.starts_with("pose-")));
     }
 }

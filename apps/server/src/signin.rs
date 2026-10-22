@@ -129,7 +129,7 @@ async fn login(
 async fn account(
     State(pool): State<SqlitePool>,
     headers: HeaderMap,
-) -> Result<Html<&'static str>, StatusCode> {
+) -> Result<Html<String>, StatusCode> {
     let token = headers
         .get(header::COOKIE)
         .and_then(|v| v.to_str().ok())
@@ -143,6 +143,7 @@ async fn account(
     if token.len() != 64 || !token.bytes().all(|x| x.is_ascii_hexdigit()) {
         return Err(StatusCode::UNAUTHORIZED);
     }
+
     let hashed = token_digest(&token);
     let member: Option<String> = sqlx::query_scalar(
         r#"SELECT u.id 
@@ -158,7 +159,9 @@ async fn account(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     member.ok_or(StatusCode::UNAUTHORIZED)?;
-    Ok(Html(
+
+    let csrf = shared::auth::token_digest(&format!("logout:{token}"));
+    Ok(Html(format!(
         r#"<!doctype html>
         <html lang="zh-Hant">
             <head>
@@ -167,10 +170,14 @@ async fn account(
             </head>
             <body>
                 <h1>已登入</h1>
+                <form action="/logout" method="post">
+                    <input type="hidden" name="csrf" value="{csrf}">
+                    <button type="submit">登出</button>
+                </form>
                 <a href="/">回首頁</a>
             </body>
-        </html>"#,
-    ))
+        </html>"#
+    )))
 }
 
 #[cfg(test)]

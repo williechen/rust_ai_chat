@@ -37,6 +37,7 @@ pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
 
     let signup_routes = signup::routes(db.clone());
     let signin_routes = signin::routes(db.clone());
+    let logout_routes = logout::routes(db.clone());
 
     let state = state::AppState::new(leptos_options, room_repository, message_repository);
 
@@ -58,7 +59,8 @@ pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
         .merge(guarded_room)
         .with_state(state)
         .merge(signup_routes)
-        .merge(signin_routes);
+        .merge(signin_routes)
+        .merge(logout_routes);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;
 

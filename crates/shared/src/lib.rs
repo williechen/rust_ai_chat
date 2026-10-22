@@ -1,3 +1,5 @@
+mod auth;
+
 use chat_domain::ChatMessage;
 use serde::{Deserialize, Serialize};
 

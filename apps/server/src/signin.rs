@@ -130,43 +130,13 @@ async fn account(
     State(pool): State<SqlitePool>,
     headers: HeaderMap,
 ) -> Result<Html<String>, StatusCode> {
-    let token = headers
-        .get(header::COOKIE)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|h| {
-            h.split(';')
-                .filter_map(|x| x.trim().split_once('='))
-                .find(|(key, _)| *key == "chat_session")
-                .map(|(_, value)| value.to_owned())
-        })
-        .ok_or(StatusCode::UNAUTHORIZED)?;
-    if token.len() != 64 || !token.bytes().all(|x| x.is_ascii_hexdigit()) {
-        return Err(StatusCode::UNAUTHORIZED);
-    }
-
-    let hashed = token_digest(&token);
-    let member: Option<String> = sqlx::query_scalar(
-        r#"SELECT u.id 
-            FROM mbr_session s 
-            JOIN mbr_user u 
-            ON u.id=s.mbr_user_id 
-            WHERE s.token_hash=?1 
-            AND s.expires_at > unixepoch() 
-            AND u.user_status='active'"#,
-    )
-    .bind(hashed)
-    .fetch_optional(&pool)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    member.ok_or(StatusCode::UNAUTHORIZED)?;
-
-    let csrf = shared::auth::token_digest(&format!("logout:{token}"));
+    crate::auth_session::active_member(&pool, &headers).await?;
+    let csrf = crate::auth_session::csrf_for_logout(&headers)?;
     Ok(Html(format!(
         r#"<!doctype html>
         <html lang="zh-Hant">
             <head>
-                <meta charset="utf-8">
-                <title>已登入</title>
+                <meta charset="utf-8"><title>已登入</title>
             </head>
             <body>
                 <h1>已登入</h1>

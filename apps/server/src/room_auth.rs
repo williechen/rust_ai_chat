@@ -1,41 +1,19 @@
+use crate::auth_session::active_member;
 use axum::{
     extract::{Request, State},
-    http::{StatusCode, header},
+    http::StatusCode,
     middleware::Next,
     response::Response,
 };
-use sha2::{Digest, Sha256};
 use sqlx::SqlitePool;
 
+/// Keep the existing #[cfg(test)] mod day25_tests unchanged.
 pub async fn require_member(
     State(pool): State<SqlitePool>,
     request: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    let raw = request
-        .headers()
-        .get(header::COOKIE)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|cookie| {
-            cookie
-                .split(';')
-                .filter_map(|segment| segment.trim().split_once('='))
-                .find(|(name, _)| *name == "chat_session")
-                .map(|(_, value)| value.to_owned())
-        })
-        .ok_or(StatusCode::UNAUTHORIZED)?;
-    if raw.len() != 64 || !raw.bytes().all(|b| b.is_ascii_hexdigit()) {
-        return Err(StatusCode::UNAUTHORIZED);
-    }
-    let digest = Sha256::digest(raw.as_bytes())
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect::<String>();
-    let member: Option<String> = sqlx::query_scalar(
-        "SELECT u.id FROM mbr_session s JOIN mbr_user u ON u.id=s.mbr_user_id WHERE s.token_hash=?1 AND s.expires_at>unixepoch() AND u.user_status='active'"
-    ).bind(digest).fetch_optional(&pool).await
-        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
-    member.ok_or(StatusCode::UNAUTHORIZED)?;
+    active_member(&pool, request.headers()).await?;
     Ok(next.run(request).await)
 }
 

@@ -1,3 +1,4 @@
+pub mod auth_session;
 pub mod http;
 pub mod hub;
 pub mod logout;

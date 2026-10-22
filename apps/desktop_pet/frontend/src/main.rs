@@ -132,7 +132,7 @@ fn App() -> impl IntoView {
                     set_blinking
                 />
                 <AnimationClock set_animation_phase />
-                
+
                 <p title=move || active_pet.get().map(|p|p.id).unwrap_or_default()>
                     {move || active_pet.get().map(|p|p.name).unwrap_or_else(|| "請在控制台選擇生活窗寵物".into())}
                 </p>

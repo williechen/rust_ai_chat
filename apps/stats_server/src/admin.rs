@@ -318,10 +318,10 @@ async fn logout(
         return StatusCode::FORBIDDEN.into_response();
     }
 
-    if let Some(key) = cookie_key(&headers) {
-        if let Ok(mut sessions) = state.sessions.lock() {
-            sessions.remove(&key);
-        }
+    if let Some(key) = cookie_key(&headers)
+        && let Ok(mut sessions) = state.sessions.lock()
+    {
+        sessions.remove(&key);
     }
 
     let mut response = Redirect::to("/login").into_response();

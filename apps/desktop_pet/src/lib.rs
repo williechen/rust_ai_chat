@@ -152,19 +152,17 @@ async fn select_pet(
 pub fn application(db: sqlx::SqlitePool) {
     tauri::Builder::default()
         .on_window_event(|window, event| {
-            if window.label().starts_with("pet-") {
-                if let tauri::WindowEvent::Destroyed = event {
-                    if let Some(id) = window
-                        .label()
-                        .strip_prefix("pet-")
-                        .and_then(|s| uuid::Uuid::parse_str(s).ok())
-                    {
-                        window
-                            .app_handle()
-                            .state::<pet_windows::Runtime>()
-                            .remove(&id.to_string());
-                    }
-                }
+            if window.label().starts_with("pet-")
+                && let tauri::WindowEvent::Destroyed = event
+                && let Some(id) = window
+                    .label()
+                    .strip_prefix("pet-")
+                    .and_then(|s| uuid::Uuid::parse_str(s).ok())
+            {
+                window
+                    .app_handle()
+                    .state::<pet_windows::Runtime>()
+                    .remove(&id.to_string());
             }
         })
         .manage(Mutex::new(PetMachine::default()))
@@ -175,10 +173,10 @@ pub fn application(db: sqlx::SqlitePool) {
             let handle = app.handle().clone();
             let store = app.state::<pet_store::PetStore>().inner().clone();
             tauri::async_runtime::spawn(async move {
-                if let Ok(Some(pet)) = store.active().await {
-                    if let Err(e) = pet_windows::open(&handle, &pet) {
-                        eprintln!("載入預設寵物失敗：{e}");
-                    }
+                if let Ok(Some(pet)) = store.active().await
+                    && let Err(e) = pet_windows::open(&handle, &pet)
+                {
+                    eprintln!("載入預設寵物失敗：{e}");
                 }
             });
             /*

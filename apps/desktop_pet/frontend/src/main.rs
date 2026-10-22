@@ -176,37 +176,37 @@ fn App() -> impl IntoView {
                         set_pets_busy.set(true);
                         let proposed = new_pet_name.get_untracked();
                         // apps/desktop_pet/frontend/src/main.rs
-// 僅替換「建立寵物」按鈕原有的 spawn_local(async move { ... }) 閉包。
-spawn_local(async move {
-    match bridge::create_pet(proposed).await {
-        Ok(created) => {
-            // 先更新清單，不因後續開窗失敗重送 INSERT。
-            match bridge::list_pets().await {
-                Ok(rows) => set_saved_pets.set(rows),
-                Err(_) => set_new_pet_feedback.set(
-                    "寵物已儲存，但清單讀回失敗；請重新載入，勿重送建立。".into()
-                ),
-            }
-            // select_pet Tauri command 既有實作會先儲存
-            // local_pet_selection，再呼叫 pet_windows::open。
-            match bridge::select_pet(&created.id).await {
-                Ok(selected) => {
-                    set_active_pet.set(Some(selected));
-                    set_new_pet_name.set(String::new());
-                    set_new_pet_feedback.set(
-                        format!("已建立並出籠：{}（{}）",created.name,created.id)
-                    );
-                }
-                Err(error) => set_new_pet_feedback.set(format!(
-                    "寵物已儲存：{}（{}）；選取／出籠未完成：{}。請從清單重試，不要再建立。",
-                    created.name, created.id, error
-                )),
-            }
-        }
-        Err(error) => set_new_pet_feedback.set(format!("建立寵物失敗：{error}")),
-    }
-    set_pets_busy.set(false);
-});
+                        // 僅替換「建立寵物」按鈕原有的 spawn_local(async move { ... }) 閉包。
+                        spawn_local(async move {
+                            match bridge::create_pet(proposed).await {
+                                Ok(created) => {
+                                    // 先更新清單，不因後續開窗失敗重送 INSERT。
+                                    match bridge::list_pets().await {
+                                        Ok(rows) => set_saved_pets.set(rows),
+                                        Err(_) => set_new_pet_feedback.set(
+                                            "寵物已儲存，但清單讀回失敗；請重新載入，勿重送建立。".into()
+                                        ),
+                                    }
+                                    // select_pet Tauri command 既有實作會先儲存
+                                    // local_pet_selection，再呼叫 pet_windows::open。
+                                    match bridge::select_pet(&created.id).await {
+                                        Ok(selected) => {
+                                            set_active_pet.set(Some(selected));
+                                            set_new_pet_name.set(String::new());
+                                            set_new_pet_feedback.set(
+                                                format!("已建立並出籠：{}（{}）",created.name,created.id)
+                                            );
+                                        }
+                                        Err(error) => set_new_pet_feedback.set(format!(
+                                            "寵物已儲存：{}（{}）；選取／出籠未完成：{}。請從清單重試，不要再建立。",
+                                            created.name, created.id, error
+                                        )),
+                                    }
+                                }
+                                Err(error) => set_new_pet_feedback.set(format!("建立寵物失敗：{error}")),
+                            }
+                            set_pets_busy.set(false);
+                        });
                     }
                 >"建立寵物"</button>
                 <p role="status">{move || new_pet_feedback.get()}</p>

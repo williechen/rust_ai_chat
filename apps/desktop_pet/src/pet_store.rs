@@ -13,7 +13,12 @@ pub struct PetStore {
 impl PetStore {
     pub async fn profile(&self, id: &str) -> Result<SavedPet, String> {
         let row: Option<(String, String, String)> = sqlx::query_as(
-            "SELECT id,name,species FROM pet_profile WHERE id=?1 AND owner_id='local-owner'",
+            r#"SELECT id
+                ,name
+                ,species 
+            FROM pet_profile 
+            WHERE id=?1 
+                AND owner_id='local-owner'"#,
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -24,9 +29,19 @@ impl PetStore {
     }
 
     pub async fn active(&self) -> Result<Option<SavedPet>, String> {
-        let row: Option<(String,String,String)> = sqlx::query_as(
-            "SELECT p.id,p.name,p.species FROM local_pet_selection s JOIN pet_profile p ON p.id=s.pet_id WHERE s.slot=1 AND p.owner_id='local-owner'")
-            .fetch_optional(&self.pool).await.map_err(|_| "無法讀取生活窗寵物".to_owned())?;
+        let row: Option<(String, String, String)> = sqlx::query_as(
+            r#"SELECT p.id
+                    ,p.name
+                    ,p.species 
+                FROM local_pet_selection s 
+                JOIN pet_profile p 
+                    ON p.id=s.pet_id 
+                WHERE s.slot=1 
+                    AND p.owner_id='local-owner'"#,
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|_| "無法讀取生活窗寵物".to_owned())?;
         Ok(row.map(|(id, name, species)| SavedPet { id, name, species }))
     }
     pub async fn select(&self, id: &str) -> Result<SavedPet, String> {
@@ -36,15 +51,31 @@ impl PetStore {
             .await
             .map_err(|_| "無法開始選取".to_owned())?;
         let row: (String, String, String) = sqlx::query_as(
-            "SELECT id,name,species FROM pet_profile WHERE id=?1 AND owner_id='local-owner'",
+            r#"SELECT id
+                ,name
+                ,species 
+            FROM pet_profile 
+            WHERE id=?1 
+                AND owner_id='local-owner'"#,
         )
         .bind(id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|_| "無法查詢寵物".to_owned())?
         .ok_or_else(|| "找不到可選的寵物".to_owned())?;
-        sqlx::query("INSERT INTO local_pet_selection(slot,pet_id) VALUES(1,?1) ON CONFLICT(slot) DO UPDATE SET pet_id=excluded.pet_id")
-            .bind(id).execute(&mut *tx).await.map_err(|_| "無法儲存選取".to_owned())?;
+        sqlx::query(
+            r#"INSERT INTO local_pet_selection(
+                    slot
+                    ,pet_id
+                ) VALUES(1,?1) 
+                ON CONFLICT(slot) 
+                DO UPDATE 
+                    SET pet_id=excluded.pet_id"#,
+        )
+        .bind(id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| "無法儲存選取".to_owned())?;
         tx.commit().await.map_err(|_| "選取提交失敗".to_owned())?;
         Ok(SavedPet {
             id: row.0,
@@ -55,7 +86,12 @@ impl PetStore {
 
     pub async fn list(&self) -> Result<Vec<SavedPet>, String> {
         let rows: Vec<(String, String, String)> = sqlx::query_as(
-            "SELECT id,name,species FROM pet_profile WHERE owner_id='local-owner' ORDER BY name,id",
+            r#"SELECT id
+                ,name
+                ,species 
+            FROM pet_profile 
+            WHERE owner_id='local-owner' 
+            ORDER BY name,id"#,
         )
         .fetch_all(&self.pool)
         .await
@@ -74,15 +110,20 @@ impl PetStore {
         let id = uuid::Uuid::new_v4().to_string();
         let mut tx = self.pool.begin().await.map_err(|_| "無法開始儲存")?;
         sqlx::query(
-        "INSERT INTO pet_owner(id,name) VALUES('local-owner','本機使用者') ON CONFLICT(id) DO NOTHING"
+        r#"INSERT INTO pet_owner(id,name) VALUES('local-owner','本機使用者') ON CONFLICT(id) DO NOTHING"#
     ).execute(&mut *tx).await.map_err(|_| "無法儲存主人")?;
         sqlx::query(
-        "INSERT INTO pet_profile(id,name,species,owner_id) VALUES(?1,?2,'tortoise','local-owner')"
+        r#"INSERT INTO pet_profile(id,name,species,owner_id) VALUES(?1,?2,'tortoise','local-owner')"#
     ).bind(&id).bind(&name)
       .execute(&mut *tx).await.map_err(|_| "無法儲存寵物")?;
         tx.commit().await.map_err(|_| "寵物提交失敗")?;
         let (saved_id, saved_name, species): (String, String, String) = sqlx::query_as(
-            "SELECT id,name,species FROM pet_profile WHERE id=?1 AND owner_id='local-owner'",
+            r#"SELECT id
+                ,name
+                ,species 
+            FROM pet_profile 
+            WHERE id=?1 
+                AND owner_id='local-owner'"#,
         )
         .bind(&id)
         .fetch_one(&self.pool)

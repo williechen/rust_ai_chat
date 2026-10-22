@@ -373,6 +373,7 @@ async fn dashboard(
     if restricted {
         return renewed(Redirect::to("/change-password"), &raw);
     }
+
     let source = query.source.as_deref().unwrap_or("web_chat");
     let source_label = match source {
         "web_chat" => "Chat",
@@ -386,23 +387,29 @@ async fn dashboard(
     let Some(total) = crate::summary_total(&rows) else {
         return StatusCode::SERVICE_UNAVAILABLE.into_response();
     };
+
     renewed(
         Html(format!(
             r#"<!doctype html>
-<html lang="zh-Hant"><head><meta charset="utf-8">
-<title>Analytics 管理後台</title></head>
-<body>
-<h1>Analytics 管理後台</h1>
-<nav aria-label="事件來源">
-<a href="/dashboard?source=web_chat">Chat 事件</a>
-<a href="/dashboard?source=desktop_pet">Pet 事件</a>
-</nav>
-<a href="/change-password">修改密碼與Email</a>
-<p>已驗證的管理員：{source_label} 已提交事件總數 {total}</p>
-<p>事件來源已篩選；詳細報表與角色／來源 ACL 尚未接通。</p>
-<form method="post" action="/logout">
-<button>登出</button></form>
-</body></html>"#
+            <html lang="zh-Hant">
+                <head>
+                    <meta charset="utf-8">
+                    <title>Analytics 管理後台</title>
+                </head>
+                <body>
+                    <h1>Analytics 管理後台</h1>
+                    <nav aria-label="事件來源">
+                        <a href="/dashboard?source=web_chat">Chat 事件</a>
+                        <a href="/dashboard?source=desktop_pet">Pet 事件</a>
+                    </nav>
+                    <a href="/change-password">修改密碼與Email</a>
+                    <p>已驗證的管理員：{source_label} 已提交事件總數 {total}</p>
+                    <p>事件來源已篩選；詳細報表與角色／來源 ACL 尚未接通。</p>
+                    <form method="post" action="/logout">
+                        <button>登出</button>
+                    </form>
+                </body>
+            </html>"#
         )),
         &raw,
     )

@@ -118,7 +118,10 @@ fn validate_new_pet_name(name: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn create_pet(name: String, store: State<'_, pet_store::PetStore>) -> Result<String, String> {
+async fn create_pet(
+    name: String,
+    store: State<'_, pet_store::PetStore>,
+) -> Result<pet_store::SavedPet, String> {
     store.create(&name).await
 }
 

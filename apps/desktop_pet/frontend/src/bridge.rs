@@ -181,11 +181,12 @@ pub async fn quit_pet() -> Result<(), String> {
     Ok(())
 }
 
-pub async fn create_pet(name: String) -> Result<String, String> {
+pub async fn create_pet(name: String) -> Result<SavedPet, String> {
     let value = JsFuture::from(create_pet_js(&name))
         .await
         .map_err(js_error)?;
-    value.as_string().ok_or_else(|| "名稱回應格式錯誤".into())
+    serde_wasm_bindgen::from_value(value)
+        .map_err(|_| "建立寵物回應格式錯誤；請重新整理清單確認是否已建立".into())
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Deserialize)]

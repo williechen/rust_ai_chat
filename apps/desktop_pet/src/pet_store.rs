@@ -66,49 +66,33 @@ impl PetStore {
             .collect())
     }
 
-    pub async fn create(&self, input: &str) -> Result<String, String> {
+    // apps/desktop_pet/src/pet_store.rs
+    // 只將既有 create() 簽名與尾端的返回值更換，
+    // INSERT/transaction/提交後 SELECT id,name/錯誤分支完整保留。
+    pub async fn create(&self, input: &str) -> Result<SavedPet, String> {
         let name = crate::normalize_new_pet_name(input)?;
         let id = uuid::Uuid::new_v4().to_string();
-
         let mut tx = self.pool.begin().await.map_err(|_| "無法開始儲存")?;
-
         sqlx::query(
-            r#"INSERT INTO pet_owner(id
-                ,name
-            ) VALUES ('local-owner','本機使用者') 
-            ON CONFLICT(id) DO NOTHING"#,
-        )
-        .execute(&mut *tx)
-        .await
-        .map_err(|_| "無法儲存主人")?;
-
+        "INSERT INTO pet_owner(id,name) VALUES('local-owner','本機使用者') ON CONFLICT(id) DO NOTHING"
+    ).execute(&mut *tx).await.map_err(|_| "無法儲存主人")?;
         sqlx::query(
-            r#"INSERT INTO pet_profile(id
-                ,name
-                ,species
-                ,owner_id
-            ) VALUES (?1,?2,'tortoise','local-owner')"#,
-        )
-        .bind(&id)
-        .bind(&name)
-        .execute(&mut *tx)
-        .await
-        .map_err(|_| "無法儲存寵物")?;
-
+        "INSERT INTO pet_profile(id,name,species,owner_id) VALUES(?1,?2,'tortoise','local-owner')"
+    ).bind(&id).bind(&name)
+      .execute(&mut *tx).await.map_err(|_| "無法儲存寵物")?;
         tx.commit().await.map_err(|_| "寵物提交失敗")?;
-
-        let (saved_id, saved_name): (String, String) = sqlx::query_as(
-            r#"SELECT id
-                ,name 
-            FROM pet_profile 
-            WHERE id=?1"#,
+        let (saved_id, saved_name, species): (String, String, String) = sqlx::query_as(
+            "SELECT id,name,species FROM pet_profile WHERE id=?1 AND owner_id='local-owner'",
         )
         .bind(&id)
         .fetch_one(&self.pool)
         .await
         .map_err(|_| "已提交但讀回失敗，請先查核資料，勿立即重送")?;
-
-        Ok(format!("{saved_name}（{saved_id}）"))
+        Ok(SavedPet {
+            id: saved_id,
+            name: saved_name,
+            species,
+        })
     }
 }
 
@@ -118,7 +102,7 @@ mod day22_tests {
     #[sqlx::test(migrations = "./migrations")]
     async fn day22_create_pet_persists(pool: sqlx::SqlitePool) {
         let store = PetStore { pool: pool.clone() };
-        assert!(store.create(" 小橘 ").await.unwrap().contains("小橘"));
+        assert_eq!(store.create(" 小橘 ").await.unwrap().name, "小橘");
 
         let row: (String, String, String) =
             sqlx::query_as(r#"SELECT name,species,owner_id FROM pet_profile"#)

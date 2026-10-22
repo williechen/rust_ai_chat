@@ -2,7 +2,7 @@ use crate::{IngestState, pg_store};
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use axum::{
     Form, Json, Router,
-    extract::{DefaultBodyLimit, Path, State},
+    extract::{DefaultBodyLimit, Path, Query, State},
     http::{HeaderMap, StatusCode, header},
     response::{Html, IntoResponse, Redirect, Response},
     routing::{get, post},
@@ -353,7 +353,18 @@ async fn change_password(
         .into_response())
 }
 
-async fn dashboard(State(state): State<IngestState>, headers: HeaderMap) -> Response {
+// apps/stats_server/src/password_login.rs：替換原 dashboard 函式，
+// 並將 extract imports 調整為 {DefaultBodyLimit, Path, Query, State}。
+#[derive(Default, Deserialize)]
+struct DashboardSourceQuery {
+    source: Option<String>,
+}
+
+async fn dashboard(
+    State(state): State<IngestState>,
+    headers: HeaderMap,
+    Query(query): Query<DashboardSourceQuery>,
+) -> Response {
     let (restricted, raw) = match session(&state, &headers).await {
         Ok(v) => v,
         Err(StatusCode::UNAUTHORIZED) => return Redirect::to("/login").into_response(),
@@ -362,7 +373,13 @@ async fn dashboard(State(state): State<IngestState>, headers: HeaderMap) -> Resp
     if restricted {
         return renewed(Redirect::to("/change-password"), &raw);
     }
-    let rows = match pg_store::summary_for_source(&state.pool, "web_chat").await {
+    let source = query.source.as_deref().unwrap_or("web_chat");
+    let source_label = match source {
+        "web_chat" => "Chat",
+        "desktop_pet" => "Pet",
+        _ => return StatusCode::BAD_REQUEST.into_response(),
+    };
+    let rows = match pg_store::summary_for_source(&state.pool, source).await {
         Ok(v) => v,
         Err(_) => return StatusCode::SERVICE_UNAVAILABLE.into_response(),
     };
@@ -372,25 +389,24 @@ async fn dashboard(State(state): State<IngestState>, headers: HeaderMap) -> Resp
     renewed(
         Html(format!(
             r#"<!doctype html>
-            <html lang="zh-Hant">
-                <head>
-                    <meta charset="utf-8">
-                </head>
-                <body>
-                    <h1>Analytics 管理後台</h1>
-                    <a href="/change-password">修改密碼與Email</a>
-                    <p>已完成密碼初始化的管理員：Chat 已提交事件總數 {total}</p>
-                    <p>詳細查詢畫面與管理操作將於後續切片接回。</p>
-                    <form method="post" action="/logout">
-                        <button>登出</button>
-                    </form>
-                </body>
-            </html>"#
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<title>Analytics 管理後台</title></head>
+<body>
+<h1>Analytics 管理後台</h1>
+<nav aria-label="事件來源">
+<a href="/dashboard?source=web_chat">Chat 事件</a>
+<a href="/dashboard?source=desktop_pet">Pet 事件</a>
+</nav>
+<a href="/change-password">修改密碼與Email</a>
+<p>已驗證的管理員：{source_label} 已提交事件總數 {total}</p>
+<p>事件來源已篩選；詳細報表與角色／來源 ACL 尚未接通。</p>
+<form method="post" action="/logout">
+<button>登出</button></form>
+</body></html>"#
         )),
         &raw,
     )
 }
-
 async fn summary(
     State(state): State<IngestState>,
     Path(source): Path<String>,

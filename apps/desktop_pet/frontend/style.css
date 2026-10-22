@@ -201,34 +201,79 @@ body {
   line-height:50px;
 }
 /* Each dynamic life window remains usable within the existing 200x200 shell. */
-.pet-life > p { margin:2px 0; font-size:12px; line-height:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pet-life > p { 
+  margin:2px 0;
+  font-size:12px;
+  line-height:16px;
+  white-space:nowrap;
+  overflow:hidden; 
+  text-overflow:ellipsis; 
+}
 
-.pet-life > p:empty { display:none; }
+.pet-life > p:empty { 
+  display:none; 
+}
 
-.pet-life .pet-status strong { font-size:12px; line-height:14px; }
+.pet-life .pet-status strong { 
+  font-size:12px; 
+  line-height:14px; 
+}
 
-.pet-life .pet-status small { font-size:10px; line-height:12px; }
+.pet-life .pet-status small { 
+  font-size:10px; 
+  line-height:12px; 
+}
 
-.pet-life > button { display:inline-block; padding:2px 6px; margin:2px; }
+.pet-life > button { 
+  display:inline-block; 
+  padding:2px 6px; 
+  margin:2px; 
+}
 
-.pet-life > p, .pet-life strong, .pet-life small { color:white; text-shadow:0 1px 3px #000; }
+.pet-life > p, .pet-life strong, .pet-life small { 
+  color:white; 
+  text-shadow:0 1px 3px #000; 
+}
 
-.pet-face { display:grid; place-items:center; width:100%; height:56px; }
+.pet-face { 
+  display:grid; 
+  place-items:center; 
+  width:100%; 
+  height:56px; 
+}
 
-.pet-face > img { width:80px; height:56px; object-fit:contain;
-    display:block; transform-origin:50% 80%; }
+.pet-face > img { 
+  width:80px; 
+  height:56px; 
+  object-fit:contain;
+  display:block; 
+  transform-origin:50% 80%; 
+}
 
-.pet-face > img.pose-idle { transform:translateY(0); }
+.pet-face > img.pose-idle { 
+  transform:translateY(0); }
 
-.pet-face > img.pose-blink { transform:scaleY(.88); }
+.pet-face > img.pose-blink { 
+  transform:scaleY(.88); 
+}
 
-.pet-face > img.pose-interact-a { transform:translateY(-3px) rotate(-5deg); }
+.pet-face > img.pose-interact-a { 
+  transform:translateY(-3px) rotate(-5deg); 
+}
 
-.pet-face > img.pose-interact-b { transform:translateY(-7px) rotate(5deg); }
+.pet-face > img.pose-interact-b { 
+  transform:translateY(-7px) rotate(5deg); 
+}
 
-.pet-face > img.pose-sleep-a { transform:scaleY(.85) translateY(5px); opacity:.90; }
+.pet-face > img.pose-sleep-a { 
+  transform:scaleY(.85) translateY(5px); 
+  opacity:.90; 
+}
 
-.pet-face > img.pose-sleep-b { transform:scaleY(.82) translateY(5px); opacity:.85; }
+.pet-face > img.pose-sleep-b { 
+  transform:scaleY(.82) translateY(5px); 
+  opacity:.85; 
+}
 
 .pet-life .pet-face { height:56px; overflow:hidden; }
 

@@ -1,8 +1,16 @@
 // 新增 apps/desktop_pet/frontend/tests/duplicate-preview-contract.test.mjs
 import assert from "node:assert/strict";
+import { URLSearchParams } from "node:url";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
+
+const location = {
+  search: ""
+};
+window.location = location;
+
+vm.runInNewContext(script, { window, location, URLSearchParams });
 
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];

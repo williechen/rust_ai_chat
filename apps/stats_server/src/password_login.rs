@@ -50,31 +50,8 @@ struct Login {
     password: String,
 }
 
-async fn login_page() -> Html<&'static str> {
-    Html(
-        r#"<!doctype html>
-        <!doctype html>
-        <html lang="zh-Hant">
-            <head>
-                <meta charset="utf-8">
-                <title>Analytics 帳密登入</title>
-            </head>
-            <body>
-                <h1>Analytics 帳密登入</h1>
-            <form method="post" action="/login">
-                <div style="margin-bottom: 1em;">
-                    <label>帳號</label>
-                    <input name="username" autocomplete="username" required>
-                </div>
-                <div style="margin-bottom: 1em;">
-                    <label>密碼</label>
-                    <input type="password" name="password" autocomplete="current-password" required>
-                </div>
-                <button>登入</button>
-            </form>
-        </body>
-        </html>"#,
-    )
+async fn login_page() -> Html<String> {
+    Html(crate::dashboard_ui::render_login())
 }
 
 async fn login(

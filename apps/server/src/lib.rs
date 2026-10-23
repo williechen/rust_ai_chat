@@ -56,10 +56,17 @@ pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
             room_auth::require_member,
         ));
 
+    // 建立房間需要有效會員；公開列表保持可讀。
+    // GET 公開；只替 POST method 加上會員 Session middleware。
+    let room_methods =
+        get(http::list_rooms).merge(axum::routing::post(http::create_room).route_layer(
+            axum::middleware::from_fn_with_state(db.clone(), room_auth::require_member),
+        ));
+
     let app = Router::new()
         .route_service(&pkg_path, pkg_service)
         .route("/health", get(http::health))
-        .route("/api/rooms", get(http::list_rooms).post(http::create_room))
+        .route("/api/rooms", room_methods)
         .route("/api/rooms/{id}", get(http::get_room))
         .route("/signin", get(ssr::app_handler))
         .route("/", get(ssr::app_handler))

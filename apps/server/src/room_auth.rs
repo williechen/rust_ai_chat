@@ -97,4 +97,53 @@ mod day25_tests {
             .unwrap();
         assert_eq!(expired.status(), StatusCode::UNAUTHORIZED);
     }
+
+    #[tokio::test]
+    async fn anonymous_create_is_rejected_while_public_list_is_available() {
+        let db = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        persistence::migrate(&db).await.unwrap();
+        let state = crate::state::AppState::new(
+            leptos_config::get_configuration(None)
+                .unwrap()
+                .leptos_options,
+            std::sync::Arc::new(persistence::SqliteRoomRepository::new(db.clone())),
+            std::sync::Arc::new(persistence::SqliteMessageRepository::new(db.clone())),
+        );
+        let room_methods = get(crate::http::list_rooms).merge(
+            axum::routing::post(crate::http::create_room).route_layer(
+                axum::middleware::from_fn_with_state(db.clone(), require_member),
+            ),
+        );
+        let app = Router::new()
+            .route("/api/rooms", room_methods)
+            .with_state(state);
+
+        let anonymous = app
+            .clone()
+            .oneshot(
+                Request::post("/api/rooms")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"name":"anonymous"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(anonymous.status(), StatusCode::UNAUTHORIZED);
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM rooms")
+            .fetch_one(&db)
+            .await
+            .unwrap();
+        assert_eq!(count, 0);
+
+        let public = app
+            .oneshot(Request::get("/api/rooms").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(public.status(), StatusCode::OK);
+        db.close().await;
+    }
 }

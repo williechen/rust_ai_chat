@@ -119,10 +119,20 @@ pub async fn cage_saved_pet(
 ) -> Result<(), String> {
     store.profile(&id).await?;
     let window = app.get_webview_window(&label(&id)?);
-    // 先確認 SQLite 已成功保存；失敗則不關閉視窗、不清 runtime。
+
+    // 儲存失敗不能先關窗，也不能清除 Runtime。
     store.set_caged(&id, true).await?;
     if let Some(window) = window {
-        window.close().map_err(|e| e.to_string())?;
+        if let Err(close_error) = window.close() {
+            // 關窗未成功，盡可能恢復 DB 的出籠標記。
+            let original = close_error.to_string();
+            return match store.set_caged(&id, false).await {
+                Ok(()) => Err(format!("關閉寵物視窗失敗，已恢復出籠狀態：{original}")),
+                Err(rollback) => Err(format!(
+                    "關閉寵物視窗失敗：{original}；回復資料庫亦失敗：{rollback}"
+                )),
+            };
+        }
     }
     app.state::<Runtime>().remove(&id);
     Ok(())

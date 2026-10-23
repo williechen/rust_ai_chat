@@ -80,23 +80,17 @@ pub fn dispatch_and_emit(
     .map_err(|e| e.to_string())?;
     Ok(snapshot)
 }
+
 #[tauri::command]
 pub async fn saved_pet_profile(id: String, store: State<'_, PetStore>) -> Result<SavedPet, String> {
     store.profile(&id).await
 }
-#[tauri::command]
-pub async fn open_saved_pet(
-    id: String,
-    app: tauri::AppHandle,
-    store: State<'_, PetStore>,
-) -> Result<(), String> {
-    let pet = store.profile(&id).await?;
-    open(&app, &pet)
-}
+
 #[tauri::command]
 pub fn get_saved_pet_state(id: String, runtime: State<'_, Runtime>) -> Result<PetSnapshot, String> {
     runtime.snapshot(&id)
 }
+
 #[tauri::command]
 pub fn send_saved_pet_command(
     id: String,
@@ -105,14 +99,32 @@ pub fn send_saved_pet_command(
 ) -> Result<PetSnapshot, String> {
     dispatch_and_emit(&app, &id, command)
 }
+
 #[tauri::command]
-pub fn cage_saved_pet(id: String, app: tauri::AppHandle) -> Result<(), String> {
+pub async fn open_saved_pet(
+    id: String,
+    app: tauri::AppHandle,
+    store: State<'_, PetStore>,
+) -> Result<(), String> {
+    let pet = store.profile(&id).await?;
+    open(&app, &pet)?;
+    store.set_caged(&id, false).await
+}
+
+#[tauri::command]
+pub async fn cage_saved_pet(
+    id: String,
+    app: tauri::AppHandle,
+    store: State<'_, PetStore>,
+) -> Result<(), String> {
+    store.profile(&id).await?;
     if let Some(window) = app.get_webview_window(&label(&id)?) {
         window.close().map_err(|e| e.to_string())?;
     }
     app.state::<Runtime>().remove(&id);
-    Ok(())
+    store.set_caged(&id, true).await
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

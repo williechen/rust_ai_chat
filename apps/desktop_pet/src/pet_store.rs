@@ -37,7 +37,8 @@ impl PetStore {
                 JOIN pet_profile p 
                     ON p.id=s.pet_id 
                 WHERE s.slot=1 
-                    AND p.owner_id='local-owner'"#,
+                    AND p.owner_id='local-owner'
+                    AND COALESCE(p.is_default_closure,0)=0"#,
         )
         .fetch_optional(&self.pool)
         .await
@@ -76,6 +77,17 @@ impl PetStore {
         .execute(&mut *tx)
         .await
         .map_err(|_| "無法儲存選取".to_owned())?;
+
+        sqlx::query(
+            "UPDATE pet_profile SET is_default_closure=FALSE,
+     updated_at=CURRENT_TIMESTAMP
+     WHERE id=?1 AND owner_id='local-owner'",
+        )
+        .bind(id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| "無法恢復出籠狀態".to_owned())?;
+
         tx.commit().await.map_err(|_| "選取提交失敗".to_owned())?;
         Ok(SavedPet {
             id: row.0,
@@ -135,6 +147,23 @@ impl PetStore {
             species,
         })
     }
+
+    pub async fn set_caged(&self, id: &str, caged: bool) -> Result<(), String> {
+        let result = sqlx::query(
+            "UPDATE pet_profile SET is_default_closure=?1,
+         updated_at=CURRENT_TIMESTAMP
+         WHERE id=?2 AND owner_id='local-owner'",
+        )
+        .bind(caged)
+        .bind(id)
+        .execute(&self.pool)
+        .await
+        .map_err(|_| "無法保存回籠狀態".to_owned())?;
+        if result.rows_affected() != 1 {
+            return Err("找不到可回籠的寵物".into());
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -168,5 +197,16 @@ mod day22_tests {
                 .await
                 .unwrap();
         assert_eq!(violations, 0);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn day28_caged_pet_is_not_active(pool: sqlx::SqlitePool) {
+        let store = PetStore { pool };
+        let pet = store.create("阿龜").await.unwrap();
+        store.select(&pet.id).await.unwrap();
+        store.set_caged(&pet.id, true).await.unwrap();
+        assert_eq!(store.active().await.unwrap(), None);
+        store.select(&pet.id).await.unwrap();
+        assert_eq!(store.active().await.unwrap(), Some(pet));
     }
 }

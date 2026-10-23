@@ -181,11 +181,11 @@ async fn session(state: &IngestState, headers: &HeaderMap) -> Result<(bool, Stri
             ,u.id 
         FROM uac_login_session s 
         JOIN uac_user u 
-        ON u.id=s.user_id 
+            ON u.id=s.user_id 
         WHERE s.token_hash=$1 
-        AND s.expires_at>floor(extract(epoch from now()))::bigint 
-        AND u.user_status='active' 
-        AND lower(u.user_acnt)='admin'"#,
+            AND s.expires_at>floor(extract(epoch from now()))::bigint 
+            AND u.user_status='active' 
+            AND lower(u.user_acnt)='admin'"#,
     )
     .bind(digest(&raw))
     .fetch_optional(&state.pool)
@@ -200,13 +200,13 @@ async fn session(state: &IngestState, headers: &HeaderMap) -> Result<(bool, Stri
         r#"UPDATE uac_login_session 
             SET expires_at=floor(extract(epoch from now()))::bigint+1800 
         WHERE token_hash=$1 
-        AND expires_at>floor(extract(epoch from now()))::bigint 
-        AND EXISTS (
-            SELECT 1 
-            FROM uac_user 
-            WHERE id=$2 
-            AND user_pd=$3 
-            AND user_status='active')"#,
+            AND expires_at>floor(extract(epoch from now()))::bigint 
+            AND EXISTS (
+                SELECT 1 
+                FROM uac_user 
+                WHERE id=$2 
+                    AND user_pd=$3 
+                    AND user_status='active')"#,
     )
     .bind(digest(&raw))
     .bind(id)
@@ -246,11 +246,21 @@ async fn change_page(
                     <h1>{heading}</h1>
                     <form method="post" action="/change-password">
                         <input type="hidden" name="csrf" value="{csrf}">
-                        <label>目前密碼<input type="password" name="current_password" autocomplete="current-password" required maxlength="128"></label>
-                        <label>新密碼<input type="password" name="new_password" autocomplete="new-password" required minlength="8" maxlength="128"></label>
-                        <label>確認新密碼<input type="password" name="confirm_password" autocomplete="new-password" required minlength="8" maxlength="128"></label>
-                        <label>唯一Email<input type="email" name="email" autocomplete="email" required maxlength="254"></label>
+                        <p>
+                        <label>目前密碼</label>
+                        <input type="password" name="current_password" autocomplete="current-password" required maxlength="128">
+                        </p><p>
+                        <label>新密碼</label>
+                        <input type="password" name="new_password" autocomplete="new-password" required minlength="8" maxlength="128">
+                        </p><p>
+                        <label>確認新密碼</label>
+                        <input type="password" name="confirm_password" autocomplete="new-password" required minlength="8" maxlength="128">
+                        </p><p>
+                        <label>唯一Email</label>
+                        <input type="email" name="email" autocomplete="email" required maxlength="254">
+                        </p><p>
                         <button>儲存並重新登入</button>
+                        </p>
                     </form>
                     <p>成功後所有裝置都須重新登入。Email不驗證；寄信重設尚未接通。</p>
                     <form method="post" action="/logout"><button>登出</button></form>
@@ -308,9 +318,23 @@ async fn change_password(
         .await
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     // 重驗本次有效 Session，鎖定會員與 Session，不能靠前端或先前 GET 的結果授權。
-    let row:Option<(String,String,String)>=sqlx::query_as(
-        "SELECT u.id,u.user_pd,s.credential_fingerprint FROM uac_user u JOIN uac_login_session s ON s.user_id=u.id WHERE s.token_hash=$1 AND s.expires_at>floor(extract(epoch from now()))::bigint AND u.user_status='active' AND lower(u.user_acnt)='admin' FOR UPDATE OF u,s")
-        .bind(digest(&raw)).fetch_optional(&mut *tx).await.map_err(|_|StatusCode::SERVICE_UNAVAILABLE)?;
+    let row: Option<(String, String, String)> = sqlx::query_as(
+        r#"SELECT u.id
+            ,u.user_pd
+            ,s.credential_fingerprint 
+        FROM uac_user u 
+        JOIN uac_login_session s 
+            ON s.user_id=u.id 
+        WHERE s.token_hash=$1 
+            AND s.expires_at>floor(extract(epoch from now()))::bigint 
+            AND u.user_status='active' 
+            AND lower(u.user_acnt)='admin' 
+        FOR UPDATE OF u,s"#,
+    )
+    .bind(digest(&raw))
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     let (id, current, fingerprint) = row.ok_or(StatusCode::UNAUTHORIZED)?;
     if digest(&current) != fingerprint {
         return Err(StatusCode::UNAUTHORIZED);
@@ -327,11 +351,23 @@ async fn change_password(
     })
     .await
     .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)??;
-    sqlx::query("UPDATE uac_user SET user_pd=$1,user_email=$2,is_init_pd=FALSE,updated_at=now() WHERE id=$3")
-        .bind(encoded).bind(email).bind(&id).execute(&mut *tx).await.map_err(|e|match e {
-            sqlx::Error::Database(ref d) if d.is_unique_violation()=>StatusCode::CONFLICT,
-            _=>StatusCode::SERVICE_UNAVAILABLE,
-        })?;
+    sqlx::query(
+        r#"UPDATE uac_user 
+            SET user_pd=$1
+                ,user_email=$2
+                ,is_init_pd=FALSE
+                ,updated_at=now() 
+        WHERE id=$3"#,
+    )
+    .bind(encoded)
+    .bind(email)
+    .bind(&id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::Database(ref d) if d.is_unique_violation() => StatusCode::CONFLICT,
+        _ => StatusCode::SERVICE_UNAVAILABLE,
+    })?;
     sqlx::query("DELETE FROM uac_login_session WHERE user_id=$1")
         .bind(id)
         .execute(&mut *tx)
@@ -389,31 +425,11 @@ async fn dashboard(
     };
 
     renewed(
-        Html(format!(
-            r#"<!doctype html>
-            <html lang="zh-Hant">
-                <head>
-                    <meta charset="utf-8">
-                    <title>Analytics 管理後台</title>
-                </head>
-                <body>
-                    <h1>Analytics 管理後台</h1>
-                    <nav aria-label="事件來源">
-                        <a href="/dashboard?source=web_chat">Chat 事件</a>
-                        <a href="/dashboard?source=desktop_pet">Pet 事件</a>
-                    </nav>
-                    <a href="/change-password">修改密碼與Email</a>
-                    <p>已驗證的管理員：{source_label} 已提交事件總數 {total}</p>
-                    <p>事件來源已篩選；詳細報表與角色／來源 ACL 尚未接通。</p>
-                    <form method="post" action="/logout">
-                        <button>登出</button>
-                    </form>
-                </body>
-            </html>"#
-        )),
+        Html(crate::dashboard_ui::render_dashboard(source_label, total)),
         &raw,
     )
 }
+
 async fn summary(
     State(state): State<IngestState>,
     Path(source): Path<String>,

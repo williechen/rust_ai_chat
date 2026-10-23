@@ -127,19 +127,42 @@ fn HomePage() -> impl IntoView {
     }
 }
 
+// crates/ui/src/lib.rs：完整取代原 SignInPage 函式。
 #[component]
 fn SignInPage() -> impl IntoView {
     view! {
         <section class="sign-in">
             <h2>"使用者登入"</h2>
+            <form method="post" action="/login">
+                <div>
+                    <label for="login-username">"帳號"</label>
+                    <input
+                        id="login-username"
+                        name="username"
+                        type="text"
+                        autocomplete="username"
+                        required
+                        maxlength="32"
+                    />
+                </div>
+                <div>
+                    <label for="login-password">"密碼"</label>
+                    <input
+                        id="login-password"
+                        name="password"
+                        type="password"
+                        autocomplete="current-password"
+                        required
+                        maxlength="128"
+                    />
+                </div>
+                <button type="submit">"登入"</button>
+            </form>
             <p>
                 <a href="/signup" rel="external">"建立會員"</a>
             </p>
             <p>
-                <a href="/login" rel="external">"帳密登入"</a>
-            </p>
-            <p>
-                <a href="/" rel="external">"回首頁"</a>
+                <a href="/" rel="external">"回房間清單"</a>
             </p>
         </section>
     }
@@ -458,5 +481,24 @@ mod day16_layout_tests {
         assert!(html.contains("尚未連線"));
         assert!(html.contains("歷史載入尚未接通"));
         assert!(!html.contains("Online: 100"));
+    }
+}
+
+// crates/ui/src/lib.rs：檔尾新增；先跑 Red，後貼 Green。
+#[cfg(all(test, feature = "ssr"))]
+mod day28_signin_tests {
+    use super::*;
+
+    #[test]
+    fn day28_leptos_signin_posts_to_existing_login_handler() {
+        let html = leptos::ssr::render_to_string(|| view! { <SignInPage /> });
+        assert!(html.contains("<form"));
+        assert!(html.contains("method=\"post\""));
+        assert!(html.contains("action=\"/login\""));
+        assert!(html.contains("name=\"username\""));
+        assert!(html.contains("name=\"password\""));
+        assert!(html.contains("type=\"password\""));
+        assert!(html.contains("autocomplete=\"current-password\""));
+        assert!(html.contains("/signup"));
     }
 }

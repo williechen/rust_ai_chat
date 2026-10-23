@@ -8,9 +8,6 @@ import vm from "node:vm";
 const location = {
   search: ""
 };
-window.location = location;
-
-vm.runInNewContext(script, { window, location, URLSearchParams });
 
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
@@ -34,9 +31,10 @@ test("重複檔案 IPC 只接受後端授權 root，不傳入任意路徑", asyn
         },
       },
       event: { listen: async () => () => {} },
+      location: location,
     },
   };
-  vm.runInNewContext(script, { window });
+  vm.runInNewContext(script, { window, location, URLSearchParams });
   assert.equal(typeof window.scanDuplicatePreview, "function");
   const result = await window.scanDuplicatePreview("/etc");
   assert.equal(result.groups.length, 1);

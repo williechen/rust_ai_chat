@@ -7,9 +7,6 @@ import vm from "node:vm";
 const location = {
   search: ""
 };
-window.location = location;
-
-vm.runInNewContext(script, { window, location, URLSearchParams });
 
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
@@ -21,9 +18,10 @@ test("scanFilePreview uses read-only command without path", async () => {
       calls.push(args);
       return { files: [], duplicateSizeCandidates: [], warnings: [] };
     }},
-    event: { listen: async () => () => {} }
+    event: { listen: async () => () => {} },
+    location: location
   }};
-  vm.runInNewContext(script, { window });
+  vm.runInNewContext(script, { window, location, URLSearchParams });
   assert.equal(typeof window.scanFilePreview, "function");
   const result = await window.scanFilePreview();
   assert.equal(result.files.length, 0);

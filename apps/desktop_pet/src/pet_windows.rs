@@ -118,11 +118,14 @@ pub async fn cage_saved_pet(
     store: State<'_, PetStore>,
 ) -> Result<(), String> {
     store.profile(&id).await?;
-    if let Some(window) = app.get_webview_window(&label(&id)?) {
+    let window = app.get_webview_window(&label(&id)?);
+    // 先確認 SQLite 已成功保存；失敗則不關閉視窗、不清 runtime。
+    store.set_caged(&id, true).await?;
+    if let Some(window) = window {
         window.close().map_err(|e| e.to_string())?;
     }
     app.state::<Runtime>().remove(&id);
-    store.set_caged(&id, true).await
+    Ok(())
 }
 
 #[cfg(test)]

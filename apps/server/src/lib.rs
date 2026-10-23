@@ -49,15 +49,22 @@ pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
             room_auth::require_member,
         ));
 
+    let guarded_ws = Router::new()
+        .route("/ws/{room_id}", any(ws::ws_handler))
+        .route_layer(axum::middleware::from_fn_with_state(
+            db.clone(),
+            room_auth::require_member,
+        ));
+
     let app = Router::new()
         .route_service(&pkg_path, pkg_service)
         .route("/health", get(http::health))
         .route("/api/rooms", get(http::list_rooms).post(http::create_room))
         .route("/api/rooms/{id}", get(http::get_room))
-        .route("/ws/{room_id}", any(ws::ws_handler))
         .route("/signin", get(ssr::app_handler))
         .route("/", get(ssr::app_handler))
         .merge(guarded_room)
+        .merge(guarded_ws)
         .with_state(state)
         .merge(signup_routes)
         .merge(signin_routes)

@@ -400,6 +400,7 @@ mod day16_room_search_tests {
         assert!(rows.is_empty());
         assert_eq!(status, "尚無房間");
     }
+
     #[test]
     fn day19_failure_preserves_complete_rows_and_message() {
         let old = vec![
@@ -491,7 +492,7 @@ mod day28_signin_tests {
 
     #[test]
     fn day28_leptos_signin_posts_to_existing_login_handler() {
-        let html = leptos::ssr::render_to_string(|| view! { <SignInPage /> });
+        let html = view! { <SignInPage /> }.to_html();
         assert!(html.contains("<form"));
         assert!(html.contains("method=\"post\""));
         assert!(html.contains("action=\"/login\""));

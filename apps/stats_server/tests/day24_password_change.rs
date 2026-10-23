@@ -323,4 +323,46 @@ async fn day24_duplicate_migration_stops_and_revocation_failure_rolls_back(pool:
         .status(),
         StatusCode::FORBIDDEN
     );
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn day31_change_page_has_connected_labels_and_existing_csrf(pool: sqlx::PgPool) {
+        stats_server::bootstrap::initialize(&pool, "lesson-only-password".into())
+            .await
+            .unwrap();
+        let login = send(
+            app(pool.clone()),
+            "/login",
+            Some("username=admin&password=lesson-only-password"),
+            None,
+        )
+        .await;
+        assert_eq!(login.status(), StatusCode::SEE_OTHER);
+        let c = cookie(&login);
+        let page = send(app(pool.clone()), "/change-password", None, Some(&c)).await;
+        assert_eq!(page.status(), StatusCode::OK);
+        assert!(page.headers().contains_key(header::SET_COOKIE));
+        let bytes = axum::body::to_bytes(page.into_body(), 16000).await.unwrap();
+        let html = String::from_utf8(bytes.to_vec()).unwrap();
+        assert_eq!(html.matches("<!doctype html>").count(), 1);
+        assert!(html.contains("for=\"change-current\""));
+        assert!(html.contains("id=\"change-current\""));
+        assert!(html.contains("action=\"/change-password\""));
+        assert!(html.contains("首次登入須更換密碼與Email"));
+        let csrf = html
+            .split("name=\"csrf\" value=\"")
+            .nth(1)
+            .unwrap()
+            .split('"')
+            .next()
+            .unwrap();
+        assert_eq!(csrf.len(), 64);
+        assert!(csrf.bytes().all(|b| b.is_ascii_hexdigit()));
+        // 沒有 Cookie 的同一個正式 router，仍不可取得表單。
+        assert_eq!(
+            send(app(pool), "/change-password", None, None)
+                .await
+                .status(),
+            StatusCode::UNAUTHORIZED
+        );
+    }
 }

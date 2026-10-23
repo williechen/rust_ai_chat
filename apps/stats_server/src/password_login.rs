@@ -201,48 +201,11 @@ async fn change_page(
     State(state): State<IngestState>,
     headers: HeaderMap,
 ) -> Result<Response, StatusCode> {
-    // 首次登入和後續主動修改均須是有效登入者，
-    // Session 再驗仍由 session() 完成。
     let (restricted, raw) = session(&state, &headers).await?;
     let csrf = digest(&format!("change-password:{raw}"));
-    let heading = if restricted {
-        "首次登入須更換密碼與Email"
-    } else {
-        "修改密碼與Email"
-    };
-
     Ok(renewed(
-        Html(format!(
-            r#"<!doctype html>
-            <html lang="zh-Hant">
-                <head>
-                    <meta charset="utf-8">
-                    <title>修改密碼</title>
-                </head>
-                <body>
-                    <h1>{heading}</h1>
-                    <form method="post" action="/change-password">
-                        <input type="hidden" name="csrf" value="{csrf}">
-                        <p>
-                        <label>目前密碼</label>
-                        <input type="password" name="current_password" autocomplete="current-password" required maxlength="128">
-                        </p><p>
-                        <label>新密碼</label>
-                        <input type="password" name="new_password" autocomplete="new-password" required minlength="8" maxlength="128">
-                        </p><p>
-                        <label>確認新密碼</label>
-                        <input type="password" name="confirm_password" autocomplete="new-password" required minlength="8" maxlength="128">
-                        </p><p>
-                        <label>唯一Email</label>
-                        <input type="email" name="email" autocomplete="email" required maxlength="254">
-                        </p><p>
-                        <button>儲存並重新登入</button>
-                        </p>
-                    </form>
-                    <p>成功後所有裝置都須重新登入。Email不驗證；寄信重設尚未接通。</p>
-                    <form method="post" action="/logout"><button>登出</button></form>
-                </body>
-            </html>"#
+        Html(crate::dashboard_ui::render_change_password(
+            restricted, csrf,
         )),
         &raw,
     ))

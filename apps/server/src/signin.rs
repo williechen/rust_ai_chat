@@ -27,6 +27,7 @@ pub fn routes(pool: SqlitePool) -> Router {
     Router::new()
         .route("/login", get(login_page).post(login))
         .route("/account", get(account))
+        .route("/account/rooms", axum::routing::post(account_create_room))
         .layer(DefaultBodyLimit::max(4096))
         .with_state(pool)
 }
@@ -126,28 +127,91 @@ async fn login(
         .into_response())
 }
 
+fn account_html(
+    headers: &HeaderMap,
+    message: String,
+    name: String,
+    room_id: Option<String>,
+) -> Result<Html<String>, StatusCode> {
+    Ok(Html(ui::account::render_account(
+        crate::auth_session::csrf_for_logout(headers)?,
+        crate::auth_session::csrf_for_create_room(headers)?,
+        message,
+        name,
+        room_id,
+    )))
+}
+
 async fn account(
     State(pool): State<SqlitePool>,
     headers: HeaderMap,
 ) -> Result<Html<String>, StatusCode> {
     crate::auth_session::active_member(&pool, &headers).await?;
-    let csrf = crate::auth_session::csrf_for_logout(&headers)?;
-    Ok(Html(format!(
-        r#"<!doctype html>
-        <html lang="zh-Hant">
-            <head>
-                <meta charset="utf-8"><title>已登入</title>
-            </head>
-            <body>
-                <h1>已登入</h1>
-                <form action="/logout" method="post">
-                    <input type="hidden" name="csrf" value="{csrf}">
-                    <button type="submit">登出</button>
-                </form>
-                <a href="/">回首頁</a>
-            </body>
-        </html>"#
-    )))
+    account_html(&headers, String::new(), String::new(), None)
+}
+
+#[derive(Deserialize)]
+struct AccountRoomForm {
+    name: String,
+    csrf: String,
+}
+
+async fn account_create_room(
+    State(pool): State<SqlitePool>,
+    headers: HeaderMap,
+    Form(form): Form<AccountRoomForm>,
+) -> Result<Response, StatusCode> {
+    crate::auth_session::active_member(&pool, &headers).await?;
+    if headers.get(header::ORIGIN).and_then(|h| h.to_str().ok()) != Some("http://127.0.0.1:3000")
+        || form.csrf != crate::auth_session::csrf_for_create_room(&headers)?
+    {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    if form.name.trim().is_empty() || form.name.len() > 200 || form.name.contains('\0') {
+        return Ok((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            account_html(
+                &headers,
+                "名稱須非空白、不得含 NUL，且最多 200 UTF-8 bytes".into(),
+                form.name,
+                None,
+            )?,
+        )
+            .into_response());
+    }
+    let repo = persistence::SqliteRoomRepository::new(pool);
+    let created = chat_application::create_room(
+        &repo,
+        chat_application::CreateRoom {
+            id: uuid::Uuid::new_v4().to_string(),
+            category_room_id: "default-category".into(),
+            name: form.name.clone(),
+        },
+    )
+    .await;
+    match created {
+        Ok(room) => Ok((
+            StatusCode::CREATED,
+            account_html(
+                &headers,
+                "已建立；可進房或回公開清單".into(),
+                String::new(),
+                Some(room.id),
+            )?,
+        )
+            .into_response()),
+        Err(_) => Ok((
+            StatusCode::SERVICE_UNAVAILABLE,
+            account_html(
+                &headers,
+                "未確認建立成功；請先查清單再決定是否重送".into(),
+                form.name,
+                None,
+            )?,
+        )
+            .into_response()),
+    }
 }
 
 #[cfg(test)]

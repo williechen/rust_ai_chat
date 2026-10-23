@@ -1,5 +1,6 @@
 mod chat_socket;
 
+pub mod account;
 #[cfg(target_arch = "wasm32")]
 mod room_api;
 
@@ -501,5 +502,25 @@ mod day28_signin_tests {
         assert!(html.contains("type=\"password\""));
         assert!(html.contains("autocomplete=\"current-password\""));
         assert!(html.contains("/signup"));
+    }
+}
+
+#[cfg(test)]
+mod day31_account_tests {
+    #[test]
+    fn account_has_operable_creation_form_and_escaped_feedback() {
+        let html = crate::account::render_account(
+            "logout-token".into(),
+            "create-token".into(),
+            "<失敗>".into(),
+            "<房名>".into(),
+            None,
+        );
+        assert!(html.contains("action=\"/account/rooms\""));
+        assert!(html.contains("name=\"name\""));
+        assert!(html.contains("name=\"csrf\" value=\"create-token\""));
+        assert!(html.contains("&lt;失敗&gt;"));
+        assert!(html.contains("&lt;房名&gt;"));
+        assert!(!html.contains("<失敗>"));
     }
 }

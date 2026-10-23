@@ -32,6 +32,15 @@ pub fn csrf_for_logout(headers: &HeaderMap) -> Result<String, StatusCode> {
     Ok(token_digest(&format!("logout:{raw}")))
 }
 
+pub fn csrf_for_create_room(headers: &HeaderMap) -> Result<String, StatusCode> {
+    let raw = headers
+        .get(header::COOKIE)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| cookie_token(v, "chat_session"))
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+    Ok(token_digest(&format!("create-room:{raw}")))
+}
+
 // Add to apps/server/src/auth_session.rs at the bottom:
 #[cfg(test)]
 mod tests {

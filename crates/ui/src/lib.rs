@@ -505,7 +505,7 @@ mod day28_signin_tests {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "ssr"))]
 mod day31_account_tests {
     #[test]
     fn account_has_operable_creation_form_and_escaped_feedback() {

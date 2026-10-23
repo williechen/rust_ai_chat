@@ -56,32 +56,20 @@
     let petContextMenu = null;
 
     async function getPetContextMenu() {
-      if (petContextMenu) {
-        return petContextMenu;
-      }
-
+      if (petContextMenu) return petContextMenu;
       const { Menu } = window.__TAURI__.menu;
-
+      const id = await currentPetId();
       petContextMenu = await Menu.new({
         items: [
-          {
-            id: `pet:${await currentPetId()}:interact`,
-            text: "互動",
-          },
-          {
-            id: `pet:${await currentPetId()}:sleep`,
-            text: "睡覺",
-          },
-          {
-            id: `pet:${await currentPetId()}:wake`,
-            text: "醒來",
-          },
+          { id: "open_control", text: "開啟控制窗" },
+          { id: `pet:${id}:interact`, text: "互動" },
+          { id: `pet:${id}:sleep`, text: "睡覺" },
+          { id: `pet:${id}:wake`, text: "醒來" },
         ],
       });
-
       return petContextMenu;
     }
-
+    
     window.showPetContextMenu = async (x, y) => {
       const menu = await getPetContextMenu();
 

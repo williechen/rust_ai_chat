@@ -155,6 +155,19 @@ async fn select_pet(
 pub fn application(db: sqlx::SqlitePool) {
     tauri::Builder::default()
         .on_window_event(|window, event| {
+            // 控制台關閉僅隱藏，讓既有 show/focus IPC 能恢復同一個 main。
+            if window.label() == "main" {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    if let Err(error) = window.hide() {
+                        // 隱藏失敗時仍保留視窗；不把錯誤當成銷毀成功。
+                        eprintln!("隱藏控制視窗失敗：{error}");
+                    }
+                }
+                return;
+            }
+
+            // 保留生活窗原有 Destroyed 清理；本日不改回籠持久化政策。
             if window.label().starts_with("pet-")
                 && let tauri::WindowEvent::Destroyed = event
                 && let Some(id) = window

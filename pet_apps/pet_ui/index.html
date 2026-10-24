@@ -45,8 +45,14 @@
       return new URLSearchParams(window.location.search).get("view") === "pet";
     };
 
-    window.openPetControls = () => {
-      return invoke("open_control_window");
+    window.openPetControls = async () => {
+        // 生活窗按鈕必須與 Day32 的原生右鍵選單一致：先選自己。
+        if (window.isPetWindow()) {
+            const id = await currentPetId();
+            await invoke("select_pet", { id });
+        }
+        // 選取失敗會 reject，絕不誤報「控制台已開啟」。
+        return invoke("open_control_window");
     };
 
     window.quitPet = () => {

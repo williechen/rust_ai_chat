@@ -1,9 +1,9 @@
 #![cfg(feature = "postgres-integration")]
+use analytics_server::{IngestState, IngestTokens, password_login};
 use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use stats_server::{IngestState, IngestTokens, password_login};
 use std::sync::Arc;
 use tower::ServiceExt;
 fn app(pool: sqlx::PgPool) -> axum::Router {
@@ -49,7 +49,7 @@ fn cookie(r: &axum::response::Response) -> String {
 }
 #[sqlx::test(migrations = "../migrations")]
 async fn day23_bootstrapped_password_is_restricted_before_first_change(pool: sqlx::PgPool) {
-    stats_server::bootstrap::initialize(&pool, "lesson-only-password".into())
+    analytics_server::bootstrap::initialize(&pool, "lesson-only-password".into())
         .await
         .unwrap();
     assert_eq!(
@@ -102,7 +102,7 @@ async fn day23_bootstrapped_password_is_restricted_before_first_change(pool: sql
         .unwrap();
     assert!(String::from_utf8_lossy(&body).contains("儲存並重新登入"));
     assert!(
-        stats_server::bootstrap::initialize(&pool, "different-password".into())
+        analytics_server::bootstrap::initialize(&pool, "different-password".into())
             .await
             .is_err()
     );
@@ -114,7 +114,7 @@ async fn day23_bootstrapped_password_is_restricted_before_first_change(pool: sql
 }
 #[sqlx::test(migrations = "../migrations")]
 async fn day23_ready_account_session_survives_new_pool_and_is_revocable(pool: sqlx::PgPool) {
-    stats_server::bootstrap::initialize(&pool, "lesson-only-password".into())
+    analytics_server::bootstrap::initialize(&pool, "lesson-only-password".into())
         .await
         .unwrap();
     // 已完成首次密碼更換的既有帳號fixture；此SQL不是提供給使用者繞過首次改密碼的操作。

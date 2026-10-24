@@ -38,10 +38,10 @@
                 "args": [
                     "build",
                     "--package",
-                    "desktop-pet"
+                    "pet-server"
                 ],
                 "filter": {
-                    "name": "desktop-pet",
+                    "name": "pet-server",
                     "kind": "bin"
                 },
                 "cwd": "${workspaceFolder}/pet_apps",
@@ -99,7 +99,7 @@
                     "--no-run"
                 ],
                 "filter": {
-                    "name": "pet-server",
+                    "name": "pet_server",
                     "kind": "lib"
                 },
                 "cwd": "${workspaceFolder}/pet_apps",

@@ -115,5 +115,5 @@ jobs:
           name: pet-linux
           if-no-files-found: error
           path: |
-            pet_apps/target/release/desktop-pet
+            pet_apps/target/release/pet-server
             pet_apps/pet_ui/dist

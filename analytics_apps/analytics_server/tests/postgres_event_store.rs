@@ -1,9 +1,9 @@
 #![cfg(feature = "postgres-integration")]
-use sqlx::PgPool;
-use stats_server::{
+use analytics_server::{
     EventInput,
     pg_store::{PersistError, PersistOutcome, persist_event},
 };
+use sqlx::PgPool;
 use uuid::Uuid;
 
 #[sqlx::test(migrations = "../migrations")]

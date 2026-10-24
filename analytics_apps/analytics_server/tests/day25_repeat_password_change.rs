@@ -1,10 +1,10 @@
 #![cfg(feature = "postgres-integration")]
 
+use analytics_server::{IngestState, IngestTokens, password_login};
 use axum::{
     body::{Body, to_bytes},
     http::{Request, StatusCode, header},
 };
-use stats_server::{IngestState, IngestTokens, password_login};
 use std::sync::Arc;
 use tower::ServiceExt;
 
@@ -70,7 +70,7 @@ async fn csrf(response: axum::response::Response) -> String {
 
 #[sqlx::test(migrations = "../migrations")]
 async fn day25_admin_can_change_password_again_after_initialization(pool: sqlx::PgPool) {
-    stats_server::bootstrap::initialize(&pool, "lesson-first-password".into())
+    analytics_server::bootstrap::initialize(&pool, "lesson-first-password".into())
         .await
         .unwrap();
     let first = request(

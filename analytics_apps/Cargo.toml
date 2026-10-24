@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["analytics_server"]
+members = ["analytics_server", "analytics_persistence"]
 
 [workspace.package]
 version = "0.2.32"

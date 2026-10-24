@@ -550,7 +550,7 @@ mod source_kind_summary_tests {
     }
 
     #[cfg(feature = "postgres-integration")]
-    #[sqlx::test(migrations = "./migrations")]
+    #[sqlx::test(migrations = "../migrations")]
     async fn filters_committed_deduplicated_rows_by_source_and_kind(pool: PgPool) {
         let shared_id = Uuid::new_v4();
         for (source, id, kind) in [

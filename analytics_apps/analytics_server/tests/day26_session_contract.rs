@@ -1,9 +1,9 @@
 #![cfg(feature = "postgres-integration")]
+use analytics_server::{IngestState, IngestTokens, bootstrap, password_login};
 use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use stats_server::{IngestState, IngestTokens, bootstrap, password_login};
 use std::sync::Arc;
 use tower::ServiceExt;
 

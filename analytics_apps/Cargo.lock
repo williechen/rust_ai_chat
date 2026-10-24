@@ -18,6 +18,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
+name = "analytics-persistence"
+version = "0.2.32"
+dependencies = [
+ "argon2",
+ "axum",
+ "dotenv",
+ "leptos",
+ "rpassword",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "shared",
+ "sqlx",
+ "tokio",
+ "tower",
+ "uuid",
+]
+
+[[package]]
 name = "analytics-server"
 version = "0.2.32"
 dependencies = [

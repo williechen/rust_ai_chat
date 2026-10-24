@@ -1,10 +1,10 @@
 #![cfg(feature = "postgres-integration")]
 
+use analytics_server::{IngestState, IngestTokens, password_login};
 use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use stats_server::{IngestState, IngestTokens, password_login};
 use std::sync::Arc;
 use tower::ServiceExt;
 
@@ -56,7 +56,7 @@ fn cookie(r: &axum::response::Response) -> String {
 async fn day24_password_change_is_atomic_revokes_all_sessions_and_requires_relogin(
     pool: sqlx::PgPool,
 ) {
-    stats_server::bootstrap::initialize(&pool, "lesson-only-password".into())
+    analytics_server::bootstrap::initialize(&pool, "lesson-only-password".into())
         .await
         .unwrap();
     let login = send(
@@ -233,7 +233,7 @@ async fn day24_password_change_is_atomic_revokes_all_sessions_and_requires_relog
 
 #[sqlx::test(migrations = "../migrations")]
 async fn day24_duplicate_migration_stops_and_revocation_failure_rolls_back(pool: sqlx::PgPool) {
-    stats_server::bootstrap::initialize(&pool, "lesson-only-password".into())
+    analytics_server::bootstrap::initialize(&pool, "lesson-only-password".into())
         .await
         .unwrap();
     sqlx::query("DROP INDEX uq_uac_user_email")
@@ -326,7 +326,7 @@ async fn day24_duplicate_migration_stops_and_revocation_failure_rolls_back(pool:
 
     #[sqlx::test(migrations = "../migrations")]
     async fn day31_change_page_has_connected_labels_and_existing_csrf(pool: sqlx::PgPool) {
-        stats_server::bootstrap::initialize(&pool, "lesson-only-password".into())
+        analytics_server::bootstrap::initialize(&pool, "lesson-only-password".into())
             .await
             .unwrap();
         let login = send(

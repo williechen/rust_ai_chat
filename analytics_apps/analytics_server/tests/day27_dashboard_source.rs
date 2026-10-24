@@ -1,10 +1,10 @@
-// apps/stats_server/tests/day27_dashboard_source.rs
+// apps/analytics_server/tests/day27_dashboard_source.rs
 #![cfg(feature = "postgres-integration")]
+use analytics_server::{IngestState, IngestTokens, bootstrap, password_login};
 use axum::{
     body::{Body, to_bytes},
     http::{Request, StatusCode, header},
 };
-use stats_server::{IngestState, IngestTokens, bootstrap, password_login};
 use std::sync::Arc;
 use tower::ServiceExt;
 

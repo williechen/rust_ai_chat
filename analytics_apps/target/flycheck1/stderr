@@ -1,6 +1,0 @@
-    Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on package cache
-    Checking analytics-server v0.2.32 (/home/willie/RUST/rust_ai_ring/analytics_apps/analytics_server)
-error: could not compile `analytics-server` (test "idempotency_contract") due to 1 previous error

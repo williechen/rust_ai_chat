@@ -1,5 +1,0 @@
-    Updating crates.io index
-error: no matching package named `persistence` found
-location searched: /home/willie/RUST/rust_ai_ring/chat_apps/chat_persistence
-required by package `chat-server v0.2.32 (/home/willie/RUST/rust_ai_ring/chat_apps/chat_server)`
-help: package `chat-persistence` exists at `/home/willie/RUST/rust_ai_ring/chat_apps/chat_persistence`

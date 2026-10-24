@@ -1,5 +1,13 @@
 use leptos::prelude::*;
 
+fn summary_count_label(source_label: &str, event_type: &str, total: i64) -> String {
+    if event_type.is_empty() {
+        format!("{source_label} 全部事件類型：{total} 筆已提交事件")
+    } else {
+        format!("{source_label} 事件類型「{event_type}」：{total} 筆已提交事件")
+    }
+}
+
 #[component]
 fn DashboardView(
     source_label: &'static str,
@@ -15,6 +23,8 @@ fn DashboardView(
     } else {
         format!("精確事件類型：{event_type}")
     };
+
+    let count_label = summary_count_label(source_label, &event_type, total);
 
     view! {
         <html lang="zh-Hant">
@@ -48,7 +58,7 @@ fn DashboardView(
                         <a href=clear_url>"清除篩選"</a>
                     </form>
                     <p>{filter_description}</p>
-                    <p>{format!("{source_label} 已提交事件總數 {total}")}</p>
+                    <p class="summary-count" aria-live="polite">{count_label}</p>
                     <p role="status">
                         {if total == 0 {
                             "沒有符合條件的已提交事件"
@@ -252,5 +262,34 @@ mod day32_filter_tests {
         assert!(!html.contains("value=\"chat.\" onfocus="));
         assert!(html.contains("沒有符合條件的已提交事件"));
         assert!(html.contains("/dashboard?source=web_chat"));
+    }
+}
+
+#[cfg(test)]
+mod day33_summary_caption_tests {
+    #[test]
+    fn count_label_distinguishes_full_and_exact_kind() {
+        assert_eq!(
+            super::summary_count_label("Chat", "", 12),
+            "Chat 全部事件類型：12 筆已提交事件"
+        );
+        assert_eq!(
+            super::summary_count_label("Chat", "chat.message.persisted", 3),
+            "Chat 事件類型「chat.message.persisted」：3 筆已提交事件"
+        );
+        assert_eq!(
+            super::summary_count_label("Pet", "pet.sleep", 0),
+            "Pet 事件類型「pet.sleep」：0 筆已提交事件"
+        );
+    }
+
+    #[test]
+    fn real_leptos_ssr_escapes_filtered_type_in_count_label() {
+        let html =
+            super::render_dashboard_filtered("Chat", 3, "web_chat", "<img src=x onerror=alert(1)>");
+        assert!(html.contains("3 筆已提交事件"));
+        assert!(html.contains("class=\"summary-count\""));
+        assert!(!html.contains("<img src=x onerror=alert(1)>"));
+        assert!(html.contains("&lt;img"));
     }
 }

@@ -1,6 +1,12 @@
 [workspace]
 resolver = "3"
-members = ["desktop_pet", "frontend", "pet_domain"]
+members = [
+    "pet_server",
+    "pet_ui",
+    "pet_domain",
+    "pet_application",
+    "pet_persistence",
+]
 
 [workspace.package]
 version = "0.2.32"

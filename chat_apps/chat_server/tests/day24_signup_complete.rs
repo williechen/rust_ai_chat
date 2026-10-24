@@ -17,7 +17,7 @@ async fn day24_signup_completes_without_automatic_login_or_navigation() {
     ] {
         sqlx::raw_sql(sql).execute(&pool).await.unwrap();
     }
-    let app = server::signup::routes(pool.clone());
+    let app = chat_server::signup::routes(pool.clone());
     let response=app.clone().oneshot(Request::post("/signup").header("origin","http://127.0.0.1:3000").header("content-type","application/x-www-form-urlencoded").body(Body::from("username=day24&email=day24%40example.test&display_name=Learner&password=lesson-only-password")).unwrap()).await.unwrap();
     assert_eq!(response.status(), StatusCode::SEE_OTHER);
     assert_eq!(response.headers()["location"], "/signup/complete");
@@ -69,7 +69,7 @@ async fn day24_existing_browser_session_revocation_is_atomic() {
     ] {
         sqlx::raw_sql(sql).execute(&pool).await.unwrap();
     }
-    let app = server::signup::routes(pool.clone());
+    let app = chat_server::signup::routes(pool.clone());
     let make = |name: &str, cookie: Option<String>| {
         let mut req = Request::post("/signup")
             .header("origin", "http://127.0.0.1:3000")

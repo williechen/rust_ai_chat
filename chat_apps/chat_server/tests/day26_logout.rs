@@ -2,7 +2,7 @@ use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
-use server::{logout, signin};
+use chat_server::{logout, signin};
 use sha2::{Digest, Sha256};
 use tower::ServiceExt;
 

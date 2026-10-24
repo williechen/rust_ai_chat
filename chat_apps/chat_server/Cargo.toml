@@ -5,7 +5,7 @@ edition.workspace = true
 
 [features]
 default = []
-ssr = ["ui/ssr"]
+ssr = ["chat-ui/ssr"]
 
 [dependencies]
 any_spawner.workspace = true
@@ -20,7 +20,7 @@ leptos.workspace = true
 leptos_axum.workspace = true
 leptos_config.workspace = true
 
-persistence = { path = "../chat_persistence" }
+chat-persistence = { path = "../chat_persistence" }
 
 serde.workspace = true
 serde_json.workspace = true
@@ -32,7 +32,7 @@ sqlx.workspace = true
 
 tokio.workspace = true
 
-ui = { path = "../chat_ui" }
+chat-ui = { path = "../chat_ui" }
 uuid.workspace = true
 
 [dev-dependencies]

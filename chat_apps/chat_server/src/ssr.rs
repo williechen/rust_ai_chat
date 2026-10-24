@@ -8,7 +8,7 @@ pub async fn app_handler(
 ) -> impl IntoResponse {
     let options = state.leptos_options.clone();
 
-    let handler = render_app_to_stream(move || ui::shell(options.clone()));
+    let handler = render_app_to_stream(move || chat_ui::shell(options.clone()));
 
     handler(request).await.into_response()
 }

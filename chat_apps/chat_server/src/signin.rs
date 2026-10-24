@@ -133,7 +133,7 @@ fn account_html(
     name: String,
     room_id: Option<String>,
 ) -> Result<Html<String>, StatusCode> {
-    Ok(Html(ui::account::render_account(
+    Ok(Html(chat_ui::account::render_account(
         crate::auth_session::csrf_for_logout(headers)?,
         crate::auth_session::csrf_for_create_room(headers)?,
         message,
@@ -180,7 +180,7 @@ async fn account_create_room(
         )
             .into_response());
     }
-    let repo = persistence::SqliteRoomRepository::new(pool);
+    let repo = chat_persistence::SqliteRoomRepository::new(pool);
     let created = chat_application::create_room(
         &repo,
         chat_application::CreateRoom {

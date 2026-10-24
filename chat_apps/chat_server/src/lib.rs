@@ -31,10 +31,10 @@ pub async fn application() -> Result<(), Box<dyn std::error::Error>> {
     let database_url = std::env::var("CHAT_DATABASE_URL")?;
     let db = sqlx::SqlitePool::connect(&database_url).await?;
 
-    persistence::migrate(&db).await?;
+    chat_persistence::migrate(&db).await?;
 
-    let room_repository = Arc::new(persistence::SqliteRoomRepository::new(db.clone()));
-    let message_repository = Arc::new(persistence::SqliteMessageRepository::new(db.clone()));
+    let room_repository = Arc::new(chat_persistence::SqliteRoomRepository::new(db.clone()));
+    let message_repository = Arc::new(chat_persistence::SqliteMessageRepository::new(db.clone()));
 
     let signup_routes = signup::routes(db.clone());
     let signin_routes = signin::routes(db.clone());

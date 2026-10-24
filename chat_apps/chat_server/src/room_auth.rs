@@ -105,13 +105,13 @@ mod day25_tests {
             .connect("sqlite::memory:")
             .await
             .unwrap();
-        persistence::migrate(&db).await.unwrap();
+        chat_persistence::migrate(&db).await.unwrap();
         let state = crate::state::AppState::new(
             leptos_config::get_configuration(None)
                 .unwrap()
                 .leptos_options,
-            std::sync::Arc::new(persistence::SqliteRoomRepository::new(db.clone())),
-            std::sync::Arc::new(persistence::SqliteMessageRepository::new(db.clone())),
+            std::sync::Arc::new(chat_persistence::SqliteRoomRepository::new(db.clone())),
+            std::sync::Arc::new(chat_persistence::SqliteMessageRepository::new(db.clone())),
         );
         let room_methods = get(crate::http::list_rooms).merge(
             axum::routing::post(crate::http::create_room).route_layer(

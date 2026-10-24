@@ -248,8 +248,8 @@ mod test {
         use chat_application::{ChatService, CreateRoom, create_room};
         use shared::ServerEvent;
 
-        let rooms = persistence::SqliteRoomRepository::new(pool.clone());
-        let messages = persistence::SqliteMessageRepository::new(pool.clone());
+        let rooms = chat_persistence::SqliteRoomRepository::new(pool.clone());
+        let messages = chat_persistence::SqliteMessageRepository::new(pool.clone());
         let hub = RoomHub::new(8);
         let (_, mut events) = hub.subscribe("room-day11".into());
         let service = ChatService::new();

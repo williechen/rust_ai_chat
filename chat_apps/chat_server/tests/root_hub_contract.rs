@@ -1,4 +1,4 @@
-use server::hub::RoomHub;
+use chat_server::hub::RoomHub;
 use shared::ServerEvent;
 use tokio::sync::broadcast::error::TryRecvError;
 

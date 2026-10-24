@@ -125,13 +125,13 @@ mod room_http_tests {
             .connect("sqlite::memory:")
             .await
             .unwrap();
-        persistence::migrate(&pool).await.unwrap();
+        chat_persistence::migrate(&pool).await.unwrap();
         let state = AppState::new(
             leptos_config::get_configuration(None)
                 .unwrap()
                 .leptos_options,
-            Arc::new(persistence::SqliteRoomRepository::new(pool.clone())),
-            Arc::new(persistence::SqliteMessageRepository::new(pool.clone())),
+            Arc::new(chat_persistence::SqliteRoomRepository::new(pool.clone())),
+            Arc::new(chat_persistence::SqliteMessageRepository::new(pool.clone())),
         );
         (state, pool)
     }
@@ -217,8 +217,8 @@ mod room_details_tests {
             .connect("sqlite::memory:")
             .await
             .unwrap();
-        persistence::migrate(&pool).await.unwrap();
-        let rooms = Arc::new(persistence::SqliteRoomRepository::new(pool.clone()));
+        chat_persistence::migrate(&pool).await.unwrap();
+        let rooms = Arc::new(chat_persistence::SqliteRoomRepository::new(pool.clone()));
         chat_application::create_room(
             rooms.as_ref(),
             chat_application::CreateRoom {
@@ -234,7 +234,7 @@ mod room_details_tests {
                 .unwrap()
                 .leptos_options,
             rooms,
-            Arc::new(persistence::SqliteMessageRepository::new(pool.clone())),
+            Arc::new(chat_persistence::SqliteMessageRepository::new(pool.clone())),
         );
         (state, pool)
     }

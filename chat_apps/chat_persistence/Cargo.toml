@@ -1,0 +1,15 @@
+[package]
+name = "chat-persistence"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+
+chat-application = { path = "../chat_application" }
+chat-domain = { path = "../chat_domain" }
+
+
+sqlx.workspace = true
+
+tokio.workspace = true

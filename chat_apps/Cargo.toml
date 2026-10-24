@@ -1,6 +1,12 @@
 [workspace]
 resolver = "3"
-members = ["server", "chat_application", "chat_domain", "persistence", "ui"]
+members = [
+    "chat_server",
+    "chat_application",
+    "chat_domain",
+    "chat_persistence",
+    "chat_ui",
+]
 
 [workspace.package]
 version = "0.2.32"

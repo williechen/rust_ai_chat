@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>Rust AI Desktop Pet</title>
+
+  <link data-trunk rel="css" href="style.css" />
+</head>
+
+<body>
+  <script>
+    const { invoke } = window.__TAURI__.core;
+    const { listen } = window.__TAURI__.event;
+
+    const windowPetId = new URLSearchParams(location.search).get("pet_id");
+
+    const currentPetId = async () => {
+      const id = windowPetId || (await invoke("active_pet"))?.id;
+      if (!id) throw "請先選擇並出籠寵物";
+      return id;
+     };
+
+    window.getPetState = async () => invoke("get_saved_pet_state", { id: await currentPetId() });
+    
+    window.sendPetCommand = async (command) => invoke("send_saved_pet_command", { id: await currentPetId(), command });
+    
+    window.listenPetState = (callback) => listen("saved-pet-state", async (event) => {
+      try { if (event.payload.id === await currentPetId()) callback(event.payload.snapshot); } catch (_) {}
+    });
+    
+    window.openSavedPet = (id) => invoke("open_saved_pet", { id });
+    
+    window.cageSavedPet = async () => invoke("cage_saved_pet", { id: await currentPetId() });
+
+    window.chatWithPet = (message) => {
+      return invoke("chat_with_pet", { message });
+    };
+
+    window.isPetWindow = () => {
+      return new URLSearchParams(window.location.search).get("view") === "pet";
+    };
+
+    window.openPetControls = () => {
+      return invoke("open_control_window");
+    };
+
+    window.quitPet = () => {
+      return invoke("quit_pet");
+    };
+
+    let petContextMenu = null;
+
+    async function getPetContextMenu() {
+      if (petContextMenu) return petContextMenu;
+      const { Menu } = window.__TAURI__.menu;
+      const id = await currentPetId();
+      petContextMenu = await Menu.new({
+        items: [
+          { id: `pet:${id}:open_control`, text: "開啟控制窗" },
+          { id: `pet:${id}:interact`, text: "互動" },
+          { id: `pet:${id}:sleep`, text: "睡覺" },
+          { id: `pet:${id}:wake`, text: "醒來" },
+        ],
+      });
+      return petContextMenu;
+    }
+    
+    window.showPetContextMenu = async (x, y) => {
+      const menu = await getPetContextMenu();
+
+      const {
+        getCurrentWindow,
+      } = window.__TAURI__.window;
+
+      const {
+        LogicalPosition,
+      } = window.__TAURI__.dpi;
+
+      const appWindow = getCurrentWindow();
+
+      await menu.popup(
+        new LogicalPosition(x, y),
+        appWindow,
+      );
+    };
+
+    window.scanFilePreview = async () => {
+      return invoke("scan_file_preview");
+    };
+
+    window.scanDuplicatePreview = () => {
+      return invoke("scan_duplicate_preview");
+    };
+
+    window.activePet = () => windowPetId ? invoke("saved_pet_profile", { id: windowPetId }) : invoke("active_pet");
+
+    window.selectPet = (id) => invoke("select_pet", { id });
+    
+    window.listenPetProfile = (callback) => window.__TAURI__.event.listen(
+      "pet-profile-changed", (event) => { if (!windowPetId || event.payload.id === windowPetId) callback(event.payload); });
+
+
+    window.listPets = () => {
+      return invoke("list_pets");
+    };
+
+    window.createPet = (name) => {
+      return invoke("create_pet", { name });
+    };
+
+  </script>
+
+  <link data-trunk rel="rust" />
+</body>
+</html>

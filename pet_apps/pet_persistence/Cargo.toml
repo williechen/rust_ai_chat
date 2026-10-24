@@ -1,0 +1,11 @@
+[package]
+name = "pet-persistence"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+thiserror = "2.0"
+uuid.workspace = true

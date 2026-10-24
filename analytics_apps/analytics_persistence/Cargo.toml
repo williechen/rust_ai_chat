@@ -1,0 +1,30 @@
+[package]
+name = "analytics-persistence"
+version.workspace = true
+edition.workspace = true
+
+[features]
+postgres-integration = []
+
+[dependencies]
+axum.workspace = true
+argon2.workspace = true
+
+dotenv.workspace = true
+
+leptos = { workspace = true, features = ["ssr"] }
+
+rpassword = "7.5"
+
+serde.workspace = true
+sha2.workspace = true
+sqlx.workspace = true
+
+tokio.workspace = true
+
+uuid.workspace = true
+
+[dev-dependencies]
+shared = { path = "../../crates/shared" }
+serde_json.workspace = true
+tower = { version = "0.5", features = ["util"] }

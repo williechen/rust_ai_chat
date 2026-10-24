@@ -1,0 +1,38 @@
+[package]
+name = "chat-ui"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+ssr = ["leptos/ssr", "leptos_router/ssr"]
+hydrate = ["leptos/hydrate"]
+
+[dependencies]
+chat-domain = { path = "../chat_domain" }
+leptos_router.workspace = true
+
+leptos.workspace = true
+
+serde_json.workspace = true
+shared = { path = "../../crates/shared" }
+
+[target.'cfg(target_arch="wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = [
+    "Headers",
+    "MessageEvent",
+    "Request",
+    "RequestInit",
+    "RequestMode",
+    "Response",
+    "UrlSearchParams",
+    "WebSocket",
+    "Window",
+    "Location",
+    "Event",
+] }

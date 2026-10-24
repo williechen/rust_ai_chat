@@ -8,11 +8,11 @@
     "frontendDist": "frontend/dist",
     "beforeDevCommand": {
       "script": "trunk serve --port 1420",
-      "cwd": "./frontend"
+      "cwd": "../frontend"
     },
     "beforeBuildCommand": {
       "script": "trunk build --release",
-      "cwd": "./frontend"
+      "cwd": "../frontend"
     }
   },
   "app": {

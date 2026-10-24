@@ -1,19 +1,6 @@
 [workspace]
 resolver = "3"
-members = [
-    "apps/desktop_pet",
-    "apps/desktop_pet/frontend",
-    "apps/server",
-    "apps/stats_server",
-    "crates/ai_core",
-    "crates/chat_application",
-    "crates/chat_domain",
-    "crates/shared",
-    "crates/persistence",
-    "crates/pet_domain",
-    "crates/telemetry",
-    "crates/ui",
-]
+members = ["server", "chat_application", "chat_domain", "persistence", "ui"]
 
 [workspace.package]
 version = "0.2.32"

@@ -1,0 +1,40 @@
+[workspace]
+resolver = "3"
+members = ["stats_server"]
+
+[workspace.package]
+version = "0.2.32"
+edition = "2024"
+
+[workspace.dependencies]
+any_spawner = { version = "0.3", features = ["tokio"] }
+argon2 = "0.6"
+async-trait = "0.1"
+axum = { version = "0.8", features = ["ws"] }
+
+dotenv = "0.15"
+
+leptos = "0.8"
+leptos_axum = "0.8"
+leptos_config = "0.8"
+leptos_router = "0.8"
+
+libc = "0.2"
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+sha2 = "0.11"
+
+sqlx = { version = "0.9", features = [
+    "runtime-tokio",
+    "macros",
+    "postgres",
+    "sqlite",
+] }
+
+thiserror = "2.0"
+tokio = { version = "1.54", features = ["full"] }
+tracing = "0.1"
+
+uuid = { version = "1.29", features = ["serde", "v4", "js"] }

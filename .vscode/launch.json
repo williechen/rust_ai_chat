@@ -9,12 +9,12 @@
                 "args": [
                     "build",
                     "--package",
-                    "server",
+                    "chat-server",
                     "--features",
                     "ssr"
                 ],
                 "filter": {
-                    "name": "server",
+                    "name": "chat-server",
                     "kind": "bin"
                 },
                 "cwd": "${workspaceFolder}/chat_apps",
@@ -65,13 +65,13 @@
                 "args": [
                     "test",
                     "--package",
-                    "server",
+                    "chat-server",
                     "--no-run",
                     "--features",
                     "ssr"
                 ],
                 "filter": {
-                    "name": "server",
+                    "name": "chat-server",
                     "kind": "lib"
                 },
                 "cwd": "${workspaceFolder}/chat_apps",
@@ -88,18 +88,18 @@
             }
         },
         {
-            "name": "Desktop Pet: Debug Tests",
+            "name": "Pet Server: Debug Tests",
             "type": "lldb",
             "request": "launch",
             "cargo": {
                 "args": [
                     "test",
                     "--package",
-                    "desktop-pet",
+                    "pet-server",
                     "--no-run"
                 ],
                 "filter": {
-                    "name": "desktop-pet",
+                    "name": "pet-server",
                     "kind": "lib"
                 },
                 "cwd": "${workspaceFolder}/pet_apps",

@@ -37,8 +37,8 @@ jobs:
             build-essential \
             pkg-config
 
-      - name: Check stats server
-        run: cargo check --locked -p stats-server
+      - name: Check analytics server
+        run: cargo check --locked -p analytics-server
         
   build-analytics:
     runs-on: ubuntu-latest
@@ -59,8 +59,8 @@ jobs:
             build-essential \
             pkg-config
 
-      - name: Build stats server
-        run: cargo build --locked -p stats-server --release
+      - name: Build analytics server
+        run: cargo build --locked -p analytics-server --release
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -68,5 +68,5 @@ jobs:
           name: analytics-linux
           if-no-files-found: error
           path: |
-            analytics_apps/target/release/server
+            analytics_apps/target/release/analytics-server
             analytics_apps/target/release/bootstrap_admin

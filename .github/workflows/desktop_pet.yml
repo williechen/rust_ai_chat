@@ -68,10 +68,10 @@ jobs:
         run: cargo install trunk --version 0.21.14 --locked
 
       - name: Check native workspace
-        run: cargo check --locked --workspace --exclude desktop-pet-frontend
+        run: cargo check --locked --workspace --exclude pet-ui
 
       - name: Check desktop frontend
-        run: cargo check --locked -p desktop-pet-frontend --target wasm32-unknown-unknown
+        run: cargo check --locked -p pet-ui --target wasm32-unknown-unknown
 
   build-pet:
     runs-on: ubuntu-latest
@@ -103,11 +103,11 @@ jobs:
         run: cargo install trunk --version 0.21.14 --locked
 
       - name: Build desktop
-        working-directory: pet_apps/frontend
+        working-directory: pet_apps/pet-ui
         run: trunk build --locked --release
 
       - name: Build native desktop
-        run: cargo build --locked --release --workspace --exclude desktop-pet-frontend
+        run: cargo build --locked --release --workspace --exclude pet-ui
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -116,4 +116,4 @@ jobs:
           if-no-files-found: error
           path: |
             pet_apps/target/release/desktop-pet
-            pet_apps/frontend/dist
+            pet_apps/pet-ui/dist

@@ -60,8 +60,8 @@ jobs:
         run: sqlx migrate run --database-url $CHAT_DATABASE_URL
 
       - name: Test persistence
-        run: DATABASE_URL="$CHAT_DATABASE_URL" cargo test --locked -p persistence
+        run: DATABASE_URL="$CHAT_DATABASE_URL" cargo test --locked -p chat-persistence
 
-      - name: Test stats server with PostgreSQL
-        run: DATABASE_URL="$ANALYTICS_DATABASE_URL" cargo test --locked -p stats-server --features postgres-integration
+      - name: Test analytics server with PostgreSQL
+        run: DATABASE_URL="$ANALYTICS_DATABASE_URL" cargo test --locked -p analytics-server --features postgres-integration
         working-directory: analytics_apps

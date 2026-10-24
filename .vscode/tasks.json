@@ -9,7 +9,7 @@
                 "check",
                 "--locked",
                 "--features",
-                "server/ssr,ui/ssr",
+                "chat-server/ssr,chat-ui/ssr",
                 "--workspace",
                 "--all-targets"
             ],
@@ -28,7 +28,7 @@
                 "check",
                 "--locked",
                 "--exclude",
-                "desktop-pet-frontend",
+                "pet-ui",
                 "--workspace",
                 "--all-targets"
             ],
@@ -93,7 +93,7 @@
                 "build",
                 "--locked",
                 "--features",
-                "server/ssr,ui/ssr",
+                "chat-server/ssr,chat-ui/ssr",
                 "--workspace",
                 "--all-targets"
             ],
@@ -112,7 +112,7 @@
                 "build",
                 "--locked",
                 "--exclude",
-                "desktop-pet-frontend",
+                "pet-ui",
                 "--workspace",
                 "--all-targets"
             ],
@@ -180,7 +180,7 @@
                 "test",
                 "--locked",
                 "--features",
-                "server/ssr,ui/ssr",
+                "chat-server/ssr,chat-ui/ssr",
                 "--workspace"
             ],
             "problemMatcher": [
@@ -198,7 +198,7 @@
                 "test",
                 "--locked",
                 "--exclude",
-                "desktop-pet-frontend",
+                "pet-ui",
                 "--workspace"
             ],
             "problemMatcher": [
@@ -397,7 +397,7 @@
                 "clippy",
                 "--locked",
                 "--features",
-                "server/ssr,ui/ssr",
+                "chat-server/ssr,chat-ui/ssr",
                 "--workspace",
                 "--all-targets",
                 "--",
@@ -419,7 +419,7 @@
                 "clippy",
                 "--locked",
                 "--exclude",
-                "desktop-pet-frontend",
+                "pet-ui",
                 "--workspace",
                 "--all-targets",
                 "--",
@@ -492,7 +492,7 @@
                 "check",
                 "--locked",
                 "-p",
-                "ui",
+                "chat-ui",
                 "--target",
                 "wasm32-unknown-unknown",
                 "--features",
@@ -513,7 +513,7 @@
                 "check",
                 "--locked",
                 "-p",
-                "desktop-pet-frontend",
+                "pet-ui",
                 "--target",
                 "wasm32-unknown-unknown"
             ],

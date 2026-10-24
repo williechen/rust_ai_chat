@@ -44,13 +44,13 @@ jobs:
         run: cargo install cargo-leptos --version 0.3.11 --locked
 
       - name: Check server ssr
-        run: cargo check --locked -p server --features ssr
+        run: cargo check --locked -p chat-server --features ssr
 
       - name: Check ui ssr
-        run: cargo check --locked -p ui --features ssr
+        run: cargo check --locked -p chat-ui --features ssr
 
       - name: Check ui
-        run: cargo check --locked -p ui --features hydrate --target wasm32-unknown-unknown
+        run: cargo check --locked -p chat-ui --features hydrate --target wasm32-unknown-unknown
 
   build-chat:
     runs-on: ubuntu-latest
@@ -83,5 +83,5 @@ jobs:
           name: chat-linux
           if-no-files-found: error
           path: |
-            chat_apps/target/release/server
+            chat_apps/target/release/chat-server
             chat_apps/target/site

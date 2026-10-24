@@ -264,17 +264,31 @@ pub fn ChatPage(room_id: String) -> impl IntoView {
                 <h2>{format!("房間 {heading}")}</h2>
                 <p role="status">{move || connection.get()}</p>
             </header>
-            <ul class="messages" aria-live="polite">
-                {move || messages.get().into_iter().map(|message|{
-                    view! {
-                        <li>
-                          <strong>
-                            {author_label(&message.author)}": "
-                          </strong>
-                          {message.content}
-                        </li>
-                    }}).collect_view()}
-            </ul>
+            <p class="history-disclosure" role="note">
+                "歷史載入尚未接通：目前只顯示本次連線收到的訊息；重新整理不會載入已儲存訊息。"
+            </p>
+            <div class="message-history" aria-live="polite">
+                {move || {
+                    if messages.get().is_empty() {
+                        view! {
+                            <p class="messages-empty">
+                                "目前尚無本次連線收到的訊息"
+                            </p>
+                        }.into_any()
+                    } else {
+                        view! {
+                            <ul class="messages">
+                                {messages.get().into_iter().map(|message| view! {
+                                    <li>
+                                        <strong>{author_label(&message.author)}": "</strong>
+                                        {message.content}
+                                    </li>
+                                }).collect_view()}
+                            </ul>
+                        }.into_any()
+                    }
+                }}
+            </div>
             <div>
                 <textarea
                     aria-label="聊天訊息"
@@ -522,5 +536,20 @@ mod day31_account_tests {
         assert!(html.contains("&lt;失敗&gt;"));
         assert!(html.contains("&lt;房名&gt;"));
         assert!(!html.contains("<失敗>"));
+    }
+}
+
+#[cfg(all(test, feature = "ssr"))]
+mod day32_history_disclosure_tests {
+    use super::*;
+    #[test]
+    fn room_explicitly_discloses_missing_history_and_empty_live_messages() {
+        let owner = Owner::new();
+        let html = owner.with(|| view! { <ChatPage room_id="day32-room".to_owned() /> }.to_html());
+        assert!(html.contains("day32-room"));
+        assert!(html.contains("歷史載入尚未接通"));
+        assert!(html.contains("重新整理不會載入已儲存訊息"));
+        assert!(html.contains("目前尚無本次連線收到的訊息"));
+        assert!(html.contains("aria-live=\"polite\""));
     }
 }

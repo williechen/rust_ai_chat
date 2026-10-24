@@ -61,7 +61,7 @@
       const id = await currentPetId();
       petContextMenu = await Menu.new({
         items: [
-          { id: "open_control", text: "開啟控制窗" },
+          { id: `pet:${id}:open_control`, text: "開啟控制窗" },
           { id: `pet:${id}:interact`, text: "互動" },
           { id: `pet:${id}:sleep`, text: "睡覺" },
           { id: `pet:${id}:wake`, text: "醒來" },

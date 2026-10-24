@@ -55,6 +55,13 @@ fn normalize_new_pet_name(input: &str) -> Result<String, String> {
     Ok(name.to_owned())
 }
 
+fn control_menu_pet_id(menu_id: &str) -> Option<String> {
+    let id = menu_id
+        .strip_prefix("pet:")?
+        .strip_suffix(":open_control")?;
+    uuid::Uuid::parse_str(id).ok().map(|id| id.to_string())
+}
+
 // 取得寵物狀態
 #[tauri::command]
 fn get_pet_state(pet: State<'_, Mutex<PetMachine>>) -> Result<PetSnapshot, String> {
@@ -203,6 +210,28 @@ pub fn application(db: sqlx::SqlitePool) {
              * 才能 dispatch PetCommand。
              */
             app.on_menu_event(|app_handle, event| {
+                // Day32：由生活窗原生選單傳入該隻寵物的 UUID。
+                if let Some(id) = control_menu_pet_id(event.id().0.as_str()) {
+                    let handle = app_handle.clone();
+                    let store = app_handle.state::<pet_store::PetStore>().inner().clone();
+                    tauri::async_runtime::spawn(async move {
+                        match store.select(&id).await {
+                            Ok(saved) => {
+                                // 控制窗原有 Leptos 監聽此事件，選取成功才通知。
+                                if let Err(error) = handle.emit("pet-profile-changed", &saved) {
+                                    eprintln!("Day32 選取通知失敗：{error}");
+                                    return;
+                                }
+                                if let Err(error) = open_control_window(handle) {
+                                    eprintln!("Day32 無法開啟控制窗：{error}");
+                                }
+                            }
+                            Err(error) => eprintln!("Day32 選取寵物失敗：{error}"),
+                        }
+                    });
+                    return;
+                }
+
                 if event.id().0.as_str() == "open_control" {
                     let _ = open_control_window(app_handle.clone());
                     return;
@@ -316,5 +345,27 @@ mod day25_capability_tests {
                 .iter()
                 .any(|v| v.as_str() == Some("core:event:default"))
         );
+    }
+}
+
+#[cfg(test)]
+mod day32_control_selection_tests {
+    use super::control_menu_pet_id;
+
+    #[test]
+    fn open_control_menu_is_scoped_to_one_valid_pet() {
+        let id = "123e4567-e89b-42d3-a456-426614174000";
+        assert_eq!(
+            control_menu_pet_id(&format!("pet:{id}:open_control")),
+            Some(id.to_string())
+        );
+        for invalid in [
+            "open_control",
+            "pet:other:open_control",
+            "pet:123e4567-e89b-42d3-a456-426614174000:sleep",
+            "pet:123e4567-e89b-42d3-a456-426614174000:open_control:extra",
+        ] {
+            assert_eq!(control_menu_pet_id(invalid), None);
+        }
     }
 }

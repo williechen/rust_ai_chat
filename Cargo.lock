@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "ai-core"
-version = "0.2.31"
+version = "0.2.32"
 dependencies = [
  "async-trait",
  "thiserror 2.0.21",
@@ -466,9 +466,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.9.0"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "877bf67ac8e52449eb2f9e98a344ea163beb70dd1f9eebe3cc5357dcfeaee4df"
+checksum = "86e055fa6e3e40ad6187ba25b6855eeb635d5271f8e0f0e1e9a5826b8d75bea0"
 dependencies = [
  "find-msvc-tools",
  "shlex",
@@ -520,7 +520,7 @@ dependencies = [
 
 [[package]]
 name = "chat-application"
-version = "0.2.31"
+version = "0.2.32"
 dependencies = [
  "async-trait",
  "chat-domain",
@@ -531,7 +531,7 @@ dependencies = [
 
 [[package]]
 name = "chat-domain"
-version = "0.2.31"
+version = "0.2.32"
 dependencies = [
  "serde",
  "uuid",
@@ -609,9 +609,9 @@ checksum = "18f12cc9948ed9604230cdddc7c86e270f9401ccbe3c2e98a4378c5e7632212f"
 
 [[package]]
 name = "const_format"
-version = "0.2.36"
+version = "0.2.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4481a617ad9a412be3b97c5d403fef8ed023103368908b9c50af598ff467cc1e"
+checksum = "a3decb4d6965448659923544a634a0571ba44cede4e11ef15a5a317126840454"
 dependencies = [
  "const_format_proc_macros",
  "konst",
@@ -619,9 +619,9 @@ dependencies = [
 
 [[package]]
 name = "const_format_proc_macros"
-version = "0.2.34"
+version = "0.2.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d57c2eccfb16dbac1f4e61e206105db5820c9d26c3c472bc17c774259ef7744"
+checksum = "941b570269a642506f08cb5b688c04bfa6cfd41a26f8bcdc49db8fd00c0ab659"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -833,9 +833,9 @@ checksum = "914a755b7c2d4af2bdcff7ce1739e2db9a1b81a9b07123d8015786ae03c0980d"
 
 [[package]]
 name = "ctutils"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12218662ccac37d9714f2191252553d67585b97df8c839cbe49e0bde278dc865"
+checksum = "38d28fb6aa7dd680b3ffd1a3e64e115c177bdba63c0ae7f9cd48129ff05c4fa0"
 dependencies = [
  "cmov",
 ]
@@ -965,7 +965,7 @@ dependencies = [
 
 [[package]]
 name = "desktop-pet"
-version = "0.2.31"
+version = "0.2.32"
 dependencies = [
  "ai-core",
  "dotenv",
@@ -984,7 +984,7 @@ dependencies = [
 
 [[package]]
 name = "desktop-pet-frontend"
-version = "0.2.31"
+version = "0.2.32"
 dependencies = [
  "gloo-timers",
  "js-sys",
@@ -3252,7 +3252,7 @@ checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 
 [[package]]
 name = "persistence"
-version = "0.2.31"
+version = "0.2.32"
 dependencies = [
  "async-trait",
  "chat-application",
@@ -3263,7 +3263,7 @@ dependencies = [
 
 [[package]]
 name = "pet-domain"
-version = "0.2.31"
+version = "0.2.32"
 dependencies = [
  "serde",
  "serde_json",
@@ -4155,7 +4155,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.2.31"
+version = "0.2.32"
 dependencies = [
  "any_spawner",
  "argon2",
@@ -4297,7 +4297,7 @@ dependencies = [
 
 [[package]]
 name = "shared"
-version = "0.2.31"
+version = "0.2.32"
 dependencies = [
  "chat-domain",
  "serde",
@@ -4357,9 +4357,9 @@ dependencies = [
 
 [[package]]
 name = "smallvec"
-version = "1.16.3"
+version = "1.16.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b3dc8af474f516a851ff4bd12db780f948b9250ad37211e4eec0bccea54e01b"
+checksum = "d0d5d4b1981b8bbbb7aed204cae5726d683d5d6ac7e74ec54122ea28f315e7c8"
 dependencies = [
  "serde",
 ]
@@ -4616,7 +4616,7 @@ checksum = "ff7589a1859b09232522bb9edf076ca7fcf14ded96685d3fa629db73023ffbb7"
 
 [[package]]
 name = "stats-server"
-version = "0.2.31"
+version = "0.2.32"
 dependencies = [
  "argon2",
  "axum",
@@ -4784,9 +4784,9 @@ dependencies = [
 
 [[package]]
 name = "tao"
-version = "0.37.1"
+version = "0.37.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f37f381f4e048e6cdf038b5705f8cf14ad108279d46eb968140a7b291aba9400"
+checksum = "d5777b06fe6435126ae8d816eba269e050e1e10d302cf5461e9c49eccabc3548"
 dependencies = [
  "bitflags 2.13.2",
  "block2",
@@ -5055,7 +5055,7 @@ dependencies = [
 
 [[package]]
 name = "telemetry"
-version = "0.2.31"
+version = "0.2.32"
 
 [[package]]
 name = "tendril"
@@ -5486,7 +5486,7 @@ checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 
 [[package]]
 name = "ui"
-version = "0.2.31"
+version = "0.2.32"
 dependencies = [
  "chat-domain",
  "leptos",
@@ -5576,9 +5576,9 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "uuid"
-version = "1.28.0"
+version = "1.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cc1186384beb7dd8eedea376413fd654937285ea6c9cfbb928dc3043ea4b606"
+checksum = "4a0e2d11620c50695fe12bbbfde96b3477fe606e7284c22d505c12ce51214514"
 dependencies = [
  "getrandom 0.4.3",
  "js-sys",
@@ -6148,11 +6148,11 @@ checksum = "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
 
 [[package]]
 name = "wry"
-version = "0.57.0"
+version = "0.57.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a819957a01b3119af85e638a38d242af76dbc87d130dca67bfd0441072e21ff0"
+checksum = "759c50ddad0ef9913bb5496cb9d509a50433a3b78cb0238d61105526589cf0e9"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "block2",
  "cookie",
  "crossbeam-channel",
@@ -6173,7 +6173,6 @@ dependencies = [
  "objc2-foundation",
  "objc2-ui-kit",
  "objc2-web-kit",
- "once_cell",
  "percent-encoding",
  "raw-window-handle",
  "sha2 0.10.9",

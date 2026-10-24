@@ -1,9 +1,20 @@
 use leptos::prelude::*;
 
 #[component]
-fn DashboardView(source_label: &'static str, total: i64) -> impl IntoView {
+fn DashboardView(
+    source_label: &'static str,
+    total: i64,
+    source: String,
+    event_type: String,
+) -> impl IntoView {
     let chat_current = (source_label == "Chat").then_some("page");
     let pet_current = (source_label == "Pet").then_some("page");
+    let clear_url = format!("/dashboard?source={source}");
+    let filter_description = if event_type.is_empty() {
+        "全部事件類型".to_string()
+    } else {
+        format!("精確事件類型：{event_type}")
+    };
 
     view! {
         <html lang="zh-Hant">
@@ -23,8 +34,29 @@ fn DashboardView(source_label: &'static str, total: i64) -> impl IntoView {
                         </a>
                     </nav>
                     <a href="/change-password">"修改密碼與 Email"</a>
+                    <form method="get" action="/dashboard">
+                        <input type="hidden" name="source" value=source/>
+                        <label for="event-type">"事件類型（精確比對）"</label>
+                        <input
+                            id="event-type"
+                            name="event_type"
+                            value=event_type
+                            maxlength="128"
+                            placeholder="例如 chat.message.persisted"
+                        />
+                        <button type="submit">"篩選"</button>
+                        <a href=clear_url>"清除篩選"</a>
+                    </form>
+                    <p>{filter_description}</p>
                     <p>{format!("{source_label} 已提交事件總數 {total}")}</p>
-                    <p>"角色與來源 ACL、互動篩選尚待接通。"</p>
+                    <p role="status">
+                        {if total == 0 {
+                            "沒有符合條件的已提交事件"
+                        } else {
+                            "查詢完成"
+                        }}
+                    </p>
+                    <p>"目前僅支援管理員；角色與來源 ACL 尚待接通。"</p>
                     <form method="post" action="/logout">
                         <button type="submit">"登出"</button>
                     </form>
@@ -34,11 +66,34 @@ fn DashboardView(source_label: &'static str, total: i64) -> impl IntoView {
     }
 }
 
-pub fn render_dashboard(source_label: &'static str, total: i64) -> String {
+pub fn render_dashboard_filtered(
+    source_label: &'static str,
+    total: i64,
+    source: &str,
+    event_type: &str,
+) -> String {
     format!(
         "<!doctype html>{}",
-        view! { <DashboardView source_label total /> }.to_html()
+        view! {
+            <DashboardView
+                source_label
+                total
+                source=source.to_string()
+                event_type=event_type.to_string()
+            />
+        }
+        .to_html()
     )
+}
+
+// 既有 Day28/29 測試與舊呼叫者仍可使用兩參數版本。
+pub fn render_dashboard(source_label: &'static str, total: i64) -> String {
+    let source = if source_label == "Pet" {
+        "desktop_pet"
+    } else {
+        "web_chat"
+    };
+    render_dashboard_filtered(source_label, total, source, "")
 }
 
 #[component]
@@ -178,5 +233,24 @@ mod day31_tests {
         assert!(ordinary.contains("修改密碼與Email"));
         assert!(!ordinary.contains("首次登入須更換密碼與Email"));
         assert!(!ordinary.contains("lesson-only-password"));
+    }
+}
+
+#[cfg(test)]
+mod day32_filter_tests {
+    #[test]
+    fn dashboard_has_accessible_exact_kind_filter_and_escaped_value() {
+        let html = super::render_dashboard_filtered("Chat", 0, "web_chat", "chat.\" onfocus=\"bad");
+        assert_eq!(html.matches("<!doctype html>").count(), 1);
+        assert!(html.contains("method=\"get\""));
+        assert!(html.contains("action=\"/dashboard\""));
+        assert!(html.contains("name=\"source\" value=\"web_chat\""));
+        assert!(html.contains("for=\"event-type\""));
+        assert!(html.contains("id=\"event-type\""));
+        assert!(html.contains("name=\"event_type\""));
+        assert!(html.contains("&quot;"));
+        assert!(!html.contains("value=\"chat.\" onfocus="));
+        assert!(html.contains("沒有符合條件的已提交事件"));
+        assert!(html.contains("/dashboard?source=web_chat"));
     }
 }

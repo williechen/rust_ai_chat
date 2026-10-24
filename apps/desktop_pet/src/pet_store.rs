@@ -209,4 +209,22 @@ mod day22_tests {
         store.select(&pet.id).await.unwrap();
         assert_eq!(store.active().await.unwrap(), Some(pet));
     }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn day32_selecting_other_pet_changes_only_active_slot(pool: sqlx::SqlitePool) {
+        let store = PetStore { pool: pool.clone() };
+        let orange = store.create("小橘").await.unwrap();
+        let turtle = store.create("阿龜").await.unwrap();
+        store.select(&orange.id).await.unwrap();
+        assert_eq!(store.active().await.unwrap(), Some(orange.clone()));
+        store.select(&turtle.id).await.unwrap();
+        assert_eq!(store.active().await.unwrap(), Some(turtle.clone()));
+        assert_eq!(store.list().await.unwrap().len(), 2);
+        let selected: String =
+            sqlx::query_scalar("SELECT pet_id FROM local_pet_selection WHERE slot=1")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(selected, turtle.id);
+    }
 }

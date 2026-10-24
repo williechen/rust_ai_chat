@@ -329,11 +329,10 @@ async fn change_password(
         .into_response())
 }
 
-// apps/stats_server/src/password_login.rs：替換原 dashboard 函式，
-// 並將 extract imports 調整為 {DefaultBodyLimit, Path, Query, State}。
 #[derive(Default, Deserialize)]
 struct DashboardSourceQuery {
     source: Option<String>,
+    event_type: Option<String>,
 }
 
 async fn dashboard(
@@ -356,7 +355,17 @@ async fn dashboard(
         "desktop_pet" => "Pet",
         _ => return StatusCode::BAD_REQUEST.into_response(),
     };
-    let rows = match pg_store::summary_for_source(&state.pool, source).await {
+    let kind = query.event_type.as_deref().unwrap_or("");
+    if !kind.is_empty() && (!crate::valid_event_type(kind) || kind.contains('\0')) {
+        return StatusCode::BAD_REQUEST.into_response();
+    }
+
+    let rows = if kind.is_empty() {
+        pg_store::summary_for_source(&state.pool, source).await
+    } else {
+        pg_store::summary_for_source_and_type(&state.pool, source, kind).await
+    };
+    let rows = match rows {
         Ok(v) => v,
         Err(_) => return StatusCode::SERVICE_UNAVAILABLE.into_response(),
     };
@@ -365,7 +374,12 @@ async fn dashboard(
     };
 
     renewed(
-        Html(crate::dashboard_ui::render_dashboard(source_label, total)),
+        Html(crate::dashboard_ui::render_dashboard_filtered(
+            source_label,
+            total,
+            source,
+            kind,
+        )),
         &raw,
     )
 }

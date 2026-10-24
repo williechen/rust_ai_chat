@@ -38,6 +38,18 @@ fn filter_rooms(rows: &[(String, String)], query: &str) -> Vec<(String, String)>
         .collect()
 }
 
+fn room_list_feedback(loaded: bool, total: usize, visible: usize) -> &'static str {
+    if !loaded {
+        "請先讀取房間列表"
+    } else if total == 0 {
+        "尚無房間"
+    } else if visible == 0 {
+        "沒有符合條件的房間"
+    } else {
+        "請選擇房間"
+    }
+}
+
 fn refreshed_room_list(
     previous: Vec<(String, String)>,
     result: Result<Vec<(String, String)>, String>,
@@ -312,6 +324,7 @@ fn RoomList() -> impl IntoView {
     let (query, set_query) = signal(String::new());
     let (rows, set_rows) = signal(Vec::<(String, String)>::new());
     let (loading, set_loading) = signal(false);
+    let (has_snapshot, set_has_snapshot) = signal(false);
     let (status, set_status) = signal(String::from("請讀取房間列表"));
 
     let query_room = move || {
@@ -325,6 +338,7 @@ fn RoomList() -> impl IntoView {
             let submitted = query.get_untracked();
             match room_api::search_rooms(&submitted).await {
                 Ok(value) => {
+                    set_has_snapshot.set(true);
                     set_status.set(
                         if value.is_empty() {
                             if submitted.trim().is_empty() {
@@ -381,7 +395,12 @@ fn RoomList() -> impl IntoView {
                         let previous = rows.get_untracked();
                         let previous_query = query.get_untracked();
                         let result = room_api::list_rooms().await;
-                        let (next_rows, next_query, next_status) = refresh_result_view(previous, previous_query, result);
+                        let succeeded = result.is_ok();
+                        let (next_rows, next_query, next_status) =
+                            refresh_result_view(previous, previous_query, result);
+                        if succeeded {
+                            set_has_snapshot.set(true);
+                        }
                         set_rows.set(next_rows);
                         set_query.set(next_query);
                         set_status.set(next_status);
@@ -392,15 +411,29 @@ fn RoomList() -> impl IntoView {
                     { set_loading.set(false); }
             }>"讀取／重新整理房間"</button>
             <p role="status">{move || status.get()}</p>
-            <ul>{move || filter_rooms(&rows.get(), &query.get()).into_iter().map(|(id, name)| view! {
-                <li>
-                    <a
-                        rel="external"
-                        aria-current=if params.read().get("room_id").as_deref()==Some(id.as_str()) { Some("page") } else { None }
-                        href=format!("/room/{id}")>{name}
-                    </a>
-                </li>
-            }).collect_view()}</ul>
+            <div class="room-results" aria-live="polite">
+            {move || {
+                let all = rows.get();
+                let visible = filter_rooms(&all, &query.get());
+                let feedback = room_list_feedback(
+                    has_snapshot.get(), all.len(), visible.len()
+                );
+                view! {
+                    <p class="room-result-feedback" role="status">{feedback}</p>
+                    <ul>
+                        {visible.into_iter().map(|(id, name)| view! {
+                        <li>
+                            <a
+                                rel="external"
+                                aria-current=if params.read().get("room_id").as_deref() == Some(id.as_str()) { Some("page") } else { None }
+                                href=format!("/room/{id}")
+                            >{name}</a>
+                        </li>
+                        }).collect_view()}
+                    </ul>
+                }
+            }}
+            </div>
         </section>
     }
 }
@@ -551,5 +584,18 @@ mod day32_history_disclosure_tests {
         assert!(html.contains("重新整理不會載入已儲存訊息"));
         assert!(html.contains("目前尚無本次連線收到的訊息"));
         assert!(html.contains("aria-live=\"polite\""));
+    }
+}
+
+#[cfg(test)]
+mod day33_room_list_feedback_tests {
+    use super::room_list_feedback;
+
+    #[test]
+    fn distinguish_not_loaded_empty_filtered_and_found() {
+        assert_eq!(room_list_feedback(false, 0, 0), "請先讀取房間列表");
+        assert_eq!(room_list_feedback(true, 0, 0), "尚無房間");
+        assert_eq!(room_list_feedback(true, 3, 0), "沒有符合條件的房間");
+        assert_eq!(room_list_feedback(true, 3, 2), "請選擇房間");
     }
 }

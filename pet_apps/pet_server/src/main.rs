@@ -7,7 +7,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = sqlx::SqlitePool::connect(&database_url).await?;
     sqlx::migrate!("../migrations").run(&db).await?;
 
-    desktop_pet::application(db);
+    pet_server::application(db);
 
     Ok(())
 }

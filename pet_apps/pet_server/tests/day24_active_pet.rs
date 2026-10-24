@@ -1,4 +1,4 @@
-use desktop_pet::pet_store::PetStore;
+use pet_server::pet_store::PetStore;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 #[tokio::test]

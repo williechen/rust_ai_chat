@@ -103,7 +103,7 @@ jobs:
         run: cargo install trunk --version 0.21.14 --locked
 
       - name: Build desktop
-        working-directory: pet_apps/pet-ui
+        working-directory: pet_apps/pet_ui
         run: trunk build --locked --release
 
       - name: Build native desktop
@@ -116,4 +116,4 @@ jobs:
           if-no-files-found: error
           path: |
             pet_apps/target/release/desktop-pet
-            pet_apps/pet-ui/dist
+            pet_apps/pet_ui/dist

@@ -1,5 +1,5 @@
 // apps/desktop_pet/tests/day27_create_and_select.rs
-use desktop_pet::pet_store::PetStore;
+use pet_server::pet_store::PetStore;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 #[tokio::test]

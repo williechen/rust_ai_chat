@@ -1,4 +1,4 @@
-use desktop_pet::pet_store::PetStore;
+use pet_server::pet_store::PetStore;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 #[tokio::test]
 async fn day23_control_list_survives_pool_reopen() {
@@ -35,7 +35,10 @@ async fn day23_control_list_survives_pool_reopen() {
         pool: reopened.clone(),
     };
     assert_eq!(store.list().await.unwrap(), before);
-    sqlx::migrate!("../migrations").run(&reopened).await.unwrap();
+    sqlx::migrate!("../migrations")
+        .run(&reopened)
+        .await
+        .unwrap();
     assert_eq!(store.list().await.unwrap(), before);
     reopened.close().await;
     std::fs::remove_file(path).unwrap();

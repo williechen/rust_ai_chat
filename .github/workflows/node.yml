@@ -31,4 +31,4 @@ jobs:
 
       - name: Run Node.js tests
         run: node --test
-        working-directory: pet_apps/frontend
+        working-directory: pet_apps/pet_ui

@@ -1,7 +1,7 @@
 **/target
 
 /pet_apps/pet_server/gen
-/pet_apps/pet-ui/dist
+/pet_apps/pet_ui/dist
 
 .env
 

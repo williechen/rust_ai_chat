@@ -71,7 +71,7 @@
                     "ssr"
                 ],
                 "filter": {
-                    "name": "chat-server",
+                    "name": "chat_server",
                     "kind": "lib"
                 },
                 "cwd": "${workspaceFolder}/chat_apps",

@@ -1,8 +1,8 @@
 {
     "rust-analyzer.linkedProjects": [
         "chat_apps/Cargo.toml",
-       "pet_apps/Cargo.toml",
+        "pet_apps/Cargo.toml",
         "analytics_apps/Cargo.toml",
-       "crates/Cargo.toml"
-   ]
+        "crates/Cargo.toml"
+    ]
 }

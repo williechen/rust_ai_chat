@@ -6,12 +6,20 @@ on:
   pull_request:
     branches: ["main"]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   test-desktop-pet:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -37,9 +45,11 @@ jobs:
 
       - name: Test desktop-pet
         run: cargo test --locked -p desktop-pet
+        working-directory: pet_apps
 
   test-server:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -57,10 +67,12 @@ jobs:
             pkg-config
 
       - name: Test server
-        run: cargo test --locked -p server
+        run: cargo test --locked -p server --features ssr
+        working-directory: chat_apps
 
   test-stats-server:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -79,9 +91,11 @@ jobs:
       
       - name: Test stats server
         run: cargo test --locked -p stats-server
+        working-directory: analytics_apps
 
   test-ai-core:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -100,9 +114,11 @@ jobs:
 
       - name: Test ai core
         run: cargo test --locked -p ai-core
+        working-directory: crates
 
   test-chat-application:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -121,9 +137,11 @@ jobs:
 
       - name: Test chat application
         run: cargo test --locked -p chat-application
+        working-directory: chat_apps
 
   test-chat-domain:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -142,9 +160,11 @@ jobs:
 
       - name: Test chat domain
         run: cargo test --locked -p chat-domain  
+        working-directory: chat_apps
 
   test-pet-domain:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -163,9 +183,11 @@ jobs:
 
       - name: Test pet domain
         run: cargo test --locked -p pet-domain
+        working-directory: pet_apps
 
   test-shared:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -184,9 +206,11 @@ jobs:
 
       - name: Test shared
         run: cargo test --locked -p shared
+        working-directory: crates
 
   test-ui:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -204,4 +228,5 @@ jobs:
             pkg-config 
 
       - name: Test ui
-        run: cargo test --locked -p ui
+        run: cargo test --locked -p ui --features ssr
+        working-directory: chat_apps

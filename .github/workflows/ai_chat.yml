@@ -6,12 +6,24 @@ on:
   pull_request:
     branches: ["main"]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ai_chat-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
+
+defaults:
+  run:
+    working-directory: chat_apps
 
 jobs:
   check-chat:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +41,7 @@ jobs:
             pkg-config
             
       - name: Install cargo-leptos
-        run: cargo install cargo-leptos --locked
+        run: cargo install cargo-leptos --version 0.3.11 --locked
 
       - name: Check server ssr
         run: cargo check --locked -p server --features ssr
@@ -42,6 +54,7 @@ jobs:
 
   build-chat:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -59,7 +72,16 @@ jobs:
             pkg-config
 
       - name: Install cargo-leptos
-        run: cargo install cargo-leptos --locked
+        run: cargo install cargo-leptos --version 0.3.11 --locked
 
       - name: Build server
         run: cargo leptos build --cargo-locked --release
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: chat-linux
+          if-no-files-found: error
+          path: |
+            chat_apps/target/release/server
+            chat_apps/target/site

@@ -1,115 +1,96 @@
 {
     "version": "0.2.0",
-
     "configurations": [
         {
             "name": "Server: Debug",
             "type": "lldb",
             "request": "launch",
-
             "cargo": {
                 "args": [
                     "build",
                     "--package",
-                    "server"
+                    "server",
+                    "--features",
+                    "ssr"
                 ],
-
                 "filter": {
                     "name": "server",
                     "kind": "bin"
                 },
-
-                "cwd": "${workspaceFolder}",
+                "cwd": "${workspaceFolder}/chat_apps",
                 "problemMatcher": "$rustc"
             },
-
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/chat_apps",
             "terminal": "integrated",
-
             "sourceLanguages": [
                 "rust"
             ],
-
             "env": {
                 "RUST_BACKTRACE": "1",
                 "RUST_LOG": "debug"
             }
         },
-
         {
             "name": "Desktop Pet: Debug",
             "type": "lldb",
             "request": "launch",
-
             "cargo": {
                 "args": [
                     "build",
                     "--package",
                     "desktop-pet"
                 ],
-
                 "filter": {
                     "name": "desktop-pet",
                     "kind": "bin"
                 },
-
-                "cwd": "${workspaceFolder}",
+                "cwd": "${workspaceFolder}/pet_apps",
                 "problemMatcher": "$rustc"
             },
-
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/pet_apps",
             "terminal": "integrated",
-
             "sourceLanguages": [
                 "rust"
             ],
-
             "env": {
                 "RUST_BACKTRACE": "1",
                 "RUST_LOG": "debug"
             }
         },
-
         {
             "name": "Server: Debug Tests",
             "type": "lldb",
             "request": "launch",
-
             "cargo": {
                 "args": [
                     "test",
                     "--package",
                     "server",
-                    "--no-run"
+                    "--no-run",
+                    "--features",
+                    "ssr"
                 ],
-
                 "filter": {
                     "name": "server",
                     "kind": "lib"
                 },
-
-                "cwd": "${workspaceFolder}",
+                "cwd": "${workspaceFolder}/chat_apps",
                 "problemMatcher": "$rustc"
             },
-
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/chat_apps",
             "terminal": "integrated",
-
             "sourceLanguages": [
                 "rust"
             ],
-
             "env": {
                 "RUST_BACKTRACE": "1",
                 "RUST_LOG": "debug"
             }
         },
-
         {
             "name": "Desktop Pet: Debug Tests",
             "type": "lldb",
             "request": "launch",
-
             "cargo": {
                 "args": [
                     "test",
@@ -117,23 +98,18 @@
                     "desktop-pet",
                     "--no-run"
                 ],
-
                 "filter": {
                     "name": "desktop-pet",
                     "kind": "lib"
                 },
-
-                "cwd": "${workspaceFolder}",
+                "cwd": "${workspaceFolder}/pet_apps",
                 "problemMatcher": "$rustc"
             },
-
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/pet_apps",
             "terminal": "integrated",
-
             "sourceLanguages": [
                 "rust"
             ],
-
             "env": {
                 "RUST_BACKTRACE": "1",
                 "RUST_LOG": "debug"

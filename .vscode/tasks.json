@@ -1,73 +1,325 @@
 {
     "version": "2.0.0",
-
     "tasks": [
         {
-            "label": "Cargo Check",
+            "label": "Cargo Check (chat_apps)",
             "type": "shell",
             "command": "cargo",
             "args": [
                 "check",
+                "--locked",
+                "--features",
+                "server/ssr,ui/ssr",
                 "--workspace",
-                "--all-targets",
-                "--all-features"
+                "--all-targets"
             ],
-            "group": "build",
             "problemMatcher": [
                 "$rustc"
-            ]
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/chat_apps"
+            }
         },
-
         {
-            "label": "Cargo Build",
+            "label": "Cargo Check (pet_apps)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "check",
+                "--locked",
+                "--exclude",
+                "desktop-pet-frontend",
+                "--workspace",
+                "--all-targets"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/pet_apps"
+            }
+        },
+        {
+            "label": "Cargo Check (analytics_apps)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "check",
+                "--locked",
+                "--workspace",
+                "--all-targets"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/analytics_apps"
+            }
+        },
+        {
+            "label": "Cargo Check (crates)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "check",
+                "--locked",
+                "--workspace",
+                "--all-targets"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/crates"
+            }
+        },
+        {
+            "label": "Cargo Check",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Cargo Check (chat_apps)",
+                "Cargo Check (pet_apps)",
+                "Cargo Check (analytics_apps)",
+                "Cargo Check (crates)"
+            ],
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "Cargo Build (chat_apps)",
             "type": "shell",
             "command": "cargo",
             "args": [
                 "build",
+                "--locked",
+                "--features",
+                "server/ssr,ui/ssr",
                 "--workspace",
-                "--all-targets",
-                "--all-features"
+                "--all-targets"
             ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/chat_apps"
+            }
+        },
+        {
+            "label": "Cargo Build (pet_apps)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "build",
+                "--locked",
+                "--exclude",
+                "desktop-pet-frontend",
+                "--workspace",
+                "--all-targets"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/pet_apps"
+            }
+        },
+        {
+            "label": "Cargo Build (analytics_apps)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "build",
+                "--locked",
+                "--workspace",
+                "--all-targets"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/analytics_apps"
+            }
+        },
+        {
+            "label": "Cargo Build (crates)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "build",
+                "--locked",
+                "--workspace",
+                "--all-targets"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/crates"
+            }
+        },
+        {
+            "label": "Cargo Build",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Cargo Build (chat_apps)",
+                "Cargo Build (pet_apps)",
+                "Cargo Build (analytics_apps)",
+                "Cargo Build (crates)"
+            ],
+            "problemMatcher": [],
             "group": {
                 "kind": "build",
                 "isDefault": true
-            },
-            "problemMatcher": [
-                "$rustc"
-            ]
+            }
         },
-
         {
-            "label": "Cargo Test",
+            "label": "Cargo Test (chat_apps)",
             "type": "shell",
             "command": "cargo",
             "args": [
                 "test",
-                "--workspace",
-                "--all-features"
+                "--locked",
+                "--features",
+                "server/ssr,ui/ssr",
+                "--workspace"
             ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/chat_apps"
+            }
+        },
+        {
+            "label": "Cargo Test (pet_apps)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "test",
+                "--locked",
+                "--exclude",
+                "desktop-pet-frontend",
+                "--workspace"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/pet_apps"
+            }
+        },
+        {
+            "label": "Cargo Test (analytics_apps)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "test",
+                "--locked",
+                "--workspace"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/analytics_apps"
+            }
+        },
+        {
+            "label": "Cargo Test (crates)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "test",
+                "--locked",
+                "--workspace"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/crates"
+            }
+        },
+        {
+            "label": "Cargo Test",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Cargo Test (chat_apps)",
+                "Cargo Test (pet_apps)",
+                "Cargo Test (analytics_apps)",
+                "Cargo Test (crates)"
+            ],
+            "problemMatcher": [],
             "group": {
                 "kind": "test",
                 "isDefault": true
-            },
-            "problemMatcher": [
-                "$rustc"
-            ]
+            }
         },
-
         {
-            "label": "Cargo Format",
+            "label": "Cargo Format (chat_apps)",
             "type": "shell",
             "command": "cargo",
             "args": [
                 "fmt",
                 "--all"
             ],
+            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceFolder}/chat_apps"
+            }
+        },
+        {
+            "label": "Cargo Format (pet_apps)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "fmt",
+                "--all"
+            ],
+            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceFolder}/pet_apps"
+            }
+        },
+        {
+            "label": "Cargo Format (analytics_apps)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "fmt",
+                "--all"
+            ],
+            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceFolder}/analytics_apps"
+            }
+        },
+        {
+            "label": "Cargo Format (crates)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "fmt",
+                "--all"
+            ],
+            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceFolder}/crates"
+            }
+        },
+        {
+            "label": "Cargo Format",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Cargo Format (chat_apps)",
+                "Cargo Format (pet_apps)",
+                "Cargo Format (analytics_apps)",
+                "Cargo Format (crates)"
+            ],
             "problemMatcher": []
         },
-
         {
-            "label": "Cargo Format Check",
+            "label": "Cargo Format Check (chat_apps)",
             "type": "shell",
             "command": "cargo",
             "args": [
@@ -76,37 +328,214 @@
                 "--",
                 "--check"
             ],
+            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceFolder}/chat_apps"
+            }
+        },
+        {
+            "label": "Cargo Format Check (pet_apps)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "fmt",
+                "--all",
+                "--",
+                "--check"
+            ],
+            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceFolder}/pet_apps"
+            }
+        },
+        {
+            "label": "Cargo Format Check (analytics_apps)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "fmt",
+                "--all",
+                "--",
+                "--check"
+            ],
+            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceFolder}/analytics_apps"
+            }
+        },
+        {
+            "label": "Cargo Format Check (crates)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "fmt",
+                "--all",
+                "--",
+                "--check"
+            ],
+            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceFolder}/crates"
+            }
+        },
+        {
+            "label": "Cargo Format Check",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Cargo Format Check (chat_apps)",
+                "Cargo Format Check (pet_apps)",
+                "Cargo Format Check (analytics_apps)",
+                "Cargo Format Check (crates)"
+            ],
             "problemMatcher": []
         },
-
         {
-            "label": "Cargo Clippy",
+            "label": "Cargo Clippy (chat_apps)",
             "type": "shell",
             "command": "cargo",
             "args": [
                 "clippy",
+                "--locked",
+                "--features",
+                "server/ssr,ui/ssr",
                 "--workspace",
                 "--all-targets",
-                "--all-features",
                 "--",
                 "-D",
                 "warnings"
             ],
             "problemMatcher": [
                 "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/chat_apps"
+            }
+        },
+        {
+            "label": "Cargo Clippy (pet_apps)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "clippy",
+                "--locked",
+                "--exclude",
+                "desktop-pet-frontend",
+                "--workspace",
+                "--all-targets",
+                "--",
+                "-D",
+                "warnings"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/pet_apps"
+            }
+        },
+        {
+            "label": "Cargo Clippy (analytics_apps)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "clippy",
+                "--locked",
+                "--workspace",
+                "--all-targets",
+                "--",
+                "-D",
+                "warnings"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/analytics_apps"
+            }
+        },
+        {
+            "label": "Cargo Clippy (crates)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "clippy",
+                "--locked",
+                "--workspace",
+                "--all-targets",
+                "--",
+                "-D",
+                "warnings"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/crates"
+            }
+        },
+        {
+            "label": "Cargo Clippy",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Cargo Clippy (chat_apps)",
+                "Cargo Clippy (pet_apps)",
+                "Cargo Clippy (analytics_apps)",
+                "Cargo Clippy (crates)"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Chat WASM Check",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "check",
+                "--locked",
+                "-p",
+                "ui",
+                "--target",
+                "wasm32-unknown-unknown",
+                "--features",
+                "hydrate"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/chat_apps"
+            },
+            "problemMatcher": [
+                "$rustc"
             ]
         },
-
         {
-    "label": "Cargo CI",
-    "dependsOrder": "sequence",
-    "dependsOn": [
-        "Cargo Format Check",
-        "Cargo Check",
-        "Cargo Clippy",
-        "Cargo Test"
-    ],
-    "problemMatcher": []
-}
+            "label": "Pet WASM Check",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "check",
+                "--locked",
+                "-p",
+                "desktop-pet-frontend",
+                "--target",
+                "wasm32-unknown-unknown"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/pet_apps"
+            },
+            "problemMatcher": [
+                "$rustc"
+            ]
+        },
+        {
+            "label": "Cargo CI",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Cargo Format Check",
+                "Cargo Check",
+                "Cargo Clippy",
+                "Cargo Test",
+                "Chat WASM Check",
+                "Pet WASM Check"
+            ],
+            "problemMatcher": []
+        }
     ]
 }

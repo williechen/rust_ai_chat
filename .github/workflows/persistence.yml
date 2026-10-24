@@ -6,12 +6,24 @@ on:
   pull_request:
     branches: ["main"]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: persistence-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
+
+defaults:
+  run:
+    working-directory: chat_apps
 
 jobs:  
   test-persistence:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     services:
       postgres:
@@ -52,3 +64,4 @@ jobs:
 
       - name: Test stats server with PostgreSQL
         run: DATABASE_URL="$ANALYTICS_DATABASE_URL" cargo test --locked -p stats-server --features postgres-integration
+        working-directory: analytics_apps

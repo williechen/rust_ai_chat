@@ -6,12 +6,24 @@ on:
   pull_request:
     branches: ["main"]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop_pet-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
+
+defaults:
+  run:
+    working-directory: pet_apps
 
 jobs:
   check-pet:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -53,16 +65,17 @@ jobs:
           pkg-config --modversion webkit2gtk-4.1
 
       - name: Install trunk
-        run: cargo install trunk --locked
+        run: cargo install trunk --version 0.21.14 --locked
 
       - name: Check native workspace
-        run: cargo check --workspace --exclude desktop-pet-frontend
+        run: cargo check --locked --workspace --exclude desktop-pet-frontend
 
       - name: Check desktop frontend
         run: cargo check --locked -p desktop-pet-frontend --target wasm32-unknown-unknown
 
   build-pet:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -86,12 +99,21 @@ jobs:
             librsvg2-dev \
             libwebkit2gtk-4.1-dev
 
-      - name: Check native dependencies
-        run: cargo build --workspace --exclude desktop-pet-frontend --verbose
-
       - name: Install trunk
-        run: cargo install trunk --locked
+        run: cargo install trunk --version 0.21.14 --locked
 
       - name: Build desktop
-        working-directory: apps/desktop_pet/frontend
+        working-directory: pet_apps/frontend
         run: trunk build --locked --release
+
+      - name: Build native desktop
+        run: cargo build --locked --release --workspace --exclude desktop-pet-frontend
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pet-linux
+          if-no-files-found: error
+          path: |
+            pet_apps/target/release/desktop-pet
+            pet_apps/frontend/dist

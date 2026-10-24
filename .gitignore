@@ -1,4 +1,4 @@
-/target
+*/**/target
 
 /apps/desktop_pet/gen
 /apps/desktop_pet/frontend/dist

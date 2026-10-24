@@ -1,4 +1,4 @@
-name: Rust Dashboard
+name: Rust Analytics
 
 on:
   push:
@@ -6,12 +6,21 @@ on:
   pull_request:
     branches: ["main"]
 
+concurrency:
+  group: analytics-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
 
+defaults:
+  run:
+    working-directory: analytics_apps
+
 jobs:
-  check-dashboard:
+  check-analytics:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -31,8 +40,9 @@ jobs:
       - name: Check stats server
         run: cargo check --locked -p stats-server
         
-  build-dashboard:
+  build-analytics:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -51,3 +61,12 @@ jobs:
 
       - name: Build stats server
         run: cargo build --locked -p stats-server --release
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: analytics-linux
+          if-no-files-found: error
+          path: |
+            analytics_apps/target/release/server
+            analytics_apps/target/release/bootstrap_admin

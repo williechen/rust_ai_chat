@@ -1,4 +1,4 @@
-use stats_server::{EventIdentity, InMemoryDeduplicator};
+use analytics_server::{EventIdentity, InMemoryDeduplicator};
 use std::collections::HashSet;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
